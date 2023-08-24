@@ -1,0 +1,22 @@
+[package]
+name = "readablility-cli"
+version = "0.1.0"
+edition = "2021"
+description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
+
+[[bin]]
+name = "rdbl"
+path = "src/main.rs"
+
+[dependencies]
+# Command line argument parsing
+clap = { version = "4.3.23", features = ["derive"] }
+
+# Convert HTML to markdown
+html2md = "0.2.14"
+
+# Extract the main content from HTML
+readable-readability = { git = "https://github.com/readable-app/readability.rs", version = "0.4.0" }
+
+# Fetch the webpage
+reqwest = { version = "0.11.19", features = ["blocking"] }
