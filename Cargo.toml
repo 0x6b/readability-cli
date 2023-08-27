@@ -20,3 +20,12 @@ readable-readability = { git = "https://github.com/readable-app/readability.rs",
 
 # Fetch the webpage
 reqwest = { version = "0.11.19", features = ["blocking"] }
+
+# Configuration parsing
+serde = "1.0.188"
+serde_derive = "1.0.188"
+toml = "0.7.6"
+
+# Prompt selection
+inquire = "0.6.2"
+xdg = "2.5.2"

@@ -14,7 +14,7 @@ Install [charmbracelet/mods](https://github.com/charmbracelet/mods) if you want 
 
 ## Usage
 
-```bash
+```console
 $ rdbl --help
 A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout.
 
@@ -24,13 +24,28 @@ Arguments:
   <URL>  A URL to fetch
 
 Options:
-  -s, --summary                  Print summary of the input with running mods. mods should be in your PATH
-  -p, --prompt <PROMPT>          Prompt for mods [default: "In a few sentences, summarize the key ideas presented in this article."]
-  -m, --model <MODEL>            Model to use for mods. Available models and its aliases: gpt-4 (4), gpt-4-32k (32k), gpt-3.5-turbo (35t) [default: gpt-3.5-turbo]
-      --user-agent <USER_AGENT>  User agent to use for fetching the URL [default: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"]
-  -h, --help                     Print help
-  -V, --version                  Print version
+  -s, --summary        Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH
+  -m, --model <MODEL>  Model to use for mods. Available models and its aliases: gpt-4 (4), gpt-4-32k (32k), gpt-3.5-turbo (35t) [default: gpt-3.5-turbo]
+  -h, --help           Print help
+  -V, --version        Print version
 ```
+
+## Configuration
+
+The command will look for a configuration file at `$XDG_CONFIG_HOME/rdbl/config.toml` e.g. `~/.config/rdbl/config.toml` in UNIX-like systems. The configuration file is optional.
+
+```toml
+# User agent for requests
+user_agent = "..."
+
+# Collection of prompts to use for the summarization task
+prompts = [
+    "...",
+    "...",
+]
+```
+
+See [`config.example.toml`](config.example.toml).
 
 ## Privacy
 

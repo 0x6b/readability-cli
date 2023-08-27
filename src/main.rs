@@ -1,28 +1,33 @@
 use std::{
+    error::Error,
     io::Write,
     process::{Command, Stdio},
     str::from_utf8,
 };
 
-use crate::args::Args;
 use clap::Parser;
+use inquire::Select;
 use reqwest::header;
+use xdg::BaseDirectories;
+
+use crate::{args::Args, config::Configuration};
 
 mod args;
+mod config;
 mod model;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let Args {
         url,
         summary: mods,
-        prompt,
         model,
-        user_agent,
     } = Args::parse();
+
+    let config = get_config()?;
 
     let content = reqwest::blocking::Client::new()
         .get(&url)
-        .header(header::USER_AGENT, user_agent)
+        .header(header::USER_AGENT, config.user_agent)
         .send()?;
     let text = content.text()?;
     let (nodes, metadata) = readable_readability::Readability::new()
@@ -37,7 +42,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("# {title}\n\n{}", &markdown);
 
     if mods {
-        println!("\n---\n");
+        println!("---");
+        let prompt =
+            match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts).prompt() {
+                Ok(s) => s,
+                Err(_) => "In a few sentences, summarize the key ideas presented in this article"
+                    .to_string(),
+            };
+
         let mut child = Command::new("mods")
             .arg("--quiet")
             .arg("--format")
@@ -59,4 +71,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn get_config() -> Result<Configuration, Box<dyn Error>> {
+    let config_path = BaseDirectories::with_prefix("rdbl")?.place_config_file("config.toml")?;
+    match std::fs::read_to_string(config_path) {
+        Ok(c) => Ok(toml::from_str::<Configuration>(&c)?),
+        Err(_) => Ok(Configuration::default()),
+    }
 }
