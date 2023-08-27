@@ -17,4 +17,9 @@ pub struct Args {
     ///   gpt-3.5-turbo (35t)
     #[clap(short, long, default_value = "gpt-3.5-turbo")]
     pub model: Model,
+
+    /// Prompt to use for mods. If not provided, will be selected from a list of prompts specified in the config file.
+    /// If you want to use a prompt that contains spaces, you must quote it.
+    #[clap(short, long)]
+    pub prompt: Option<String>,
 }
