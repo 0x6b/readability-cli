@@ -1,27 +1,29 @@
 use std::{
+    error::Error,
     io::Write,
     process::{Command, Stdio},
     str::from_utf8,
 };
 
-use crate::{args::Args, config::Configuration};
 use clap::Parser;
 use inquire::Select;
 use reqwest::header;
+use xdg::BaseDirectories;
+
+use crate::{args::Args, config::Configuration};
 
 mod args;
 mod config;
 mod model;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let Args {
         url,
         summary: mods,
         model,
-        config,
     } = Args::parse();
 
-    let config = toml::from_str::<Configuration>(&std::fs::read_to_string(config)?)?;
+    let config = get_config()?;
 
     let content = reqwest::blocking::Client::new()
         .get(&url)
@@ -40,6 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("# {title}\n\n{}", &markdown);
 
     if mods {
+        println!("---");
         let prompt =
             match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts).prompt() {
                 Ok(s) => s,
@@ -68,4 +71,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn get_config() -> Result<Configuration, Box<dyn Error>> {
+    let config_path = BaseDirectories::with_prefix("rdbl")?.place_config_file("config.toml")?;
+    match std::fs::read_to_string(config_path) {
+        Ok(c) => Ok(toml::from_str::<Configuration>(&c)?),
+        Err(_) => Ok(Configuration::default()),
+    }
 }

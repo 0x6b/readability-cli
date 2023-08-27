@@ -17,8 +17,4 @@ pub struct Args {
     ///   gpt-3.5-turbo (35t)
     #[clap(short, long, default_value = "gpt-3.5-turbo")]
     pub model: Model,
-
-    /// Path to the config file
-    #[clap(short, long, default_value = "./config.toml")]
-    pub config: String,
 }

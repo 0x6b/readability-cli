@@ -28,3 +28,4 @@ toml = "0.7.6"
 
 # Prompt selection
 inquire = "0.6.2"
+xdg = "2.5.2"
