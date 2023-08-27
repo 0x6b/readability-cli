@@ -26,10 +26,7 @@ pub struct Args {
     #[clap(short, long, default_value = "gpt-3.5-turbo")]
     pub model: Model,
 
-    /// User agent to use for fetching the URL
-    #[clap(
-        long,
-        default_value = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-    )]
-    pub user_agent: String,
+    /// Path to the config file
+    #[clap(short, long, default_value = "./config.toml")]
+    pub config: String,
 }

@@ -4,11 +4,12 @@ use std::{
     str::from_utf8,
 };
 
-use crate::args::Args;
+use crate::{args::Args, config::Configuration};
 use clap::Parser;
 use reqwest::header;
 
 mod args;
+mod config;
 mod model;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,12 +18,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         summary: mods,
         prompt,
         model,
-        user_agent,
+        config,
     } = Args::parse();
+
+    let config = toml::from_str::<Configuration>(&std::fs::read_to_string(config)?)?;
 
     let content = reqwest::blocking::Client::new()
         .get(&url)
-        .header(header::USER_AGENT, user_agent)
+        .header(header::USER_AGENT, config.user_agent)
         .send()?;
     let text = content.text()?;
     let (nodes, metadata) = readable_readability::Readability::new()
