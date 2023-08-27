@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         url,
         summary: mods,
         model,
+        prompt,
     } = Args::parse();
 
     let config = get_config()?;
@@ -43,12 +44,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if mods {
         println!("---");
-        let prompt =
-            match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts).prompt() {
+        let prompt = match prompt {
+            Some(p) => p,
+            None => match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts)
+                .prompt()
+            {
                 Ok(s) => s,
                 Err(_) => "In a few sentences, summarize the key ideas presented in this article"
                     .to_string(),
-            };
+            },
+        };
 
         let mut child = Command::new("mods")
             .arg("--quiet")

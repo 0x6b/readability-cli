@@ -24,10 +24,11 @@ Arguments:
   <URL>  A URL to fetch
 
 Options:
-  -s, --summary        Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH
-  -m, --model <MODEL>  Model to use for mods. Available models and its aliases: gpt-4 (4), gpt-4-32k (32k), gpt-3.5-turbo (35t) [default: gpt-3.5-turbo]
-  -h, --help           Print help
-  -V, --version        Print version
+  -s, --summary          Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH
+  -m, --model <MODEL>    Model to use for mods. Available models and its aliases: gpt-4 (4), gpt-4-32k (32k), gpt-3.5-turbo (35t) [default: gpt-3.5-turbo]
+  -p, --prompt <PROMPT>  Prompt to use for mods. If not provided, will be selected from a list of prompts specified in the config file. If you want to use a prompt that contains spaces, you must quote it
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 
 ## Configuration
