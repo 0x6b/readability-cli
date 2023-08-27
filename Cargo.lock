@@ -1243,7 +1243,8 @@ dependencies = [
 [[package]]
 name = "readable-readability"
 version = "0.4.0"
-source = "git+https://github.com/readable-app/readability.rs#04128c50bcf32d6213365ecc20e21e810fefe7c5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17015928a25bff296b0471dfa7a784e406664e1d091781db66e885b18708a8d"
 dependencies = [
  "html5ever 0.25.2",
  "kuchiki",
