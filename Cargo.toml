@@ -25,7 +25,7 @@ reqwest = { version = "0.11.19", features = ["blocking"] }
 serde = "1.0.188"
 serde_derive = "1.0.188"
 toml = "0.7.6"
+xdg = "2.5.2"
 
 # Prompt selection
 inquire = "0.6.2"
-xdg = "2.5.2"
