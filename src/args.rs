@@ -7,17 +7,9 @@ pub struct Args {
     /// A URL to fetch
     pub url: String,
 
-    /// Print summary of the input with running mods. mods should be in your PATH.
+    /// Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH.
     #[clap(short, long)]
     pub summary: bool,
-
-    /// Prompt for mods
-    #[clap(
-        short,
-        long,
-        default_value = "In a few sentences, summarize the key ideas presented in this article."
-    )]
-    pub prompt: String,
 
     /// Model to use for mods. Available models and its aliases:
     ///   gpt-4 (4),

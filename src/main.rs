@@ -6,6 +6,7 @@ use std::{
 
 use crate::{args::Args, config::Configuration};
 use clap::Parser;
+use inquire::Select;
 use reqwest::header;
 
 mod args;
@@ -16,7 +17,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let Args {
         url,
         summary: mods,
-        prompt,
         model,
         config,
     } = Args::parse();
@@ -40,7 +40,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("# {title}\n\n{}", &markdown);
 
     if mods {
-        println!("\n---\n");
+        let prompt =
+            match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts).prompt() {
+                Ok(s) => s,
+                Err(_) => "In a few sentences, summarize the key ideas presented in this article"
+                    .to_string(),
+            };
+
         let mut child = Command::new("mods")
             .arg("--quiet")
             .arg("--format")
