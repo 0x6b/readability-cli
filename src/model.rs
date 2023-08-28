@@ -18,6 +18,7 @@ impl FromStr for Model {
             "32k" => Ok(Self::Gpt4_32k), // alias
             "gpt-3.5-turbo" => Ok(Self::Gpt35Turbo),
             "35t" => Ok(Self::Gpt35Turbo), // alias
+            "35" => Ok(Self::Gpt35Turbo),  // alias
             _ => Ok(Self::Gpt35Turbo),
         }
     }

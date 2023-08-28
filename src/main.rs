@@ -25,20 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     } = Args::parse();
 
     let config = get_config()?;
-
-    let content = reqwest::blocking::Client::new()
-        .get(&url)
-        .header(header::USER_AGENT, config.user_agent)
-        .send()?;
-    let text = content.text()?;
-    let (nodes, metadata) = readable_readability::Readability::new()
-        .base_url(reqwest::Url::parse(&url)?)
-        .parse(&text);
-    let mut text = vec![];
-    nodes.serialize(&mut text)?;
-
-    let title = metadata.page_title.unwrap_or("(no title)".to_string());
-    let markdown = html2md::parse_html(from_utf8(&text)?);
+    let (title, markdown) = get_content(&url, &config)?;
 
     println!("# {title}\n\n{}", &markdown);
 
@@ -84,4 +71,22 @@ fn get_config() -> Result<Configuration, Box<dyn Error>> {
         Ok(c) => Ok(toml::from_str::<Configuration>(&c)?),
         Err(_) => Ok(Configuration::default()),
     }
+}
+
+fn get_content(url: &str, config: &Configuration) -> Result<(String, String), Box<dyn Error>> {
+    let content = reqwest::blocking::Client::new()
+        .get(url)
+        .header(header::USER_AGENT, &config.user_agent)
+        .send()?;
+    let text = content.text()?;
+    let (nodes, metadata) = readable_readability::Readability::new()
+        .base_url(reqwest::Url::parse(url)?)
+        .parse(&text);
+    let mut text = vec![];
+    nodes.serialize(&mut text)?;
+
+    let title = metadata.page_title.unwrap_or("(no title)".to_string());
+    let markdown = html2md::parse_html(from_utf8(&text)?);
+
+    Ok((title, markdown))
 }
