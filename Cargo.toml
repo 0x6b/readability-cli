@@ -29,3 +29,4 @@ xdg = "2.5.2"
 
 # Prompt selection
 inquire = "0.6.2"
+termimad = "0.25.0"

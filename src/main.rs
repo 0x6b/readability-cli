@@ -19,7 +19,7 @@ mod model;
 fn main() -> Result<(), Box<dyn Error>> {
     let Args {
         url,
-        summary: mods,
+        summary,
         model,
         prompt,
     } = Args::parse();
@@ -27,10 +27,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let config = get_config()?;
     let (title, markdown) = get_content(&url, &config)?;
 
-    println!("# {title}\n\n{}", &markdown);
+    println!(
+        "{}",
+        termimad::text(&format!("# {title}\n\n{}\n", &markdown))
+    );
 
-    if mods {
-        println!("---");
+    if summary {
         let prompt = match prompt {
             Some(p) => p,
             None => match Select::new("Your prompt? (Ctrl-c to just summarize)", config.prompts)
@@ -57,9 +59,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
 
         let output = child.wait_with_output()?;
-        println!("# Summary\n");
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        println!("{}", String::from_utf8_lossy(&output.stderr));
+        println!(
+            "{}",
+            termimad::text(&format!(
+                "# Summary\n\n{}",
+                String::from_utf8_lossy(&output.stdout)
+            ))
+        );
     }
 
     Ok(())
