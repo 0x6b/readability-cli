@@ -17,20 +17,12 @@ mod config;
 mod model;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let Args {
-        url,
-        summary,
-        model,
-        prompt,
-    } = Args::parse();
+    let Args { url, summary, model, prompt } = Args::parse();
 
     let config = get_config()?;
     let (title, markdown) = get_content(&url, &config)?;
 
-    println!(
-        "{}",
-        termimad::text(&format!("# {title}\n\n{}\n", &markdown))
-    );
+    println!("{}", termimad::text(&format!("# {title}\n\n{}\n", &markdown)));
 
     if summary {
         let prompt = match prompt {
@@ -61,10 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let output = child.wait_with_output()?;
         println!(
             "{}",
-            termimad::text(&format!(
-                "# Summary\n\n{}",
-                String::from_utf8_lossy(&output.stdout)
-            ))
+            termimad::text(&format!("# Summary\n\n{}", String::from_utf8_lossy(&output.stdout)))
         );
     }
 
