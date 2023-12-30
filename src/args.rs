@@ -1,5 +1,6 @@
-use crate::model::Model;
 use clap::Parser;
+
+use crate::model::Model;
 
 #[derive(Parser)]
 #[clap(version, about)]
@@ -7,7 +8,8 @@ pub struct Args {
     /// A URL to fetch
     pub url: String,
 
-    /// Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH.
+    /// Display prompts selection and ask OpenAI to process the article with the prompt, by running
+    /// mods, which should be in your PATH.
     #[clap(short, long)]
     pub summary: bool,
 
@@ -18,8 +20,9 @@ pub struct Args {
     #[clap(short, long, default_value = "gpt-3.5-turbo")]
     pub model: Model,
 
-    /// Prompt to use for mods. If not provided, will be selected from a list of prompts specified in the config file.
-    /// If you want to use a prompt that contains spaces, you must quote it.
+    /// Prompt to use for mods. If not provided, will be selected from a list of prompts specified
+    /// in the config file. If you want to use a prompt that contains spaces, you must quote
+    /// it.
     #[clap(short, long)]
     pub prompt: Option<String>,
 }

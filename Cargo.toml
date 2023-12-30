@@ -1,6 +1,6 @@
 [package]
 name = "readablility-cli"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
 
@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Command line argument parsing
-clap = { version = "4.3.23", features = ["derive"] }
+clap = { version = "4.4.12", features = ["derive"] }
 
 # Convert HTML to markdown
 html2md = "0.2.14"
@@ -19,14 +19,14 @@ html2md = "0.2.14"
 readable-readability = "0.4.0"
 
 # Fetch the webpage
-reqwest = { version = "0.11.19", features = ["blocking"] }
+reqwest = { version = "0.11.23", features = ["blocking"] }
 
 # Configuration parsing
-serde = "1.0.188"
-serde_derive = "1.0.188"
-toml = "0.7.6"
+serde = "1.0.193"
+serde_derive = "1.0.193"
+toml = "0.8.8"
 xdg = "2.5.2"
 
 # Prompt selection
 inquire = "0.6.2"
-termimad = "0.25.0"
+termimad = "0.26.1"
