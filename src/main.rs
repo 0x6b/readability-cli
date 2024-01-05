@@ -17,7 +17,7 @@ mod model;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let Args { url, summary, model, prompt } = Args::parse();
+    let Args { url, summary, model, prompt, language } = Args::parse();
 
     let config = get_config()?;
     let (title, markdown) = get_content(&url, &config).await?;
@@ -35,13 +35,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         if let Some(prompt) = prompt {
                             prompt
                         } else {
-                            r#"As a professional summarizer, create a concise and comprehensive summary of the provided text, be it an article, post, conversation, or passage, while adhering to these guidelines:
+                            format!(r#"As a professional summarizer, create a concise and comprehensive summary of the provided text, be it an article, post, conversation, or passage, while adhering to these guidelines:
 
-1. In 3 paragraphs or less, craft a summary that is detailed, thorough, in-depth, and complex, while maintaining clarity and conciseness, in English.
+1. In 3 paragraphs or less, craft a summary that is detailed, thorough, in-depth, and complex, while maintaining clarity and conciseness, in {language}.
 2. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
 3. Rely strictly on the provided text, without including external information.
 4. Utilize markdown to cleanly format your output. Example: **Bold** key subject matter and potential areas that may need expanded information
-"#.to_string()                        })
+"#)
+                        })
                     .build()?
                     .into(),
                 ChatCompletionRequestUserMessageArgs::default()
@@ -67,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .collect::<Vec<String>>()
             .await
             .join("");
-        println!("{}", termimad::text(&format!("{}\n\n", result)));
+        println!("{}", termimad::text(&format!("{}\n", result)));
     }
 
     Ok(())
