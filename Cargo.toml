@@ -21,12 +21,22 @@ readable-readability = "0.4.0"
 # Fetch the webpage
 reqwest = { version = "0.11.23", features = ["blocking"] }
 
-# Configuration parsing
+# Serialize and deserialize
 serde = "1.0.194"
 serde_derive = "1.0.194"
+serde_json = { version = "1.0.111", features = [] }
 toml = "0.8.8"
+
+# Configuration directory
 xdg = "2.5.2"
 
 # Prompt selection
 inquire = "0.6.2"
 termimad = "0.26.1"
+
+# Async runtime
+tokio = { version = "1.35.1", features = ["full"] }
+
+# OpenAI API client
+async-openai = "0.18.0"
+futures = "0.3.30"
