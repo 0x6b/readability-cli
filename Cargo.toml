@@ -1,6 +1,6 @@
 [package]
 name = "readablility-cli"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
 
