@@ -13,10 +13,10 @@ pub struct Args {
     #[clap(short, long)]
     pub summary: bool,
 
-    /// Model to use for mods. Available models and its aliases:
-    ///   gpt-4 (4),
-    ///   gpt-4-32k (32k),
-    ///   gpt-3.5-turbo (35t)
+    /// Model to use. Available models and its aliases:
+    ///   gpt-4 (4) -- gtp-4-1106-preview,
+    ///   gpt-4-32k (32k) -- gpt-4-32k,
+    ///   gpt-3.5-turbo (35t) -- gpt-3.5-turbo-1106
     #[clap(short, long, default_value = "gpt-3.5-turbo")]
     pub model: Model,
 
@@ -25,4 +25,8 @@ pub struct Args {
     /// it.
     #[clap(short, long)]
     pub prompt: Option<String>,
+
+    /// Language to use for summarization.
+    #[clap(short, long, default_value = "English")]
+    pub language: String,
 }

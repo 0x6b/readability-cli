@@ -1,8 +1,2 @@
 # User agent for requests
 user_agent = "rdbl/0.1.0"
-
-# Collection of prompts to use for the summarization task
-prompts = [
-    "In a few sentences, summarize the key ideas presented in this article.",
-    "What is the main point of this article?",
-]
