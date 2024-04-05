@@ -1,12 +1,20 @@
 use std::{error::Error, str::from_utf8};
 
 use async_openai::{
-    types::{ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs},
+    types::{
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+        CreateChatCompletionRequestArgs,
+    },
     Client,
 };
 use clap::Parser;
 use futures::StreamExt;
-use reqwest::header;
+use html2md::parse_html;
+use readable_readability::Readability;
+use reqwest::{header::USER_AGENT, Url};
+use termimad::text;
+use tokio::fs::read_to_string;
+use toml::from_str;
 use xdg::BaseDirectories;
 
 use crate::{args::Args, config::Configuration};
@@ -19,14 +27,14 @@ mod model;
 async fn main() -> Result<(), Box<dyn Error>> {
     let Args { url, summary, model, prompt, language } = Args::parse();
 
-    let config = get_config()?;
+    let config = get_config().await?;
     let (title, markdown) = get_content(&url, &config).await?;
 
-    println!("{}", termimad::text(&format!("# {title}\n\n{}\n", &markdown)));
+    println!("{}", text(&format!("# {title}\n\n{}\n", &markdown)));
 
     if summary {
         let client = Client::new();
-        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+        let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model(model.to_string())
             .messages([
@@ -52,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ])
             .build()?;
 
-        println!("{}", termimad::text("# Summary\n"));
+        println!("{}", text("# Summary\n"));
         let stream = client.chat().create_stream(request).await?;
         let result = stream
             .map(|result| {
@@ -68,16 +76,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .collect::<Vec<String>>()
             .await
             .join("");
-        println!("{}", termimad::text(&format!("{}\n", result)));
+        println!("{}", text(&format!("{}\n", result)));
     }
 
     Ok(())
 }
 
-fn get_config() -> Result<Configuration, Box<dyn Error>> {
+async fn get_config() -> Result<Configuration, Box<dyn Error>> {
     let config_path = BaseDirectories::with_prefix("rdbl")?.place_config_file("config.toml")?;
-    match std::fs::read_to_string(config_path) {
-        Ok(c) => Ok(toml::from_str::<Configuration>(&c)?),
+    match read_to_string(config_path).await {
+        Ok(c) => Ok(from_str::<Configuration>(&c)?),
         Err(_) => Ok(Configuration::default()),
     }
 }
@@ -88,18 +96,16 @@ async fn get_content(
 ) -> Result<(String, String), Box<dyn Error>> {
     let content = reqwest::Client::new()
         .get(url)
-        .header(header::USER_AGENT, &config.user_agent)
+        .header(USER_AGENT, &config.user_agent)
         .send()
         .await?;
     let text = content.text().await?;
-    let (nodes, metadata) = readable_readability::Readability::new()
-        .base_url(reqwest::Url::parse(url)?)
-        .parse(&text);
+    let (nodes, metadata) = Readability::new().base_url(Url::parse(url)?).parse(&text);
     let mut text = vec![];
     nodes.serialize(&mut text)?;
 
     let title = metadata.page_title.unwrap_or("(no title)".to_string());
-    let markdown = html2md::parse_html(from_utf8(&text)?);
+    let markdown = parse_html(from_utf8(&text)?);
 
     Ok((title, markdown))
 }

@@ -1,6 +1,6 @@
 [package]
 name = "readablility-cli"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
 
@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Command line argument parsing
-clap = { version = "4.4.13", features = ["derive"] }
+clap = { version = "4.5.4", features = ["derive"] }
 
 # Convert HTML to markdown
 html2md = "0.2.14"
@@ -19,24 +19,22 @@ html2md = "0.2.14"
 readable-readability = "0.4.0"
 
 # Fetch the webpage
-reqwest = { version = "0.11.23", features = ["blocking"] }
+reqwest = { version = "0.12.2", features = ["blocking"] }
 
 # Serialize and deserialize
-serde = "1.0.194"
-serde_derive = "1.0.194"
-serde_json = { version = "1.0.111", features = [] }
-toml = "0.8.8"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = { version = "1.0.115", features = [] }
+toml = "0.8.12"
 
 # Configuration directory
 xdg = "2.5.2"
 
 # Prompt selection
-inquire = "0.6.2"
-termimad = "0.26.1"
+termimad = "0.29.1"
 
 # Async runtime
-tokio = { version = "1.35.1", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 
 # OpenAI API client
-async-openai = "0.18.0"
+async-openai = "0.20.0"
 futures = "0.3.30"
