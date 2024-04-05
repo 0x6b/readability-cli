@@ -1,6 +1,6 @@
 [package]
 name = "readablility-cli"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
 
@@ -22,7 +22,7 @@ readable-readability = "0.4.0"
 reqwest = { version = "0.12.2", features = ["blocking"] }
 
 # Serialize and deserialize
-serde = { version = "1.0.197" , features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.115", features = [] }
 toml = "0.8.12"
 
