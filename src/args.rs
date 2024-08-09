@@ -24,6 +24,6 @@ pub struct Args {
     pub prompt: Option<String>,
 
     /// Language to use for summarization.
-    #[clap(short, long, default_value = "English")]
+    #[clap(short, long, default_value = "Japanese")]
     pub language: String,
 }
