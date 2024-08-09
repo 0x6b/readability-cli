@@ -13,11 +13,8 @@ pub struct Args {
     #[clap(short, long)]
     pub summary: bool,
 
-    /// Model to use. Available models and its aliases:
-    ///   gpt-4 (4) -- gtp-4-1106-preview,
-    ///   gpt-4-32k (32k) -- gpt-4-32k,
-    ///   gpt-3.5-turbo (35t) -- gpt-3.5-turbo-1106
-    #[clap(short, long, default_value = "gpt-3.5-turbo")]
+    /// Model to use. `4o` - gpt-4o, `mini` - gpt-4o-mini, `4` - gpt-4-turbo, `35` - gpt-3.5-turbo
+    #[arg(short, long, default_value = "mini")]
     pub model: Model,
 
     /// Prompt to use for mods. If not provided, will be selected from a list of prompts specified
