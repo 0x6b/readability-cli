@@ -9,7 +9,6 @@ use async_openai::{
     Client,
 };
 use clap::Parser;
-use futures::StreamExt;
 use html2md::parse_html;
 use readable_readability::Readability;
 use reqwest::{header::USER_AGENT, Url};
@@ -62,20 +61,14 @@ async fn main() -> Result<()> {
             .build()?;
 
         println!("{}", text("# Summary\n"));
-        let stream = client.chat().create_stream(request).await?;
-        let result = stream
-            .map(|result| {
-                let response = result.unwrap();
-                let summary = response
-                    .choices
-                    .iter()
-                    .filter_map(|choice| choice.clone().delta.content)
-                    .collect::<Vec<String>>()
-                    .join("");
-                summary
-            })
+        let result = client
+            .chat()
+            .create(request)
+            .await?
+            .choices
+            .into_iter()
+            .filter_map(|c| c.message.content)
             .collect::<Vec<String>>()
-            .await
             .join("");
         println!("{}", text(&format!("{}\n", result)));
     }
