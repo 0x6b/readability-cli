@@ -39,3 +39,12 @@ tokio = { version = "1.39.2", features = ["full"] }
 
 # OpenAI API client
 async-openai = "0.23.4"
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+codegen-units = 1
