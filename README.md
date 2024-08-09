@@ -22,10 +22,10 @@ Arguments:
   <URL>  A URL to fetch
 
 Options:
-  -s, --summary              Display prompts selection and ask OpenAI to process the article with the prompt, by running mods, which should be in your PATH
-  -m, --model <MODEL>        Model to use. Available models and its aliases: gpt-4 (4) -- gtp-4-1106-preview, gpt-4-32k (32k) -- gpt-4-32k, gpt-3.5-turbo (35t) -- gpt-3.5-turbo-1106 [default: gpt-3.5-turbo]
-  -p, --prompt <PROMPT>      Prompt to use for mods. If not provided, will be selected from a list of prompts specified in the config file. If you want to use a prompt that contains spaces, you must quote it
-  -l, --language <LANGUAGE>  Language to use for summarization [default: English]
+  -s, --summary              Display prompts selection and ask OpenAI to process the article with the prompt
+  -m, --model <MODEL>        Model to use. `4o` - gpt-4o, `mini` - gpt-4o-mini, `4` - gpt-4-turbo, `35` - gpt-3.5-turbo [default: mini]
+  -p, --prompt <PROMPT>      Prompt to use for summarization. Default embedded prompt will be used if none is provided. If you want to use a prompt that contains spaces, you must quote it
+  -l, --language <LANGUAGE>  Language to use for summarization [default: Japanese]
   -h, --help                 Print help
   -V, --version              Print version
 ```

@@ -1,5 +1,6 @@
-use std::{error::Error, str::from_utf8};
+use std::str::from_utf8;
 
+use anyhow::Result;
 use async_openai::{
     types::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -8,7 +9,6 @@ use async_openai::{
     Client,
 };
 use clap::Parser;
-use futures::StreamExt;
 use html2md::parse_html;
 use readable_readability::Readability;
 use reqwest::{header::USER_AGENT, Url};
@@ -24,7 +24,7 @@ mod config;
 mod model;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     let Args { url, summary, model, prompt, language } = Args::parse();
 
     let config = get_config().await?;
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if summary {
         let client = Client::new();
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(512u16)
+            .max_tokens(16384u16)
             .model(model.to_string())
             .messages([
                 ChatCompletionRequestSystemMessageArgs::default()
@@ -61,20 +61,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .build()?;
 
         println!("{}", text("# Summary\n"));
-        let stream = client.chat().create_stream(request).await?;
-        let result = stream
-            .map(|result| {
-                let response = result.unwrap();
-                let summary = response
-                    .choices
-                    .iter()
-                    .filter_map(|choice| choice.clone().delta.content)
-                    .collect::<Vec<String>>()
-                    .join("");
-                summary
-            })
+        let result = client
+            .chat()
+            .create(request)
+            .await?
+            .choices
+            .into_iter()
+            .filter_map(|c| c.message.content)
             .collect::<Vec<String>>()
-            .await
             .join("");
         println!("{}", text(&format!("{}\n", result)));
     }
@@ -82,7 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn get_config() -> Result<Configuration, Box<dyn Error>> {
+async fn get_config() -> Result<Configuration> {
     let config_path = BaseDirectories::with_prefix("rdbl")?.place_config_file("config.toml")?;
     match read_to_string(config_path).await {
         Ok(c) => Ok(from_str::<Configuration>(&c)?),
@@ -90,10 +84,7 @@ async fn get_config() -> Result<Configuration, Box<dyn Error>> {
     }
 }
 
-async fn get_content(
-    url: &str,
-    config: &Configuration,
-) -> Result<(String, String), Box<dyn Error>> {
+async fn get_content(url: &str, config: &Configuration) -> Result<(String, String)> {
     let content = reqwest::Client::new()
         .get(url)
         .header(USER_AGENT, &config.user_agent)
