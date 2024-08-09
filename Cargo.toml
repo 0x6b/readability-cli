@@ -9,6 +9,9 @@ name = "rdbl"
 path = "src/main.rs"
 
 [dependencies]
+# Error handling
+anyhow = "1.0.86"
+
 # Command line argument parsing
 clap = { version = "4.5.4", features = ["derive"] }
 

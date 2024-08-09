@@ -1,5 +1,6 @@
-use std::{error::Error, str::from_utf8};
+use std::str::from_utf8;
 
+use anyhow::Result;
 use async_openai::{
     types::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -24,7 +25,7 @@ mod config;
 mod model;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     let Args { url, summary, model, prompt, language } = Args::parse();
 
     let config = get_config().await?;
@@ -82,7 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn get_config() -> Result<Configuration, Box<dyn Error>> {
+async fn get_config() -> Result<Configuration> {
     let config_path = BaseDirectories::with_prefix("rdbl")?.place_config_file("config.toml")?;
     match read_to_string(config_path).await {
         Ok(c) => Ok(from_str::<Configuration>(&c)?),
@@ -90,10 +91,7 @@ async fn get_config() -> Result<Configuration, Box<dyn Error>> {
     }
 }
 
-async fn get_content(
-    url: &str,
-    config: &Configuration,
-) -> Result<(String, String), Box<dyn Error>> {
+async fn get_content(url: &str, config: &Configuration) -> Result<(String, String)> {
     let content = reqwest::Client::new()
         .get(url)
         .header(USER_AGENT, &config.user_agent)
