@@ -13,7 +13,7 @@ path = "src/main.rs"
 anyhow = "1.0.86"
 
 # Command line argument parsing
-clap = { version = "4.5.4", features = ["derive"] }
+clap = { version = "4.5.14", features = ["derive"] }
 
 # Convert HTML to markdown
 html2md = "0.2.14"
@@ -22,22 +22,20 @@ html2md = "0.2.14"
 readable-readability = "0.4.0"
 
 # Fetch the webpage
-reqwest = { version = "0.12.2", features = ["blocking"] }
+reqwest = "0.12.5"
 
 # Serialize and deserialize
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = { version = "1.0.115", features = [] }
-toml = "0.8.12"
+serde = { version = "1.0.205", features = ["derive"] }
+toml = "0.8.19"
 
 # Configuration directory
 xdg = "2.5.2"
 
 # Prompt selection
-termimad = "0.29.1"
+termimad = "0.29.4"
 
 # Async runtime
-tokio = { version = "1.37.0", features = ["full"] }
+tokio = { version = "1.39.2", features = ["full"] }
 
 # OpenAI API client
-async-openai = "0.20.0"
-futures = "0.3.30"
+async-openai = "0.23.4"
