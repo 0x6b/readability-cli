@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     if summary {
         let client = Client::new();
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(512u16)
+            .max_tokens(16384u16)
             .model(model.to_string())
             .messages([
                 ChatCompletionRequestSystemMessageArgs::default()
