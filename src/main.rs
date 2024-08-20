@@ -2,6 +2,7 @@ use std::str::from_utf8;
 
 use anyhow::Result;
 use async_openai::{
+    config::OpenAIConfig,
     types::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         CreateChatCompletionRequestArgs,
@@ -25,7 +26,7 @@ mod model;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let Args { url, summary, model, prompt, language } = Args::parse();
+    let Args { url, summary, api_key, model, prompt, language } = Args::parse();
 
     let config = get_config().await?;
     let (title, markdown) = get_content(&url, &config).await?;
@@ -33,7 +34,7 @@ async fn main() -> Result<()> {
     println!("{}", text(&format!("# {title}\n\n{}\n", &markdown)));
 
     if summary {
-        let client = Client::new();
+        let client = Client::with_config(OpenAIConfig::new().with_api_key(api_key));
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(16384u16)
             .model(model.to_string())
