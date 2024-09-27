@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
                         } else {
                             format!(r#"As a professional summarizer, create a concise and comprehensive summary of the provided text, be it an article, post, conversation, or passage, while adhering to these guidelines:
 
-1. In 3 paragraphs or less, craft a summary that is detailed, thorough, in-depth, and complex, while maintaining clarity and conciseness, in {language}.
+1. In 5 paragraphs or less, craft a summary that is detailed, thorough, in-depth, and complex, while maintaining clarity and conciseness, in {language}.
 2. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
 3. Rely strictly on the provided text, without including external information.
 4. Utilize markdown to cleanly format your output. Example: **Bold** key subject matter and potential areas that may need expanded information
