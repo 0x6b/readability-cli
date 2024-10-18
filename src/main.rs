@@ -12,6 +12,7 @@ use async_openai::{
 use clap::Parser;
 use html2md::parse_html;
 use readable_readability::Readability;
+use regex::Regex;
 use reqwest::{header::USER_AGENT, Url};
 use termimad::text;
 use tokio::fs::read_to_string;
@@ -98,6 +99,8 @@ async fn get_content(url: &str, config: &Configuration) -> Result<(String, Strin
 
     let title = metadata.page_title.unwrap_or("(no title)".to_string());
     let markdown = parse_html(from_utf8(&text)?);
+    let markdown =
+        Regex::new(r#""data:image/[^"]+""#)?.replace_all(&markdown, r#""redacted data URI""#);
 
-    Ok((title, markdown))
+    Ok((title, markdown.to_string()))
 }
