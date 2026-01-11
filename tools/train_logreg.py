@@ -9,7 +9,7 @@ Usage:
     cd tools && uv run train_logreg.py --corpus ../tests/corpus --output model_weights.json
 
 Requirements:
-    uv sync  # in tools/ directory
+    cd tools && pnpm install && uv sync
 """
 
 import argparse
@@ -104,8 +104,8 @@ NUM_FEATURES = 64
 
 def run_readability_js(html_path: Path) -> Optional[str]:
     """Run Readability.js on an HTML file and return extracted text."""
-    # This requires Node.js and @mozilla/readability installed
-    # npm install -g @mozilla/readability jsdom
+    # Uses local node_modules - run `pnpm install` in tools/ first
+    tools_dir = Path(__file__).parent
     script = """
     const { Readability } = require('@mozilla/readability');
     const { JSDOM } = require('jsdom');
@@ -127,6 +127,7 @@ def run_readability_js(html_path: Path) -> Optional[str]:
             capture_output=True,
             text=True,
             timeout=30,
+            cwd=tools_dir,  # Run from tools/ to find local node_modules
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -331,7 +332,7 @@ def main():
     if not corpus_pairs:
         print("No valid training pairs found.")
         print("Make sure Node.js and @mozilla/readability are installed:")
-        print("  npm install -g @mozilla/readability jsdom")
+        print("  cd tools && pnpm install")
 
         # Generate placeholder weights for development
         print("\nGenerating placeholder weights...")

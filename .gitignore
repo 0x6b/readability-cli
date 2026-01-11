@@ -1,2 +1,5 @@
 /target
 config.toml
+tools/node_modules/
+tools/.venv/
+tools/pnpm-lock.yaml
