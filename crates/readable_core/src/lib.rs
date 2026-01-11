@@ -10,6 +10,7 @@ pub mod dom;
 pub mod features;
 pub mod model;
 pub mod parse;
+pub mod postprocess;
 pub mod select;
 pub mod serialize;
 pub mod title;
@@ -116,6 +117,9 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         candidate.score = model::score(&candidate.features);
     }
 
+    // Apply score propagation (Readability.js-style parent score accumulation)
+    postprocess::apply_score_propagation(&mut candidates, &arena);
+
     // Select best candidate
     let selected = select::select_best(&candidates, &arena, options);
 
@@ -123,17 +127,66 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     let debug_info =
         if options.debug { Some(debug::build_debug_info(&candidates, &arena)) } else { None };
 
-    // Get the selected subtree root
-    let content_root = selected.map(|c| c.node_id);
+    // Get the selected subtree root and find sibling expansions
+    let (content_roots, use_sibling_expansion) = if let Some(selected_candidate) = selected {
+        let selected_id = selected_candidate.node_id;
+        let selected_text_len = (selected_candidate.features.values
+            [features::FeatureIndex::LogTextLenChars as usize]
+            .exp()
+            - 1.0) as usize;
+
+        // Find siblings that should be included
+        let siblings = postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len);
+
+        if siblings.is_empty() {
+            (vec![selected_id], false)
+        } else {
+            // Include selected node plus siblings in document order
+            let mut all_roots = Vec::new();
+
+            // Find position of selected in parent's children
+            if let Some(parent_id) = arena.get(selected_id).and_then(|n| n.parent) {
+                for child_id in arena.children(parent_id) {
+                    if child_id == selected_id || siblings.contains(&child_id) {
+                        all_roots.push(child_id);
+                    }
+                }
+            }
+
+            if all_roots.is_empty() {
+                all_roots.push(selected_id);
+            }
+
+            (all_roots, true)
+        }
+    } else {
+        (Vec::new(), false)
+    };
 
     // Cleanup and serialize
-    let (content_html, text) = if let Some(root_id) = content_root {
+    let (content_html, text) = if content_roots.is_empty() {
+        (String::new(), String::new())
+    } else if content_roots.len() == 1 && !use_sibling_expansion {
+        // Single root - standard path
+        let root_id = content_roots[0];
         let cleaned = cleanup::cleanup(&arena, root_id, options);
         let html = serialize::to_html(&cleaned);
         let text = serialize::to_text(&cleaned);
         (html, text)
     } else {
-        (String::new(), String::new())
+        // Multiple roots from sibling expansion - merge them
+        let mut combined_html = String::new();
+        let mut combined_text = String::new();
+
+        for root_id in &content_roots {
+            let cleaned = cleanup::cleanup(&arena, *root_id, options);
+            combined_html.push_str(&serialize::to_html(&cleaned));
+            combined_html.push('\n');
+            combined_text.push_str(&serialize::to_text(&cleaned));
+            combined_text.push('\n');
+        }
+
+        (combined_html, combined_text)
     };
 
     ExtractResult {

@@ -191,30 +191,56 @@ fn ancestor_fallback<'a>(
         return Some(best);
     }
 
-    // Find parent candidates
-    let parent_id = arena.get(best.node_id).and_then(|n| n.parent)?;
+    // Find the best ancestor candidate - check up to 3 levels
+    let mut current_id = best.node_id;
+    let mut best_ancestor: Option<&Candidate> = None;
+    let mut best_ancestor_score = f32::NEG_INFINITY;
 
-    // Look for parent in candidates
-    for candidate in candidates {
-        if candidate.node_id == parent_id {
-            // Check if parent is suitable
-            let parent_text_len =
-                (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
-                    as usize;
+    for _level in 0..3 {
+        let parent_id = match arena.get(current_id).and_then(|n| n.parent) {
+            Some(id) => id,
+            None => break,
+        };
 
-            // Parent should have substantially more text
-            if parent_text_len > best_text_len * 2 {
-                // Check parent tag is suitable
-                if matches!(
-                    candidate.tag,
-                    TagId::Div | TagId::Section | TagId::Article | TagId::Main
-                ) {
-                    // Check parent score is reasonable
-                    if candidate.score > best.score - 0.5 {
-                        return Some(candidate);
+        // Look for parent in candidates
+        for candidate in candidates {
+            if candidate.node_id == parent_id {
+                // Check if parent is suitable
+                let parent_text_len =
+                    (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
+                        as usize;
+
+                // Parent should have substantially more text
+                if parent_text_len > best_text_len * 3 {
+                    // Check parent tag is suitable
+                    if matches!(
+                        candidate.tag,
+                        TagId::Div | TagId::Section | TagId::Article | TagId::Main
+                    ) {
+                        // Use tie-break score that favors more paragraphs
+                        let p_count = candidate.features.values[FeatureIndex::LogPCount as usize];
+                        let tie_score = candidate.score + p_count * 0.5;
+
+                        if tie_score > best_ancestor_score {
+                            best_ancestor = Some(candidate);
+                            best_ancestor_score = tie_score;
+                        }
                     }
                 }
             }
+        }
+
+        current_id = parent_id;
+    }
+
+    // Accept ancestor if its adjusted score is reasonably close to best
+    // More generous threshold since we're promoting to a larger container
+    if let Some(ancestor) = best_ancestor {
+        let adjusted_best_score = best.score;
+        // Allow ancestor if it's within 3.0 points of the best
+        // This is more generous because larger containers naturally score lower
+        if best_ancestor_score > adjusted_best_score - 3.0 {
+            return Some(ancestor);
         }
     }
 

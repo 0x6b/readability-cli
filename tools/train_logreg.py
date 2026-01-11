@@ -22,6 +22,7 @@ from typing import Optional
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingClassifier
 
 # Feature names in order (must match features.rs)
 FEATURE_NAMES = [
@@ -51,7 +52,7 @@ FEATURE_NAMES = [
     "nav_tag_in_subtree_count",
     "log_form_element_count",
     "log_script_style_count",
-    "inline_style_count",
+    "high_link_density_flag",
     # Code-ness (24-31)
     "log_pre_count",
     "log_code_count",
@@ -97,9 +98,27 @@ FEATURE_NAMES = [
     "child_diversity",
     "text_density",
     "content_to_boilerplate_ratio",
+    # Readability-style features (64-71)
+    "log_comma_count",
+    "avg_paragraph_len",
+    "is_article_tag",
+    "is_main_tag",
+    "is_semantic_container",
+    "paragraph_text_score",
+    "clean_text_ratio",
+    "ancestor_article_depth",
+    # Anti-over-extraction features (72-79)
+    "content_density",
+    "log_clean_text_len",
+    "avg_paragraph_len_strict",
+    "long_paragraph_ratio",
+    "text_to_markup_ratio",
+    "has_min_paragraphs",
+    "descendant_diversity",
+    "content_cluster_score",
 ]
 
-NUM_FEATURES = 64
+NUM_FEATURES = 80
 
 
 def run_readability_js(html_path: Path) -> Optional[str]:
@@ -226,21 +245,23 @@ def load_corpus(corpus_dir: Path) -> list[tuple[Path, str]]:
 def generate_training_data(
     corpus_pairs: list[tuple[Path, str]],
     overlap_threshold: float = 0.5,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate training data from corpus.
 
-    Returns (X, y) where:
+    Returns (X, y, weights) where:
     - X is feature matrix [n_samples, n_features]
     - y is labels [n_samples] (1 for positive, 0 for negative)
+    - weights is sample weights [n_samples] based on overlap quality
 
     Labeling strategy:
     - Compute Jaccard overlap between each candidate's text and expected text
     - Label as positive if overlap >= threshold
-    - This teaches the model to match Readability.js output
+    - Weight samples by overlap quality (squared) to favor high-overlap candidates
     """
     X_list = []
     y_list = []
+    weight_list = []
 
     for html_path, teacher_text in corpus_pairs:
         candidates = extract_candidates_with_features(html_path)
@@ -265,17 +286,27 @@ def generate_training_data(
 
             is_positive = overlap >= overlap_threshold
             y_list.append(1 if is_positive else 0)
+
+            # Weight by overlap quality (squared to heavily favor high overlap)
+            # Positive samples: weight by overlap^2
+            # Negative samples: weight by (1-overlap) to penalize near-misses more
+            if is_positive:
+                weight_list.append(overlap ** 2)
+            else:
+                weight_list.append((1 - overlap) ** 0.5)  # Sqrt to not over-penalize
+
             if is_positive:
                 positive_count += 1
 
         print(f"  {html_path.name}: {len(candidates)} candidates, {positive_count} positive")
 
-    return np.array(X_list), np.array(y_list)
+    return np.array(X_list), np.array(y_list), np.array(weight_list)
 
 
 def train_model(
     X: np.ndarray,
     y: np.ndarray,
+    sample_weights: np.ndarray = None,
     C: float = 1.0,
 ) -> tuple[np.ndarray, float]:
     """
@@ -294,7 +325,7 @@ def train_model(
         solver="lbfgs",
         random_state=42,
     )
-    model.fit(X_scaled, y)
+    model.fit(X_scaled, y, sample_weight=sample_weights)
 
     # Return weights and bias
     # Note: In production, we'd need to handle the scaling properly
@@ -303,6 +334,139 @@ def train_model(
     bias = model.intercept_[0] - np.dot(weights, scaler.mean_)
 
     return weights, bias
+
+
+def train_with_hard_negative_mining(
+    X: np.ndarray,
+    y: np.ndarray,
+    sample_weights: np.ndarray = None,
+    C: float = 1.0,
+    n_iterations: int = 3,
+    hard_negative_boost: float = 2.0,
+) -> tuple[np.ndarray, float]:
+    """
+    Train with hard negative mining - iteratively upweight misclassified samples.
+
+    This improves model performance on difficult cases by:
+    1. Training an initial model
+    2. Finding samples that are misclassified or have low confidence
+    3. Boosting weights of hard samples
+    4. Retraining
+
+    Args:
+        X: Feature matrix
+        y: Labels
+        sample_weights: Initial sample weights
+        C: Regularization parameter
+        n_iterations: Number of hard negative mining iterations
+        hard_negative_boost: Weight multiplier for hard samples
+
+    Returns (weights, bias).
+    """
+    if sample_weights is None:
+        sample_weights = np.ones(len(y))
+    else:
+        sample_weights = sample_weights.copy()
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    model = None
+
+    for iteration in range(n_iterations):
+        print(f"  Hard negative mining iteration {iteration + 1}/{n_iterations}")
+
+        # Train model with current weights
+        model = LogisticRegression(
+            C=C,
+            max_iter=1000,
+            solver="lbfgs",
+            random_state=42 + iteration,
+        )
+        model.fit(X_scaled, y, sample_weight=sample_weights)
+
+        if iteration < n_iterations - 1:
+            # Find hard samples for next iteration
+            proba = model.predict_proba(X_scaled)[:, 1]
+
+            # Hard negatives: predicted positive but actually negative
+            hard_neg_mask = (y == 0) & (proba > 0.5)
+
+            # Hard positives: predicted negative but actually positive
+            hard_pos_mask = (y == 1) & (proba < 0.5)
+
+            # Low confidence correct predictions (also worth boosting)
+            low_conf_mask = np.abs(proba - 0.5) < 0.2
+
+            # Boost weights for hard samples
+            hard_mask = hard_neg_mask | hard_pos_mask | low_conf_mask
+            sample_weights[hard_mask] *= hard_negative_boost
+
+            hard_count = hard_mask.sum()
+            print(f"    Found {hard_count} hard samples, boosting weights")
+
+    # Extract final weights
+    weights = model.coef_[0] / scaler.scale_
+    bias = model.intercept_[0] - np.dot(weights, scaler.mean_)
+
+    return weights, bias
+
+
+def train_gradient_boosting(
+    X: np.ndarray,
+    y: np.ndarray,
+    sample_weights: np.ndarray = None,
+    n_estimators: int = 100,
+    max_depth: int = 3,
+    learning_rate: float = 0.1,
+) -> tuple[np.ndarray, float]:
+    """
+    Train gradient boosting model and extract linear approximation.
+
+    Gradient boosting can capture non-linear interactions between features.
+    We extract a linear approximation via feature importances for use
+    in the logistic regression-based Rust code.
+
+    Note: This is an approximation - the actual GB model is non-linear.
+
+    Returns (weights, bias).
+    """
+    # Normalize features for consistent scale
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Train gradient boosting classifier
+    model = GradientBoostingClassifier(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        random_state=42,
+    )
+    model.fit(X_scaled, y, sample_weight=sample_weights)
+
+    # Extract feature importances as weights
+    # Scale by standard deviation to get proper coefficients
+    importances = model.feature_importances_
+
+    # For positive/negative direction, we need to analyze correlation with labels
+    # Use sign based on correlation between feature and positive class probability
+    from scipy.stats import pearsonr
+    proba = model.predict_proba(X_scaled)[:, 1]
+
+    # Compute signed weights based on feature correlation with predictions
+    signed_weights = np.zeros_like(importances)
+    for i in range(len(importances)):
+        corr, _ = pearsonr(X_scaled[:, i], proba)
+        signed_weights[i] = importances[i] * np.sign(corr) / scaler.scale_[i]
+
+    # Normalize to similar scale as logistic regression
+    # Find a bias that gives ~50% probability at origin
+    mean_score = np.dot(signed_weights, scaler.mean_)
+    bias = -mean_score  # Adjust bias so mean sample has ~0 score
+
+    print(f"  GB Model accuracy: {model.score(X_scaled, y):.3f}")
+
+    return signed_weights, bias
 
 
 def save_weights(
@@ -345,6 +509,28 @@ def main():
         default=1.0,
         help="Regularization parameter (inverse of regularization strength)",
     )
+    parser.add_argument(
+        "--hard-negative-mining",
+        action="store_true",
+        help="Enable hard negative mining for improved training",
+    )
+    parser.add_argument(
+        "--hnm-iterations",
+        type=int,
+        default=3,
+        help="Number of hard negative mining iterations",
+    )
+    parser.add_argument(
+        "--gradient-boosting",
+        action="store_true",
+        help="Use gradient boosting instead of logistic regression",
+    )
+    parser.add_argument(
+        "--gb-estimators",
+        type=int,
+        default=100,
+        help="Number of estimators for gradient boosting",
+    )
 
     args = parser.parse_args()
 
@@ -383,6 +569,10 @@ def main():
             -1.5, -1.2, -0.4, -0.8, -0.5, -1.0, -0.3, -0.4,
             # Position/context (56-63)
             -0.2, -0.1, 0.5, 0.6, 0.4, 0.2, 0.3, 0.5,
+            # Readability-style (64-71)
+            0.5, 0.3, 1.0, 0.8, 0.6, 0.4, 0.5, 0.2,
+            # Anti-over-extraction (72-79)
+            0.3, 0.2, 0.4, 0.3, 0.2, 0.5, 0.2, 0.3,
         ])
         bias = -2.0
         save_weights(weights, bias, args.output)
@@ -390,17 +580,34 @@ def main():
 
     # Generate training data
     print("Generating training data...")
-    X, y = generate_training_data(corpus_pairs)
+    X, y, sample_weights = generate_training_data(corpus_pairs)
 
     if len(X) == 0:
         print("No training data generated.")
         sys.exit(1)
 
     print(f"Training data: {len(X)} samples, {sum(y)} positive")
+    print(f"Sample weights: min={sample_weights.min():.3f}, max={sample_weights.max():.3f}, mean={sample_weights.mean():.3f}")
 
     # Train model
     print("Training model...")
-    weights, bias = train_model(X, y, C=args.C)
+    if args.gradient_boosting:
+        print("Using Gradient Boosting...")
+        weights, bias = train_gradient_boosting(
+            X, y,
+            sample_weights=sample_weights,
+            n_estimators=args.gb_estimators,
+        )
+    elif args.hard_negative_mining:
+        print("Using Hard Negative Mining...")
+        weights, bias = train_with_hard_negative_mining(
+            X, y,
+            sample_weights=sample_weights,
+            C=args.C,
+            n_iterations=args.hnm_iterations,
+        )
+    else:
+        weights, bias = train_model(X, y, sample_weights=sample_weights, C=args.C)
 
     # Save weights
     save_weights(weights, bias, args.output)

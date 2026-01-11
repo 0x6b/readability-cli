@@ -24,6 +24,8 @@ FEATURE_GROUPS = [
     ("Keywords", 40, 48),
     ("TOC signature", 48, 56),
     ("Position/context", 56, 64),
+    ("Readability-style", 64, 72),
+    ("Anti-over-extraction", 72, 80),
 ]
 
 # Feature names for comments
@@ -54,7 +56,7 @@ FEATURE_NAMES = [
     "NavTagInSubtreeCount",
     "LogFormElementCount",
     "LogScriptStyleCount",
-    "InlineStyleCount",
+    "HighLinkDensityFlag",
     # Code-ness (24-31)
     "LogPreCount",
     "LogCodeCount",
@@ -100,6 +102,24 @@ FEATURE_NAMES = [
     "ChildDiversity",
     "TextDensity",
     "ContentToBoilerplateRatio",
+    # Readability-style features (64-71)
+    "LogCommaCount",
+    "AvgParagraphLen",
+    "IsArticleTag",
+    "IsMainTag",
+    "IsSemanticContainer",
+    "ParagraphTextScore",
+    "CleanTextRatio",
+    "AncestorArticleDepth",
+    # Anti-over-extraction features (72-79)
+    "ContentDensity",
+    "LogCleanTextLen",
+    "AvgParagraphLenStrict",
+    "LongParagraphRatio",
+    "TextToMarkupRatio",
+    "HasMinParagraphs",
+    "DescendantDiversity",
+    "ContentClusterScore",
 ]
 
 
@@ -195,8 +215,8 @@ def main():
     weights = data["weights"]
     bias = data["bias"]
 
-    if len(weights) != 64:
-        print(f"Warning: Expected 64 weights, got {len(weights)}")
+    if len(weights) != 80:
+        print(f"Warning: Expected 80 weights, got {len(weights)}")
 
     # Generate Rust code
     rust_code = generate_rust_code(weights, bias)

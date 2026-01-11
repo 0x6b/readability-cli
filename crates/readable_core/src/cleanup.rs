@@ -128,8 +128,8 @@ fn mark_for_removal(
             return;
         }
 
-        // Remove boilerplate tags
-        if matches!(tag, TagId::Nav | TagId::Aside | TagId::Footer | TagId::Header) {
+        // Enhanced boilerplate detection using postprocess module
+        if crate::postprocess::is_boilerplate_for_cleanup(arena, node_id) {
             remove_set.insert(node_id);
             return;
         }

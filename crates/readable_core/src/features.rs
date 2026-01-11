@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Number of features in the feature vector
-pub const NUM_FEATURES: usize = 64;
+pub const NUM_FEATURES: usize = 80;
 
 /// Feature vector for a candidate
 #[derive(Debug, Clone)]
@@ -60,7 +60,7 @@ pub enum FeatureIndex {
     NavTagInSubtreeCount = 20,
     LogFormElementCount = 21,
     LogScriptStyleCount = 22,
-    InlineStyleCount = 23,
+    HighLinkDensityFlag = 23, // 1.0 if link density > 0.25 (Readability.js threshold)
 
     // Code-ness features (24-31)
     LogPreCount = 24,
@@ -111,6 +111,26 @@ pub enum FeatureIndex {
     ChildDiversity = 61,
     TextDensity = 62,
     ContentToBoilerplateRatio = 63,
+
+    // Readability-style features (64-71)
+    LogCommaCount = 64,        // Raw comma count (Readability.js core heuristic)
+    AvgParagraphLen = 65,      // Average text length per paragraph
+    IsArticleTag = 66,         // 1.0 if candidate is <article>
+    IsMainTag = 67,            // 1.0 if candidate is <main>
+    IsSemanticContainer = 68,  // 1.0 if article/main/section
+    ParagraphTextScore = 69,   // p_count * log(avg_para_len) - Readability-like
+    CleanTextRatio = 70,       // (text - link_text) / text
+    AncestorArticleDepth = 71, // Distance to nearest article ancestor (0 if none)
+
+    // Anti-over-extraction features (72-79)
+    ContentDensity = 72, // text_len / subtree_node_count - high = focused content
+    LogCleanTextLen = 73, // log(text_len - link_text_len) - content without links
+    AvgParagraphLenStrict = 74, // avg chars per <p>, stricter threshold
+    LongParagraphRatio = 75, // ratio of paragraphs > 80 chars
+    TextToMarkupRatio = 76, // text_len / (subtree_node_count * 10)
+    HasMinParagraphs = 77, // 1.0 if >= 3 paragraphs with > 50 chars each
+    DescendantDiversity = 78, // variety of content tags in subtree
+    ContentClusterScore = 79, // paragraphs close together vs scattered
 }
 
 /// Extract features from a candidate node
@@ -170,7 +190,10 @@ pub fn extract_features(arena: &Arena, node_id: NodeId) -> FeatureVector {
         log1p((counts.form + counts.input + counts.select + counts.textarea) as f32);
     features.values[FeatureIndex::LogScriptStyleCount as usize] =
         log1p((counts.script + counts.style) as f32);
-    features.values[FeatureIndex::InlineStyleCount as usize] = 0.0; // Would need attr parsing
+    // High link density flag: 1.0 if link density > 0.25 (Readability.js threshold)
+    let link_density_val = counts.link_text_len as f32 / text_len_chars.max(1) as f32;
+    features.values[FeatureIndex::HighLinkDensityFlag as usize] =
+        if link_density_val > 0.25 { 1.0 } else { 0.0 };
 
     // Code-ness features
     features.values[FeatureIndex::LogPreCount as usize] = log1p(counts.pre as f32);
@@ -276,6 +299,82 @@ pub fn extract_features(arena: &Arena, node_id: NodeId) -> FeatureVector {
                 + counts.footer_text_len)
                 .max(1) as f32,
     );
+
+    // Readability-style features (64-71)
+
+    // LogCommaCount: raw comma count (Readability.js core heuristic for prose detection)
+    features.values[FeatureIndex::LogCommaCount as usize] = log1p(commas as f32);
+
+    // AvgParagraphLen: average text per paragraph (normalized)
+    let avg_para_len = if counts.p > 0 { text_len_chars as f32 / counts.p as f32 } else { 0.0 };
+    features.values[FeatureIndex::AvgParagraphLen as usize] = (avg_para_len / 500.0).min(1.0);
+
+    // IsArticleTag, IsMainTag, IsSemanticContainer: tag identity features
+    let is_article =
+        matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Article, .. }));
+    let is_main = matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Main, .. }));
+    let is_section =
+        matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Section, .. }));
+    features.values[FeatureIndex::IsArticleTag as usize] = if is_article { 1.0 } else { 0.0 };
+    features.values[FeatureIndex::IsMainTag as usize] = if is_main { 1.0 } else { 0.0 };
+    features.values[FeatureIndex::IsSemanticContainer as usize] =
+        if is_article || is_main || is_section { 1.0 } else { 0.0 };
+
+    // ParagraphTextScore: p_count * log(avg_para_len) - Readability-like composite
+    features.values[FeatureIndex::ParagraphTextScore as usize] =
+        if counts.p > 0 && avg_para_len > 0.0 {
+            ((counts.p as f32).sqrt() * log1p(avg_para_len)).min(10.0) / 10.0
+        } else {
+            0.0
+        };
+
+    // CleanTextRatio: (text - link_text) / text
+    let clean_text_len = text_len_chars.saturating_sub(counts.link_text_len);
+    features.values[FeatureIndex::CleanTextRatio as usize] =
+        clamp01(clean_text_len as f32 / text_len_chars.max(1) as f32);
+
+    // AncestorArticleDepth: distance to nearest article/main ancestor
+    features.values[FeatureIndex::AncestorArticleDepth as usize] =
+        compute_ancestor_semantic_depth(arena, node_id);
+
+    // Anti-over-extraction features (72-79)
+    let subtree_nodes = arena.subtree_node_count(node_id).max(1);
+
+    // ContentDensity: text per node - high means focused content
+    let content_density = text_len_chars as f32 / subtree_nodes as f32;
+    features.values[FeatureIndex::ContentDensity as usize] = (content_density / 50.0).min(1.0);
+
+    // LogCleanTextLen: log of text without links
+    features.values[FeatureIndex::LogCleanTextLen as usize] = log1p(clean_text_len as f32);
+
+    // Compute paragraph statistics
+    let para_stats = compute_paragraph_stats(arena, node_id);
+
+    // AvgParagraphLenStrict: stricter average (0 if < 3 paragraphs)
+    features.values[FeatureIndex::AvgParagraphLenStrict as usize] =
+        if para_stats.count >= 3 { (para_stats.avg_len / 200.0).min(1.0) } else { 0.0 };
+
+    // LongParagraphRatio: ratio of paragraphs > 80 chars
+    features.values[FeatureIndex::LongParagraphRatio as usize] = if para_stats.count > 0 {
+        para_stats.long_count as f32 / para_stats.count as f32
+    } else {
+        0.0
+    };
+
+    // TextToMarkupRatio: higher = more text-focused, less markup-heavy
+    features.values[FeatureIndex::TextToMarkupRatio as usize] =
+        (text_len_chars as f32 / (subtree_nodes * 10) as f32).min(1.0);
+
+    // HasMinParagraphs: 1.0 if >= 3 paragraphs with > 50 chars each
+    features.values[FeatureIndex::HasMinParagraphs as usize] =
+        if para_stats.substantial_count >= 3 { 1.0 } else { 0.0 };
+
+    // DescendantDiversity: variety of content-related tags
+    features.values[FeatureIndex::DescendantDiversity as usize] =
+        compute_descendant_diversity(arena, node_id);
+
+    // ContentClusterScore: are paragraphs clustered together or scattered?
+    features.values[FeatureIndex::ContentClusterScore as usize] = para_stats.cluster_score;
 
     features
 }
@@ -677,6 +776,25 @@ fn has_ancestor_tag(arena: &Arena, node_id: NodeId, tag: TagId) -> bool {
     false
 }
 
+/// Compute normalized distance to nearest semantic ancestor (article/main)
+/// Returns 0.0 if node is itself article/main, higher values for deeper nesting
+fn compute_ancestor_semantic_depth(arena: &Arena, node_id: NodeId) -> f32 {
+    let mut depth = 0;
+    for ancestor_id in arena.ancestors(node_id) {
+        depth += 1;
+        if let Some(ancestor) = arena.get(ancestor_id) {
+            if let NodeKind::Element { tag, .. } = &ancestor.kind {
+                if matches!(tag, TagId::Article | TagId::Main) {
+                    // Found semantic container - normalize by depth
+                    return clamp01(depth as f32 / 10.0);
+                }
+            }
+        }
+    }
+    // No semantic ancestor found
+    0.0
+}
+
 /// Compute relative position (0 = start, 1 = end of body)
 fn compute_relative_position(arena: &Arena, node_id: NodeId) -> f32 {
     let body_id = match arena.find_body() {
@@ -742,6 +860,126 @@ fn compute_child_diversity(arena: &Arena, node_id: NodeId) -> f32 {
     }
 
     clamp01(tag_set.len() as f32 / child_count.min(10) as f32)
+}
+
+/// Paragraph statistics for anti-over-extraction features
+struct ParagraphStats {
+    count: usize,
+    avg_len: f32,
+    long_count: usize,
+    substantial_count: usize,
+    cluster_score: f32,
+}
+
+/// Compute paragraph statistics for a subtree
+fn compute_paragraph_stats(arena: &Arena, node_id: NodeId) -> ParagraphStats {
+    let mut paragraphs: Vec<(NodeId, usize)> = Vec::new();
+
+    // Find all <p> elements and their text lengths
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag: TagId::P, .. } = &node.kind {
+                let text_len = arena.collect_text(desc_id).chars().count();
+                paragraphs.push((desc_id, text_len));
+            }
+        }
+    }
+
+    let count = paragraphs.len();
+    if count == 0 {
+        return ParagraphStats {
+            count: 0,
+            avg_len: 0.0,
+            long_count: 0,
+            substantial_count: 0,
+            cluster_score: 0.0,
+        };
+    }
+
+    let total_len: usize = paragraphs.iter().map(|(_, len)| len).sum();
+    let avg_len = total_len as f32 / count as f32;
+
+    let long_count = paragraphs.iter().filter(|(_, len)| *len > 80).count();
+    let substantial_count = paragraphs.iter().filter(|(_, len)| *len > 50).count();
+
+    // Compute cluster score: are paragraphs close together or scattered?
+    // Higher score = more clustered (good for content)
+    let cluster_score = if count >= 2 {
+        // Get depths of paragraphs
+        let depths: Vec<u32> = paragraphs
+            .iter()
+            .filter_map(|(id, _)| arena.get(*id).map(|n| n.depth))
+            .collect();
+
+        if depths.is_empty() {
+            0.0
+        } else {
+            // Check if paragraphs are at similar depths
+            let min_depth = *depths.iter().min().unwrap_or(&0);
+            let max_depth = *depths.iter().max().unwrap_or(&0);
+            let depth_variance = max_depth - min_depth;
+
+            // Low variance = high cluster score
+            if depth_variance <= 2 {
+                1.0
+            } else if depth_variance <= 4 {
+                0.5
+            } else {
+                0.2
+            }
+        }
+    } else {
+        0.5 // Single paragraph - neutral score
+    };
+
+    ParagraphStats {
+        count,
+        avg_len,
+        long_count,
+        substantial_count,
+        cluster_score,
+    }
+}
+
+/// Compute descendant diversity: variety of content-related tags in subtree
+/// Higher diversity often indicates real content rather than navigation/boilerplate
+fn compute_descendant_diversity(arena: &Arena, node_id: NodeId) -> f32 {
+    use std::collections::HashSet;
+
+    // Content-related tags to track
+    let content_tags = [
+        TagId::P,
+        TagId::H1,
+        TagId::H2,
+        TagId::H3,
+        TagId::H4,
+        TagId::H5,
+        TagId::H6,
+        TagId::Pre,
+        TagId::Code,
+        TagId::Blockquote,
+        TagId::Ul,
+        TagId::Ol,
+        TagId::Li,
+        TagId::Table,
+        TagId::Figure,
+        TagId::Img,
+    ];
+
+    let mut found_tags: HashSet<TagId> = HashSet::new();
+
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag, .. } = &node.kind {
+                if content_tags.contains(tag) {
+                    found_tags.insert(*tag);
+                }
+            }
+        }
+    }
+
+    // Normalize: 0 tags = 0.0, 5+ tags = 1.0
+    (found_tags.len() as f32 / 5.0).min(1.0)
 }
 
 /// Natural log of (1 + x)
