@@ -2,8 +2,7 @@
 //!
 //! Provides a JavaScript-friendly API for content extraction.
 
-use readable_core::{ExtractOptions, ExtractResult};
-use serde::{Deserialize, Serialize};
+use readable_core::ExtractOptions;
 use wasm_bindgen::prelude::*;
 
 /// Extract readable content from HTML
