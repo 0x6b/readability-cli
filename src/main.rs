@@ -80,12 +80,12 @@ async fn main() -> Result<()> {
             println!("{}", result.text);
         }
         "markdown" | _ => {
-            // Convert HTML to simple markdown-like format
+            // Convert HTML to markdown
             if let Some(title) = &result.title {
                 println!("# {}\n", title);
             }
-            // For now, output the text (proper markdown conversion can be added later)
-            println!("{}", result.text);
+            let markdown = html2md::parse_html(&result.content_html);
+            println!("{}", markdown);
         }
     }
 
