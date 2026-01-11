@@ -376,6 +376,12 @@ fn is_boilerplate_element(arena: &Arena, node_id: NodeId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
+    use crate::candidates::generate_candidates;
+    #[cfg(test)]
+    use crate::features::extract_features;
+    #[cfg(test)]
+    use crate::model::score;
     use crate::parse::parse_html;
 
     #[test]
@@ -390,12 +396,12 @@ mod tests {
         "#;
 
         let arena = parse_html(html);
-        let mut candidates = crate::candidates::generate_candidates(&arena, 100);
+        let mut candidates = generate_candidates(&arena, 100);
 
         // Compute features and scores
         for c in &mut candidates {
-            c.features = crate::features::extract_features(&arena, c.node_id);
-            c.score = crate::model::score(&c.features);
+            c.features = extract_features(&arena, c.node_id);
+            c.score = score(&c.features);
         }
 
         // Find article candidate

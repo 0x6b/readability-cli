@@ -3,6 +3,7 @@
 //! Provides a JavaScript-friendly API for content extraction.
 
 use readable_core::ExtractOptions;
+use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
 /// Extract readable content from HTML
@@ -19,14 +20,14 @@ pub fn extract(html: &str, opts: JsValue) -> Result<JsValue, JsValue> {
     let options: ExtractOptions = if opts.is_undefined() || opts.is_null() {
         ExtractOptions::default()
     } else {
-        serde_wasm_bindgen::from_value(opts).map_err(|e| JsValue::from_str(&e.to_string()))?
+        from_value(opts).map_err(|e| JsValue::from_str(&e.to_string()))?
     };
 
     // Run extraction
     let result = readable_core::extract(html, &options);
 
     // Convert to JS
-    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+    to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 /// Get version information

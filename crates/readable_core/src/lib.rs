@@ -16,7 +16,16 @@ pub mod select;
 pub mod serialize;
 pub mod title;
 
+use candidates::generate_candidates;
+use debug::{build_debug_info, DebugInfo};
+use features::extract_features;
+use model::score;
+use parse::parse_html;
+use postprocess::{apply_score_propagation, find_expansion_siblings};
+use select::select_best;
 use serde::{Deserialize, Serialize};
+use serialize::{to_html, to_text};
+use title::{extract_byline, extract_title};
 
 /// Options for content extraction
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,7 +95,7 @@ pub struct ExtractResult {
 
     /// Debug information (only present if debug option was enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub debug: Option<debug::DebugInfo>,
+    pub debug: Option<DebugInfo>,
 }
 
 /// Extract readable content from HTML
@@ -104,34 +113,33 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     };
 
     // Parse HTML into node arena
-    let arena = parse::parse_html(html);
+    let arena = parse_html(html);
 
     // Extract title early (before cleanup)
-    let title = title::extract_title(&arena);
-    let byline = title::extract_byline(&arena);
+    let title = extract_title(&arena);
+    let byline = extract_byline(&arena);
 
     // Generate candidates
-    let mut candidates = candidates::generate_candidates(&arena, options.max_candidates);
+    let mut candidates = generate_candidates(&arena, options.max_candidates);
 
     // Compute features for each candidate
     for candidate in &mut candidates {
-        candidate.features = features::extract_features(&arena, candidate.node_id);
+        candidate.features = extract_features(&arena, candidate.node_id);
     }
 
     // Score candidates with logistic regression
     for candidate in &mut candidates {
-        candidate.score = model::score(&candidate.features);
+        candidate.score = score(&candidate.features);
     }
 
     // Apply score propagation (Readability.js-style parent score accumulation)
-    postprocess::apply_score_propagation(&mut candidates, &arena);
+    apply_score_propagation(&mut candidates, &arena);
 
     // Select best candidate
-    let selected = select::select_best(&candidates, &arena, options);
+    let selected = select_best(&candidates, &arena, options);
 
     // Build debug info if requested
-    let debug_info =
-        if options.debug { Some(debug::build_debug_info(&candidates, &arena)) } else { None };
+    let debug_info = if options.debug { Some(build_debug_info(&candidates, &arena)) } else { None };
 
     // Get the selected subtree root and find sibling expansions
     let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
@@ -148,7 +156,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
 
         if html_has_body && matches!(selected_tag, Some(dom::TagId::P | dom::TagId::Td)) {
             if let Some(body_id) = arena.find_body() {
-                let body_features = features::extract_features(&arena, body_id);
+                let body_features = extract_features(&arena, body_id);
                 let body_text_len =
                     (body_features.values[features::FeatureIndex::LogTextLenChars as usize].exp()
                         - 1.0) as usize;
@@ -170,7 +178,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         (selected_id, selected_text_len, selected_tag)
     } else if html_has_body {
         if let Some(body_id) = arena.find_body() {
-            let body_features = features::extract_features(&arena, body_id);
+            let body_features = extract_features(&arena, body_id);
             let body_text_len = (body_features.values
                 [features::FeatureIndex::LogTextLenChars as usize]
                 .exp()
@@ -213,10 +221,10 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
             if section_siblings > 1 {
                 Vec::new()
             } else {
-                postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len)
+                find_expansion_siblings(&arena, selected_id, selected_text_len)
             }
         } else {
-            postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len)
+            find_expansion_siblings(&arena, selected_id, selected_text_len)
         };
 
         if siblings.is_empty() {
@@ -251,8 +259,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         // Single root - standard path
         let root_id = content_roots[0];
         let cleaned = cleanup::cleanup(&arena, root_id, options);
-        let html = serialize::to_html(&cleaned);
-        let text = serialize::to_text(&cleaned);
+        let html = to_html(&cleaned);
+        let text = to_text(&cleaned);
         (html, text)
     } else {
         // Multiple roots from sibling expansion - merge them
@@ -261,9 +269,9 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
 
         for root_id in &content_roots {
             let cleaned = cleanup::cleanup(&arena, *root_id, options);
-            combined_html.push_str(&serialize::to_html(&cleaned));
+            combined_html.push_str(&to_html(&cleaned));
             combined_html.push('\n');
-            combined_text.push_str(&serialize::to_text(&cleaned));
+            combined_text.push_str(&to_text(&cleaned));
             combined_text.push('\n');
         }
 

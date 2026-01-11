@@ -1,9 +1,14 @@
-use std::io::{self, Read};
+use std::{
+    io::{stdin, Read},
+    process::exit,
+};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
+use html2md::parse_html;
 use readable_core::{extract, ExtractOptions};
 use reqwest::Url;
+use serde_json::to_string_pretty;
 
 #[derive(Parser)]
 #[clap(version, about = "Extract readable content from HTML")]
@@ -43,13 +48,13 @@ async fn main() -> Result<()> {
     // Get HTML content
     let html = if args.stdin {
         let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer)?;
+        stdin().read_to_string(&mut buffer)?;
         buffer
     } else if let Some(url) = &args.url {
         fetch_url(url, &args.user_agent).await?
     } else {
         eprintln!("Error: Either provide a URL or use --stdin to read HTML from stdin");
-        std::process::exit(1);
+        exit(1);
     };
 
     // Configure extraction options
@@ -65,27 +70,27 @@ async fn main() -> Result<()> {
     // Output based on format
     match args.format.as_str() {
         "json" => {
-            println!("{}", serde_json::to_string_pretty(&result)?);
+            println!("{}", to_string_pretty(&result)?);
         }
         "html" => {
             if let Some(title) = &result.title {
-                println!("<!-- Title: {} -->", title);
+                println!("<!-- Title: {title} -->");
             }
             println!("{}", result.content_html);
         }
         "text" => {
             if let Some(title) = &result.title {
-                println!("{}\n", title);
+                println!("{title}\n");
             }
             println!("{}", result.text);
         }
         "markdown" | _ => {
             // Convert HTML to markdown
             if let Some(title) = &result.title {
-                println!("# {}\n", title);
+                println!("# {title}\n");
             }
-            let markdown = html2md::parse_html(&result.content_html);
-            println!("{}", markdown);
+            let markdown = parse_html(&result.content_html);
+            println!("{markdown}");
         }
     }
 
@@ -98,7 +103,7 @@ async fn fetch_url(url: &Url, user_agent: &str) -> Result<String> {
     let response = client.get(url.as_str()).send().await?;
 
     if !response.status().is_success() {
-        anyhow::bail!("HTTP error: {}", response.status());
+        bail!("HTTP error: {}", response.status());
     }
 
     let html = response.text().await?;

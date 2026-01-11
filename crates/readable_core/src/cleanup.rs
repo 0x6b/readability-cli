@@ -5,8 +5,10 @@
 use std::collections::HashSet;
 
 use crate::{
+    blocklist::should_block,
     candidates::{negative_keywords, positive_keywords},
     dom::{Arena, NodeId, NodeKind, TagId},
+    postprocess::is_boilerplate_for_cleanup,
     ExtractOptions,
 };
 
@@ -129,13 +131,13 @@ fn mark_for_removal(
         }
 
         // Enhanced boilerplate detection using postprocess module
-        if crate::postprocess::is_boilerplate_for_cleanup(arena, node_id) {
+        if is_boilerplate_for_cleanup(arena, node_id) {
             remove_set.insert(node_id);
             return;
         }
 
         // Curated blocklist for common boilerplate patterns
-        if crate::blocklist::should_block(arena, node_id) {
+        if should_block(arena, node_id) {
             remove_set.insert(node_id);
             return;
         }
@@ -398,6 +400,8 @@ pub fn flatten_cleaned_tree(node: CleanedNode) -> Option<CleanedNode> {
 mod tests {
     use super::*;
     use crate::parse::parse_html;
+    #[cfg(test)]
+    use crate::serialize::to_html;
 
     #[test]
     fn test_cleanup_removes_script() {
@@ -420,7 +424,7 @@ mod tests {
         let cleaned = cleanup(&arena, body_id, &options);
 
         // Serialize to check script is removed
-        let html = crate::serialize::to_html(&cleaned);
+        let html = to_html(&cleaned);
         assert!(!html.contains("script"));
         assert!(!html.contains("alert"));
         assert!(html.contains("Main content"));
@@ -445,7 +449,7 @@ mod tests {
         let options = ExtractOptions::default();
         let cleaned = cleanup(&arena, body_id, &options);
 
-        let html = crate::serialize::to_html(&cleaned);
+        let html = to_html(&cleaned);
         assert!(!html.contains("Navigation"));
         assert!(html.contains("Article content"));
     }
@@ -470,7 +474,7 @@ mod tests {
         let options = ExtractOptions::default();
         let cleaned = cleanup(&arena, body_id, &options);
 
-        let html = crate::serialize::to_html(&cleaned);
+        let html = to_html(&cleaned);
         assert!(html.contains("<pre>"));
         assert!(html.contains("<code>"));
         assert!(html.contains("fn main()"));
@@ -495,7 +499,7 @@ mod tests {
         let options = ExtractOptions::default();
         let cleaned = cleanup(&arena, body_id, &options);
 
-        let html = crate::serialize::to_html(&cleaned);
+        let html = to_html(&cleaned);
         assert!(html.contains("https://example.com"));
         assert!(!html.contains("javascript:"));
     }

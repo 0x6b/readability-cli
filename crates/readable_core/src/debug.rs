@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     candidates::Candidate,
     dom::{Arena, NodeId, NodeKind},
-    features::FeatureIndex,
+    features::{FeatureIndex, FeatureVector},
 };
 
 /// Debug information for extraction
@@ -148,7 +148,7 @@ fn build_node_path(arena: &Arena, node_id: NodeId) -> String {
 
 /// Build feature summary from feature vector
 fn build_feature_summary(
-    features: &crate::features::FeatureVector,
+    features: &FeatureVector,
     arena: &Arena,
     node_id: NodeId,
 ) -> FeatureSummary {

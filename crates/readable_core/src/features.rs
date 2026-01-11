@@ -4,7 +4,7 @@
 
 use crate::{
     candidates::{negative_keywords, positive_keywords},
-    dom::{Arena, NodeId, NodeKind, TagId},
+    dom::{Arena, Attributes, NodeId, NodeKind, TagId},
 };
 
 /// Number of features in the feature vector
@@ -758,7 +758,7 @@ fn count_keyword_hits(arena: &Arena, node_id: NodeId) -> (usize, usize) {
 }
 
 /// Check if attributes contain specific keywords
-fn has_keyword_in_attrs(attrs: Option<&crate::dom::Attributes>, keywords: &[&str]) -> bool {
+fn has_keyword_in_attrs(attrs: Option<&Attributes>, keywords: &[&str]) -> bool {
     attrs.map_or(false, |a| a.contains_keyword(keywords))
 }
 
