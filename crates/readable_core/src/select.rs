@@ -198,12 +198,17 @@ fn refine_overextracted<'a>(
 
     let best_toc = best.features.values[FeatureIndex::TocLike as usize];
     let best_cluster = best.features.values[FeatureIndex::ContentClusterScore as usize];
+    let best_link_density = best.features.values[FeatureIndex::LinkDensity as usize];
+    let best_clean_ratio = best.features.values[FeatureIndex::CleanTextRatio as usize];
+    let best_p_count =
+        (best.features.values[FeatureIndex::LogPCount as usize].exp() - 1.0) as usize;
     if best_toc < 0.2 && best_cluster > 0.4 {
         return best;
     }
 
     let mut refined: Option<&Candidate> = None;
     let mut refined_score = f32::NEG_INFINITY;
+    let mut refined_candidates = 0usize;
 
     for candidate in candidates {
         if candidate.node_id == best.node_id {
@@ -238,6 +243,7 @@ fn refine_overextracted<'a>(
             continue;
         }
 
+        refined_candidates += 1;
         let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
         let focus_score = cluster * 2.0 + clean_ratio - toc_like;
 
@@ -245,6 +251,15 @@ fn refine_overextracted<'a>(
             refined = Some(candidate);
             refined_score = focus_score;
         }
+    }
+
+    if refined_candidates > 1
+        && best_toc < 0.2
+        && best_link_density < 0.05
+        && best_clean_ratio > 0.9
+        && best_p_count >= 8
+    {
+        return best;
     }
 
     refined.unwrap_or(best)
