@@ -310,6 +310,7 @@ impl TagId {
                 | TagId::P
                 | TagId::Pre
                 | TagId::Td
+                | TagId::Table
                 | TagId::Li
                 | TagId::Blockquote
         )
