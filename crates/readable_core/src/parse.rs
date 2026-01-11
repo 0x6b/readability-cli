@@ -1,5 +1,8 @@
 //! HTML parsing into node arena using html5ever
+//!
+//! Handles encoding detection and conversion for non-UTF-8 pages.
 
+use encoding_rs::Encoding;
 use html5ever::{parse_document, tendril::TendrilSink};
 use markup5ever_rcdom::{Handle, NodeData, RcDom};
 
@@ -7,6 +10,14 @@ use crate::dom::{Arena, Attributes, Node, NodeId, NodeKind, TagId};
 
 /// Parse an HTML string into a node arena
 pub fn parse_html(html: &str) -> Arena {
+    parse_html_bytes(html.as_bytes())
+}
+
+/// Parse HTML bytes into a node arena, handling encoding detection
+pub fn parse_html_bytes(bytes: &[u8]) -> Arena {
+    // Convert to UTF-8, detecting encoding if needed
+    let html = decode_html(bytes);
+
     let dom = parse_document(RcDom::default(), Default::default())
         .from_utf8()
         .read_from(&mut html.as_bytes())
@@ -16,6 +27,77 @@ pub fn parse_html(html: &str) -> Arena {
     let root = arena.add_node(Node::document());
     convert_node(&dom.document, root, &mut arena);
     arena
+}
+
+/// Decode HTML bytes to UTF-8 string, detecting encoding from BOM or meta tags
+fn decode_html(bytes: &[u8]) -> String {
+    // Check for BOM
+    if let Some(encoding) = detect_bom(bytes) {
+        let (decoded, _, _) = encoding.decode(bytes);
+        return decoded.into_owned();
+    }
+
+    // Try to detect charset from meta tags (scan first 1024 bytes)
+    let scan_len = bytes.len().min(1024);
+    if let Some(encoding) = detect_meta_charset(&bytes[..scan_len]) {
+        let (decoded, _, _) = encoding.decode(bytes);
+        return decoded.into_owned();
+    }
+
+    // Default: try UTF-8, fall back to Windows-1252 (superset of ISO-8859-1)
+    match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            let (decoded, _, _) = encoding_rs::WINDOWS_1252.decode(bytes);
+            decoded.into_owned()
+        }
+    }
+}
+
+/// Detect encoding from BOM (Byte Order Mark)
+fn detect_bom(bytes: &[u8]) -> Option<&'static Encoding> {
+    if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
+        Some(encoding_rs::UTF_8)
+    } else if bytes.starts_with(&[0xFE, 0xFF]) {
+        Some(encoding_rs::UTF_16BE)
+    } else if bytes.starts_with(&[0xFF, 0xFE]) {
+        Some(encoding_rs::UTF_16LE)
+    } else {
+        None
+    }
+}
+
+/// Detect encoding from meta charset tag
+fn detect_meta_charset(bytes: &[u8]) -> Option<&'static Encoding> {
+    // Convert to lowercase ASCII for searching
+    let lower: Vec<u8> = bytes.iter().map(|&b| b.to_ascii_lowercase()).collect();
+    let text = String::from_utf8_lossy(&lower);
+
+    // Look for <meta charset="...">
+    if let Some(pos) = text.find("charset") {
+        let rest = &text[pos..];
+        // Find the value after = or "
+        if let Some(start) = rest.find(|c| c == '"' || c == '\'') {
+            let rest = &rest[start + 1..];
+            if let Some(end) = rest.find(|c| c == '"' || c == '\'') {
+                let charset = rest[..end].trim();
+                return Encoding::for_label(charset.as_bytes());
+            }
+        }
+        // Also try charset=value without quotes
+        if let Some(eq_pos) = rest.find('=') {
+            let rest = &rest[eq_pos + 1..];
+            let end = rest
+                .find(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == '>' || c == ';')
+                .unwrap_or(rest.len());
+            let charset = rest[..end].trim();
+            if !charset.is_empty() {
+                return Encoding::for_label(charset.as_bytes());
+            }
+        }
+    }
+
+    None
 }
 
 /// Recursively convert html5ever nodes to arena nodes
@@ -180,5 +262,57 @@ mod tests {
         let text = arena.collect_text(pre_id.unwrap());
         // Should preserve the indentation
         assert!(text.contains("  indented"));
+    }
+
+    #[test]
+    fn test_detect_meta_charset() {
+        // UTF-8
+        let html = b"<meta charset=\"utf-8\">";
+        assert_eq!(detect_meta_charset(html), Some(encoding_rs::UTF_8));
+
+        // Shift-JIS
+        let html = b"<meta charset=\"shift_jis\">";
+        assert_eq!(detect_meta_charset(html), Some(encoding_rs::SHIFT_JIS));
+
+        // Content-Type style
+        let html = b"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=euc-jp\">";
+        assert_eq!(detect_meta_charset(html), Some(encoding_rs::EUC_JP));
+
+        // No charset
+        let html = b"<html><head><title>Test</title></head></html>";
+        assert_eq!(detect_meta_charset(html), None);
+    }
+
+    #[test]
+    fn test_parse_shift_jis() {
+        // Shift-JIS encoded "こんにちは" (Hello in Japanese)
+        let html: &[u8] = &[
+            0x3C, 0x6D, 0x65, 0x74, 0x61, 0x20, 0x63, 0x68, 0x61, 0x72, 0x73, 0x65, 0x74, 0x3D,
+            0x22, 0x73, 0x68, 0x69, 0x66, 0x74, 0x5F, 0x6A, 0x69, 0x73, 0x22,
+            0x3E, // <meta charset="shift_jis">
+            0x3C, 0x70, 0x3E, // <p>
+            0x82, 0xB1, 0x82, 0xF1, 0x82, 0xC9, 0x82, 0xBF, 0x82,
+            0xCD, // こんにちは in Shift-JIS
+            0x3C, 0x2F, 0x70, 0x3E, // </p>
+        ];
+
+        let arena = parse_html_bytes(html);
+        let body_id = arena.find_body().unwrap();
+        let text = arena.collect_text(body_id);
+        assert!(text.contains("こんにちは"));
+    }
+
+    #[test]
+    fn test_parse_utf8_bom() {
+        // UTF-8 with BOM
+        let html: &[u8] = &[
+            0xEF, 0xBB, 0xBF, // UTF-8 BOM
+            b'<', b'p', b'>', b'H', b'e', b'l', b'l', b'o', b'<', b'/', b'p', b'>',
+        ];
+
+        let arena = parse_html_bytes(html);
+        let body_id = arena.find_body().unwrap();
+        let text = arena.collect_text(body_id);
+        assert!(text.contains("Hello"));
     }
 }

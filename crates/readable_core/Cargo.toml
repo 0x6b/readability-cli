@@ -10,6 +10,9 @@ license = "MIT"
 html5ever = "0.27"
 markup5ever_rcdom = "0.3"
 
+# Encoding detection and conversion
+encoding_rs = "0.8"
+
 # Serialization for options/debug output
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
