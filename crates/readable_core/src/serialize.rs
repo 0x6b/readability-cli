@@ -132,10 +132,12 @@ fn serialize_text_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
                 }
                 TagId::Li => {
                     // Add bullet for list items
-                    if !output.ends_with('\n') {
-                        output.push('\n');
+                    if has_text_content(node) {
+                        if !output.ends_with('\n') {
+                            output.push('\n');
+                        }
+                        output.push_str("- ");
                     }
-                    output.push_str("- ");
                 }
                 TagId::Pre | TagId::Code if !in_pre => {
                     // Add code fence for code blocks
@@ -173,6 +175,13 @@ fn serialize_text_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
                 }
             }
         }
+    }
+}
+
+fn has_text_content(node: &CleanedNode) -> bool {
+    match &node.kind {
+        CleanedNodeKind::Text(text) => !text.trim().is_empty(),
+        CleanedNodeKind::Element { .. } => node.children.iter().any(has_text_content),
     }
 }
 

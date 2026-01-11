@@ -97,6 +97,11 @@ pub struct ExtractResult {
 /// # Returns
 /// Extracted content including title, HTML, and plain text
 pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
+    let html_has_body = {
+        let lower = html.to_ascii_lowercase();
+        lower.contains("<body")
+    };
+
     // Parse HTML into node arena
     let arena = parse::parse_html(html);
 
@@ -128,15 +133,89 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         if options.debug { Some(debug::build_debug_info(&candidates, &arena)) } else { None };
 
     // Get the selected subtree root and find sibling expansions
-    let (content_roots, use_sibling_expansion) = if let Some(selected_candidate) = selected {
+    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected {
         let selected_id = selected_candidate.node_id;
         let selected_text_len = (selected_candidate.features.values
             [features::FeatureIndex::LogTextLenChars as usize]
             .exp()
             - 1.0) as usize;
 
+        let mut selected_id = Some(selected_id);
+        let mut selected_text_len = selected_text_len;
+        let mut selected_tag = Some(selected_candidate.tag);
+
+        if html_has_body && matches!(selected_tag, Some(dom::TagId::P | dom::TagId::Td)) {
+            if let Some(body_id) = arena.find_body() {
+                let body_features = features::extract_features(&arena, body_id);
+                let body_text_len =
+                    (body_features.values[features::FeatureIndex::LogTextLenChars as usize].exp()
+                        - 1.0) as usize;
+                let body_link_density =
+                    body_features.values[features::FeatureIndex::LinkDensity as usize];
+                let body_toc_like =
+                    body_features.values[features::FeatureIndex::TocLike as usize];
+
+                if body_text_len > selected_text_len * 3
+                    && body_link_density < 0.05
+                    && body_toc_like < 0.2
+                {
+                    selected_id = Some(body_id);
+                    selected_text_len = body_text_len;
+                    selected_tag = Some(dom::TagId::Body);
+                }
+            }
+        }
+
+        (selected_id, selected_text_len, selected_tag)
+    } else if html_has_body {
+        if let Some(body_id) = arena.find_body() {
+            let body_features = features::extract_features(&arena, body_id);
+            let body_text_len =
+                (body_features.values[features::FeatureIndex::LogTextLenChars as usize].exp()
+                    - 1.0) as usize;
+            let body_link_density =
+                body_features.values[features::FeatureIndex::LinkDensity as usize];
+            let body_toc_like = body_features.values[features::FeatureIndex::TocLike as usize];
+
+            if body_text_len > 0 && body_link_density < 0.05 && body_toc_like < 0.2 {
+                (Some(body_id), body_text_len, Some(dom::TagId::Body))
+            } else {
+                (None, 0, None)
+            }
+        } else {
+            (None, 0, None)
+        }
+    } else {
+        (None, 0, None)
+    };
+
+    let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
         // Find siblings that should be included
-        let siblings = postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len);
+        let siblings = if matches!(selected_tag, Some(dom::TagId::Article)) {
+            Vec::new()
+        } else if matches!(selected_tag, Some(dom::TagId::Section)) {
+            let mut section_siblings = 0usize;
+            if let Some(parent_id) = arena.get(selected_id).and_then(|n| n.parent) {
+                for child_id in arena.children(parent_id) {
+                    if let Some(node) = arena.get(child_id) {
+                        if matches!(
+                            node.kind,
+                            dom::NodeKind::Element { tag: dom::TagId::Section, .. }
+                        ) {
+                            section_siblings += 1;
+                        }
+                    }
+                }
+            }
+
+            if section_siblings > 1 {
+                Vec::new()
+            } else {
+                postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len)
+            }
+        } else {
+            postprocess::find_expansion_siblings(&arena, selected_id, selected_text_len)
+        };
 
         if siblings.is_empty() {
             (vec![selected_id], false)

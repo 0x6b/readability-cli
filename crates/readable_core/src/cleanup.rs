@@ -147,6 +147,15 @@ fn mark_for_removal(
                     }
                 }
             }
+
+            // Drop large gallery-style blocks even if they have lots of text
+            if attrs.contains_keyword(&["gallery", "slideshow", "carousel", "lightbox"]) {
+                let (img_count, li_count) = count_descendant_media(arena, node_id);
+                if img_count >= 5 || li_count >= 10 {
+                    remove_set.insert(node_id);
+                    return;
+                }
+            }
         }
 
         // Remove high link density micro-blocks
@@ -160,6 +169,25 @@ fn mark_for_removal(
     for child_id in arena.children(node_id) {
         mark_for_removal(arena, child_id, remove_set, _options);
     }
+}
+
+fn count_descendant_media(arena: &Arena, node_id: NodeId) -> (usize, usize) {
+    let mut img_count = 0;
+    let mut li_count = 0;
+
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag, .. } = &node.kind {
+                match tag {
+                    TagId::Img => img_count += 1,
+                    TagId::Li => li_count += 1,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    (img_count, li_count)
 }
 
 /// Check if a node is a small block with mostly links

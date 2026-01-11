@@ -44,6 +44,12 @@ pub fn select_best<'a>(
     // Step 4: Apply tie-breakers if scores are close
     let best = apply_tie_breakers(&top_k, arena, options);
 
+    // Step 4.5: Refine overly broad containers
+    let best = refine_overextracted(best, candidates, arena, options);
+
+    // Step 4.6: Promote step-based containers
+    let best = promote_step_container(best, candidates, arena);
+
     // Step 5: Consider ancestor fallback
     ancestor_fallback(best, candidates, arena, options)
 }
@@ -166,6 +172,133 @@ fn compute_tie_break_score(candidate: &Candidate, options: &ExtractOptions) -> f
     score += features.values[FeatureIndex::PosMinusNeg as usize] * 0.5;
 
     score
+}
+
+fn refine_overextracted<'a>(
+    best: &'a Candidate,
+    candidates: &'a [Candidate],
+    arena: &Arena,
+    options: &ExtractOptions,
+) -> &'a Candidate {
+    let best_text_len =
+        (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    if best_text_len < options.min_text_chars * 4 {
+        return best;
+    }
+
+    if !matches!(
+        best.tag,
+        TagId::Div | TagId::Section | TagId::Main | TagId::Article
+    ) {
+        return best;
+    }
+
+    let best_toc = best.features.values[FeatureIndex::TocLike as usize];
+    let best_cluster = best.features.values[FeatureIndex::ContentClusterScore as usize];
+    if best_toc < 0.2 && best_cluster > 0.4 {
+        return best;
+    }
+
+    let mut refined: Option<&Candidate> = None;
+    let mut refined_score = f32::NEG_INFINITY;
+
+    for candidate in candidates {
+        if candidate.node_id == best.node_id {
+            continue;
+        }
+        if !is_descendant(arena, candidate.node_id, best.node_id) {
+            continue;
+        }
+
+        if !matches!(
+            candidate.tag,
+            TagId::Div | TagId::Section | TagId::Main | TagId::Article
+        ) {
+            continue;
+        }
+
+        let text_len =
+            (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
+                as usize;
+        if text_len < options.min_text_chars * 2 {
+            continue;
+        }
+
+        let ratio = text_len as f32 / best_text_len.max(1) as f32;
+        if ratio < 0.2 || ratio > 0.6 {
+            continue;
+        }
+
+        let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+        if cluster < 0.8 {
+            continue;
+        }
+
+        let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
+        if toc_like > best_toc {
+            continue;
+        }
+
+        let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
+        let focus_score = cluster * 2.0 + clean_ratio - toc_like;
+
+        if focus_score > refined_score {
+            refined = Some(candidate);
+            refined_score = focus_score;
+        }
+    }
+
+    refined.unwrap_or(best)
+}
+
+fn promote_step_container<'a>(
+    best: &'a Candidate,
+    candidates: &'a [Candidate],
+    arena: &Arena,
+) -> &'a Candidate {
+    if best.tag != TagId::Div {
+        return best;
+    }
+
+    let p_count = (best.features.values[FeatureIndex::LogPCount as usize].exp() - 1.0) as usize;
+    if p_count > 1 {
+        return best;
+    }
+
+    let parent_id = match arena.get(best.node_id).and_then(|n| n.parent) {
+        Some(id) => id,
+        None => return best,
+    };
+
+    let class_id = arena
+        .get_attributes(parent_id)
+        .map(|attrs| {
+            format!(
+                "{} {}",
+                attrs.class.as_deref().unwrap_or(""),
+                attrs.id.as_deref().unwrap_or("")
+            )
+            .to_lowercase()
+        })
+        .unwrap_or_default();
+
+    if !class_id.contains("step") && !class_id.contains("instruction") {
+        return best;
+    }
+
+    candidates
+        .iter()
+        .find(|candidate| candidate.node_id == parent_id)
+        .unwrap_or(best)
+}
+
+fn is_descendant(arena: &Arena, node_id: NodeId, ancestor_id: NodeId) -> bool {
+    for parent_id in arena.ancestors(node_id) {
+        if parent_id == ancestor_id {
+            return true;
+        }
+    }
+    false
 }
 
 /// Consider promoting to a larger ancestor container

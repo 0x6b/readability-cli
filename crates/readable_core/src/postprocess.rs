@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    candidates::Candidate,
+    candidates::{negative_keywords, Candidate},
     dom::{Arena, NodeId, NodeKind, TagId},
     features::FeatureIndex,
 };
@@ -135,13 +135,90 @@ fn should_include_sibling(arena: &Arena, sibling_id: NodeId, best_text_len: usiz
         }
     }
 
-    // Prefer semantic siblings
-    if matches!(tag, TagId::Article | TagId::Section | TagId::Div | TagId::P) {
+    // Prefer semantic/content siblings
+    if matches!(
+        tag,
+        TagId::Article | TagId::Section | TagId::Div | TagId::P | TagId::Td | TagId::Tr
+    ) {
         return true;
     }
 
     // For other tags, require higher text threshold
     sibling_text_len >= best_text_len / 3
+}
+
+#[derive(Clone, Copy)]
+enum PassThrough {
+    Include,
+    Skip,
+}
+
+fn is_media_tag(tag: TagId) -> bool {
+    matches!(tag, TagId::Img | TagId::Figure | TagId::Figcaption | TagId::Video | TagId::Audio)
+}
+
+fn has_media_descendant(arena: &Arena, node_id: NodeId) -> bool {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag, .. } = &node.kind {
+                if is_media_tag(*tag) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn pass_through_sibling(
+    arena: &Arena,
+    sibling_id: NodeId,
+    best_text_len: usize,
+) -> Option<PassThrough> {
+    let sibling = arena.get(sibling_id)?;
+    let tag = match &sibling.kind {
+        NodeKind::Element { tag, .. } => *tag,
+        _ => return None,
+    };
+
+    let sibling_text_len = arena.collect_text(sibling_id).chars().count();
+
+    if is_media_tag(tag) {
+        return Some(PassThrough::Include);
+    }
+
+    if sibling_text_len < best_text_len / 6 && has_media_descendant(arena, sibling_id) {
+        return Some(PassThrough::Include);
+    }
+
+    if sibling_text_len == 0 && matches!(tag, TagId::Div | TagId::Span) {
+        return Some(PassThrough::Skip);
+    }
+
+    if tag.is_boilerplate() {
+        if sibling_text_len < best_text_len / 3 {
+            return Some(PassThrough::Skip);
+        }
+        return None;
+    }
+
+    if let Some(attrs) = arena.get_attributes(sibling_id) {
+        if attrs.contains_keyword(negative_keywords()) {
+            if sibling_text_len < best_text_len / 3 {
+                return Some(PassThrough::Skip);
+            }
+            return None;
+        }
+    }
+
+    let link_text_len = compute_link_text_len(arena, sibling_id);
+    let link_density = link_text_len as f32 / sibling_text_len.max(1) as f32;
+
+    if sibling_text_len < best_text_len / 4 && link_density > 0.6 {
+        return Some(PassThrough::Skip);
+    }
+
+    None
 }
 
 /// Compute link text length in a subtree
@@ -175,10 +252,21 @@ pub fn find_expansion_siblings(
     };
 
     // Check preceding siblings
+    let mut skipped = 0usize;
     let mut prev = selected_id;
     while let Some(prev_id) = arena.get(prev).and_then(|n| n.prev_sibling) {
         if should_include_sibling(arena, prev_id, selected_text_len) {
             siblings.push(prev_id);
+            skipped = 0;
+        } else if let Some(pass_through) = pass_through_sibling(arena, prev_id, selected_text_len)
+        {
+            if matches!(pass_through, PassThrough::Include) {
+                siblings.push(prev_id);
+            }
+            skipped += 1;
+            if skipped > 2 {
+                break;
+            }
         } else {
             // Stop at first non-matching sibling to maintain contiguity
             break;
@@ -190,10 +278,21 @@ pub fn find_expansion_siblings(
     siblings.reverse();
 
     // Check following siblings
+    let mut skipped = 0usize;
     let mut next = selected_id;
     while let Some(next_id) = arena.get(next).and_then(|n| n.next_sibling) {
         if should_include_sibling(arena, next_id, selected_text_len) {
             siblings.push(next_id);
+            skipped = 0;
+        } else if let Some(pass_through) = pass_through_sibling(arena, next_id, selected_text_len)
+        {
+            if matches!(pass_through, PassThrough::Include) {
+                siblings.push(next_id);
+            }
+            skipped += 1;
+            if skipped > 2 {
+                break;
+            }
         } else {
             break;
         }

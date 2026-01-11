@@ -101,6 +101,10 @@ const NEGATIVE_KEYWORDS: &[&str] = &[
     "widget",
     "banner",
     "masthead",
+    "gallery",
+    "slideshow",
+    "carousel",
+    "lightbox",
     // Japanese
     "ナビ",
     "メニュー",
