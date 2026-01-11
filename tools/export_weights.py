@@ -110,17 +110,24 @@ def format_weight(w: float) -> str:
     elif w == int(w):
         return f"{int(w)}.0"
     else:
-        return f"{w:.4f}".rstrip("0").rstrip(".")
+        result = f"{w:.4f}".rstrip("0")
         # Ensure at least one decimal place
-        if "." not in result:
-            result += ".0"
+        if result.endswith("."):
+            result += "0"
         return result
 
 
 def generate_rust_code(weights: list[float], bias: float) -> str:
-    """Generate Rust const array code."""
+    """Generate complete model.rs Rust code."""
     lines = []
 
+    # Module header
+    lines.append("//! Logistic regression model for content scoring")
+    lines.append("//!")
+    lines.append("//! Weights trained via tools/train_logreg.py on Mozilla Readability test data.")
+    lines.append("")
+    lines.append("use crate::features::{FeatureVector, NUM_FEATURES};")
+    lines.append("")
     lines.append("/// Model weights - trained via tools/train_logreg.py")
     lines.append("const WEIGHTS: [f32; NUM_FEATURES] = [")
 
@@ -140,8 +147,24 @@ def generate_rust_code(weights: list[float], bias: float) -> str:
 
     lines.append("];")
     lines.append("")
-    lines.append(f"/// Model bias term")
+    lines.append("/// Model bias term")
     lines.append(f"const BIAS: f32 = {format_weight(bias)};")
+    lines.append("")
+    lines.append("/// Compute logit score for a feature vector")
+    lines.append("pub fn score(features: &FeatureVector) -> f32 {")
+    lines.append("    let mut sum = BIAS;")
+    lines.append("    for i in 0..NUM_FEATURES {")
+    lines.append("        sum += WEIGHTS[i] * features.values[i];")
+    lines.append("    }")
+    lines.append("    sum")
+    lines.append("}")
+    lines.append("")
+    lines.append("/// Convert logit to probability")
+    lines.append("#[allow(dead_code)]")
+    lines.append("pub fn probability(logit: f32) -> f32 {")
+    lines.append("    1.0 / (1.0 + (-logit).exp())")
+    lines.append("}")
+    lines.append("")
 
     return "\n".join(lines)
 

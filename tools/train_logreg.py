@@ -175,15 +175,50 @@ def extract_candidates_with_features(html_path: Path) -> list[dict]:
     return []
 
 
+def extract_text_from_html(html: str) -> str:
+    """Extract plain text from HTML content."""
+    # Simple text extraction - strip tags
+    import re
+
+    # Remove script/style content
+    html = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    # Remove tags
+    text = re.sub(r"<[^>]+>", " ", html)
+    # Normalize whitespace
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
 def load_corpus(corpus_dir: Path) -> list[tuple[Path, str]]:
-    """Load HTML files and their expected teacher outputs."""
+    """
+    Load HTML files and their expected teacher outputs.
+
+    Looks for paired files:
+    - {name}.html - source HTML
+    - {name}.expected.html - expected output (optional, falls back to Readability.js)
+    """
     pairs = []
 
     for html_file in corpus_dir.glob("*.html"):
+        # Skip expected files
+        if html_file.stem.endswith(".expected"):
+            continue
+
+        # Look for expected.html file first
+        expected_file = corpus_dir / f"{html_file.stem}.expected.html"
+        if expected_file.exists():
+            expected_html = expected_file.read_text(encoding="utf-8", errors="replace")
+            teacher_text = extract_text_from_html(expected_html)
+            if teacher_text:
+                pairs.append((html_file, teacher_text))
+                print(f"Loaded: {html_file.name} (with expected.html)")
+                continue
+
+        # Fall back to Readability.js
         teacher_text = run_readability_js(html_file)
         if teacher_text:
             pairs.append((html_file, teacher_text))
-            print(f"Loaded: {html_file.name}")
+            print(f"Loaded: {html_file.name} (via Readability.js)")
 
     return pairs
 
