@@ -456,6 +456,20 @@ impl Attributes {
 
         for kw in keywords {
             let kw_lower = kw.to_ascii_lowercase();
+            if kw_lower.len() <= 3 {
+                if let Some(ref id) = id_lower {
+                    if has_token_prefix(id, &kw_lower) {
+                        return true;
+                    }
+                }
+                if let Some(ref class) = class_lower {
+                    if has_token_prefix(class, &kw_lower) {
+                        return true;
+                    }
+                }
+                continue;
+            }
+
             if let Some(ref id) = id_lower {
                 if id.contains(&kw_lower) {
                     return true;
@@ -469,6 +483,12 @@ impl Attributes {
         }
         false
     }
+}
+
+fn has_token_prefix(haystack: &str, needle: &str) -> bool {
+    haystack
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|token| token.starts_with(needle))
 }
 
 /// The node arena - stores all nodes and their data
