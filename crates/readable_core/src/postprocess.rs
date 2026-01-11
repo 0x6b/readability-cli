@@ -258,8 +258,7 @@ pub fn find_expansion_siblings(
         if should_include_sibling(arena, prev_id, selected_text_len) {
             siblings.push(prev_id);
             skipped = 0;
-        } else if let Some(pass_through) = pass_through_sibling(arena, prev_id, selected_text_len)
-        {
+        } else if let Some(pass_through) = pass_through_sibling(arena, prev_id, selected_text_len) {
             if matches!(pass_through, PassThrough::Include) {
                 siblings.push(prev_id);
             }
@@ -284,8 +283,7 @@ pub fn find_expansion_siblings(
         if should_include_sibling(arena, next_id, selected_text_len) {
             siblings.push(next_id);
             skipped = 0;
-        } else if let Some(pass_through) = pass_through_sibling(arena, next_id, selected_text_len)
-        {
+        } else if let Some(pass_through) = pass_through_sibling(arena, next_id, selected_text_len) {
             if matches!(pass_through, PassThrough::Include) {
                 siblings.push(next_id);
             }

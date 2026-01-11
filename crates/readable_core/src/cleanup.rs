@@ -134,6 +134,12 @@ fn mark_for_removal(
             return;
         }
 
+        // Curated blocklist for common boilerplate patterns
+        if crate::blocklist::should_block(arena, node_id) {
+            remove_set.insert(node_id);
+            return;
+        }
+
         // Check for negative keywords in class/id
         if let Some(attrs) = arena.get_attributes(node_id) {
             if attrs.contains_keyword(negative_keywords()) {

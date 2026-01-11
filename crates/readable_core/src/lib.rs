@@ -3,6 +3,7 @@
 //! This library extracts the main readable content from HTML documents
 //! using a logistic regression model over engineered features.
 
+pub mod blocklist;
 pub mod candidates;
 pub mod cleanup;
 pub mod debug;
@@ -133,7 +134,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         if options.debug { Some(debug::build_debug_info(&candidates, &arena)) } else { None };
 
     // Get the selected subtree root and find sibling expansions
-    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected {
+    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
+    {
         let selected_id = selected_candidate.node_id;
         let selected_text_len = (selected_candidate.features.values
             [features::FeatureIndex::LogTextLenChars as usize]
@@ -152,8 +154,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
                         - 1.0) as usize;
                 let body_link_density =
                     body_features.values[features::FeatureIndex::LinkDensity as usize];
-                let body_toc_like =
-                    body_features.values[features::FeatureIndex::TocLike as usize];
+                let body_toc_like = body_features.values[features::FeatureIndex::TocLike as usize];
 
                 if body_text_len > selected_text_len * 3
                     && body_link_density < 0.05
@@ -170,9 +171,10 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     } else if html_has_body {
         if let Some(body_id) = arena.find_body() {
             let body_features = features::extract_features(&arena, body_id);
-            let body_text_len =
-                (body_features.values[features::FeatureIndex::LogTextLenChars as usize].exp()
-                    - 1.0) as usize;
+            let body_text_len = (body_features.values
+                [features::FeatureIndex::LogTextLenChars as usize]
+                .exp()
+                - 1.0) as usize;
             let body_link_density =
                 body_features.values[features::FeatureIndex::LinkDensity as usize];
             let body_toc_like = body_features.values[features::FeatureIndex::TocLike as usize];

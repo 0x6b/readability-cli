@@ -186,10 +186,7 @@ fn refine_overextracted<'a>(
         return best;
     }
 
-    if !matches!(
-        best.tag,
-        TagId::Div | TagId::Section | TagId::Main | TagId::Article
-    ) {
+    if !matches!(best.tag, TagId::Div | TagId::Section | TagId::Main | TagId::Article) {
         return best;
     }
 
@@ -210,16 +207,12 @@ fn refine_overextracted<'a>(
             continue;
         }
 
-        if !matches!(
-            candidate.tag,
-            TagId::Div | TagId::Section | TagId::Main | TagId::Article
-        ) {
+        if !matches!(candidate.tag, TagId::Div | TagId::Section | TagId::Main | TagId::Article) {
             continue;
         }
 
-        let text_len =
-            (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
-                as usize;
+        let text_len = (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp()
+            - 1.0) as usize;
         if text_len < options.min_text_chars * 2 {
             continue;
         }
