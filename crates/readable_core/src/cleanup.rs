@@ -142,6 +142,25 @@ fn mark_for_removal(
 
         // Check for negative keywords in class/id
         if let Some(attrs) = arena.get_attributes(node_id) {
+            if tag == &TagId::Section && attrs.contains_keyword(&["5-band"]) {
+                let is_opinion = attrs.contains_keyword(&["5-band-intl-opinion"]);
+                prune_band_section_text(arena, node_id, remove_set, is_opinion);
+            }
+
+            if attrs.contains_keyword(&["highlight", "highlights"]) {
+                if let Some(primary_child) = find_primary_highlight_child(arena, node_id) {
+                    for child_id in arena.children(node_id) {
+                        if child_id != primary_child {
+                            if let Some(child) = arena.get(child_id) {
+                                if matches!(child.kind, NodeKind::Element { .. }) {
+                                    remove_set.insert(child_id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if attrs.contains_keyword(negative_keywords()) {
                 // Don't remove if also has positive keywords
                 if !attrs.contains_keyword(positive_keywords()) {
@@ -213,10 +232,17 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
         return false;
     }
 
+    if has_heading_descendant(arena, node_id) {
+        return false;
+    }
+
     if tag == TagId::A {
         if let Some(parent_id) = node.parent {
             if let Some(parent) = arena.get(parent_id) {
                 if let NodeKind::Element { tag: parent_tag, .. } = parent.kind {
+                    if matches!(parent_tag, TagId::Header) {
+                        return false;
+                    }
                     if matches!(
                         parent_tag,
                         TagId::H1 | TagId::H2 | TagId::H3 | TagId::H4 | TagId::H5 | TagId::H6
@@ -260,6 +286,133 @@ fn count_link_text(arena: &Arena, node_id: NodeId, total: &mut usize) {
     for child_id in arena.children(node_id) {
         count_link_text(arena, child_id, total);
     }
+}
+
+fn find_primary_highlight_child(arena: &Arena, node_id: NodeId) -> Option<NodeId> {
+    for child_id in arena.children(node_id) {
+        if let Some(node) = arena.get(child_id) {
+            if matches!(node.kind, NodeKind::Element { .. }) {
+                if has_heading_descendant(arena, child_id) {
+                    return Some(child_id);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn has_heading_descendant(arena: &Arena, node_id: NodeId) -> bool {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag, .. } = node.kind {
+                if matches!(tag, TagId::H1 | TagId::H2 | TagId::H3) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn prune_band_section_text(
+    arena: &Arena,
+    section_id: NodeId,
+    remove_set: &mut HashSet<NodeId>,
+    is_opinion: bool,
+) {
+    let mut text_blocks = Vec::new();
+    let mut article_count = 0;
+
+    for desc_id in arena.descendants(section_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag: TagId::Article, .. } = node.kind {
+                article_count += 1;
+                if let Some(text_container) = find_article_text_container(arena, desc_id) {
+                    let headline_len =
+                        find_headline_length(arena, text_container).unwrap_or(usize::MAX);
+                    text_blocks.push((text_container, headline_len));
+                }
+            }
+        }
+    }
+
+    if article_count < 3 || text_blocks.is_empty() {
+        return;
+    }
+
+    if is_opinion {
+        for (text_container, _) in text_blocks {
+            remove_set.insert(text_container);
+        }
+        return;
+    }
+
+    let mut keep_container = None;
+    let mut keep_len = usize::MAX;
+    for (text_container, headline_len) in &text_blocks {
+        if *headline_len < keep_len {
+            keep_len = *headline_len;
+            keep_container = Some(*text_container);
+        }
+    }
+
+    if let Some(keep_container) = keep_container {
+        for (text_container, _) in text_blocks {
+            if text_container != keep_container {
+                remove_set.insert(text_container);
+            }
+        }
+    }
+}
+
+fn find_article_text_container(arena: &Arena, article_id: NodeId) -> Option<NodeId> {
+    for child_id in arena.children(article_id) {
+        if let Some(child) = arena.get(child_id) {
+            if let NodeKind::Element { tag: TagId::Div, .. } = child.kind {
+                if has_textual_descendant(arena, child_id) {
+                    return Some(child_id);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_headline_length(arena: &Arena, node_id: NodeId) -> Option<usize> {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag: TagId::H2, .. } = node.kind {
+                let text = arena.collect_text(desc_id);
+                let len = text.chars().count();
+                if len > 0 {
+                    return Some(len);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn has_textual_descendant(arena: &Arena, node_id: NodeId) -> bool {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let NodeKind::Element { tag, .. } = node.kind {
+                if matches!(
+                    tag,
+                    TagId::P
+                        | TagId::H1
+                        | TagId::H2
+                        | TagId::H3
+                        | TagId::H4
+                        | TagId::H5
+                        | TagId::H6
+                ) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 /// Build a cleaned node tree

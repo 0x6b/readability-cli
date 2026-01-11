@@ -263,6 +263,63 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         (Vec::new(), false)
     };
 
+    let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
+        if let Some(highlight_id) = find_highlight_ancestor(&arena, selected_id) {
+            let highlight_features = extract_features(&arena, highlight_id);
+            let highlight_text_len = (highlight_features.values
+                [features::FeatureIndex::LogTextLenChars as usize]
+                .exp()
+                - 1.0) as usize;
+            let highlight_siblings =
+                find_expansion_siblings(&arena, highlight_id, highlight_text_len);
+
+            let mut all_roots = content_roots;
+            let mut expanded = use_sibling_expansion;
+
+            for sibling_id in highlight_siblings {
+                if all_roots.contains(&sibling_id) {
+                    continue;
+                }
+                if should_include_highlight_sibling(&arena, sibling_id, options.min_text_chars) {
+                    all_roots.push(sibling_id);
+                    expanded = true;
+                }
+            }
+
+            if let Some(parent_id) = arena.get(highlight_id).and_then(|n| n.parent) {
+                let mut past_highlight = false;
+                for child_id in arena.children(parent_id) {
+                    if child_id == highlight_id {
+                        past_highlight = true;
+                        continue;
+                    }
+                    if !past_highlight {
+                        continue;
+                    }
+                    if all_roots.contains(&child_id) {
+                        continue;
+                    }
+                    if !has_heading_descendant(&arena, child_id) {
+                        continue;
+                    }
+                    if should_include_highlight_sibling(&arena, child_id, options.min_text_chars) {
+                        all_roots.push(child_id);
+                        expanded = true;
+                    }
+                }
+            }
+
+            if expanded && all_roots.len() > 1 {
+                all_roots.sort_unstable();
+            }
+            (all_roots, expanded)
+        } else {
+            (content_roots, use_sibling_expansion)
+        }
+    } else {
+        (content_roots, use_sibling_expansion)
+    };
+
     // Cleanup and serialize
     let (content_html, text) = if content_roots.is_empty() {
         (String::new(), String::new())
@@ -296,4 +353,68 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         text,
         debug: debug_info,
     }
+}
+
+fn find_highlight_ancestor(arena: &dom::Arena, node_id: dom::NodeId) -> Option<dom::NodeId> {
+    if is_highlight_container(arena, node_id) {
+        return Some(node_id);
+    }
+
+    for ancestor_id in arena.ancestors(node_id) {
+        if is_highlight_container(arena, ancestor_id) {
+            return Some(ancestor_id);
+        }
+    }
+
+    None
+}
+
+fn is_highlight_container(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
+    let node = match arena.get(node_id) {
+        Some(node) => node,
+        None => return false,
+    };
+    let tag = match &node.kind {
+        dom::NodeKind::Element { tag, .. } => *tag,
+        _ => return false,
+    };
+    if !matches!(tag, dom::TagId::Section | dom::TagId::Div) {
+        return false;
+    }
+    if let Some(attrs) = arena.get_attributes(node_id) {
+        return attrs.contains_keyword(&["highlight", "highlights"]);
+    }
+    false
+}
+
+fn should_include_highlight_sibling(
+    arena: &dom::Arena,
+    node_id: dom::NodeId,
+    min_text_chars: usize,
+) -> bool {
+    let tag = arena.get(node_id).and_then(|n| match n.kind {
+        dom::NodeKind::Element { tag, .. } => Some(tag),
+        _ => None,
+    });
+    if !matches!(tag, Some(dom::TagId::Section | dom::TagId::Div | dom::TagId::Article)) {
+        return false;
+    }
+    let sibling_features = extract_features(arena, node_id);
+    let sibling_text_len =
+        (sibling_features.values[features::FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
+            as usize;
+    sibling_text_len >= min_text_chars / 2
+}
+
+fn has_heading_descendant(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(node) = arena.get(desc_id) {
+            if let dom::NodeKind::Element { tag, .. } = node.kind {
+                if matches!(tag, dom::TagId::H2 | dom::TagId::H3) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
