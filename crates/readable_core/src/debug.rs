@@ -28,6 +28,8 @@ pub struct CandidateDebug {
     pub features: FeatureSummary,
     /// Raw 64-element feature vector for training
     pub feature_vector: Vec<f32>,
+    /// Extracted text content (for training label comparison)
+    pub text: String,
 }
 
 /// Summary of key features for debugging
@@ -77,12 +79,14 @@ fn build_candidate_debug(candidate: &Candidate, arena: &Arena) -> CandidateDebug
     let node_path = build_node_path(arena, candidate.node_id);
     let features = build_feature_summary(&candidate.features, arena, candidate.node_id);
     let feature_vector = candidate.features.values.to_vec();
+    let text = arena.collect_text(candidate.node_id);
 
     CandidateDebug {
         node_path,
         logit: candidate.score,
         features,
         feature_vector,
+        text,
     }
 }
 

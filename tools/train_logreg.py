@@ -235,9 +235,9 @@ def generate_training_data(
     - y is labels [n_samples] (1 for positive, 0 for negative)
 
     Labeling strategy:
-    - The top-1 candidate (highest logit) is labeled positive if it has
-      reasonable content characteristics (low link density, enough text)
-    - Other candidates are labeled negative
+    - Compute Jaccard overlap between each candidate's text and expected text
+    - Label as positive if overlap >= threshold
+    - This teaches the model to match Readability.js output
     """
     X_list = []
     y_list = []
@@ -246,32 +246,29 @@ def generate_training_data(
         candidates = extract_candidates_with_features(html_path)
 
         if not candidates:
-            print(f"No candidates extracted from {html_path.name}")
+            print(f"  {html_path.name}: no candidates")
             continue
 
-        # Candidates are already sorted by logit score (highest first)
-        for i, candidate in enumerate(candidates):
+        # Compute overlap for each candidate
+        positive_count = 0
+        for candidate in candidates:
             # Use the raw 64-element feature vector
             feature_vector = candidate.get("feature_vector", [])
             if len(feature_vector) != NUM_FEATURES:
-                print(f"Warning: expected {NUM_FEATURES} features, got {len(feature_vector)}")
                 continue
 
             X_list.append(np.array(feature_vector))
 
-            # Label: top candidate with good characteristics is positive
-            features = candidate.get("features", {})
-            link_density = features.get("link_density", 1.0)
-            text_len = features.get("text_len", 0)
+            # Label based on overlap with expected text
+            candidate_text = candidate.get("text", "")
+            overlap = compute_overlap(candidate_text, teacher_text)
 
-            is_positive = (
-                i == 0  # Top candidate
-                and link_density < 0.5  # Not too link-heavy
-                and text_len > 100  # Has substantial text
-            )
+            is_positive = overlap >= overlap_threshold
             y_list.append(1 if is_positive else 0)
+            if is_positive:
+                positive_count += 1
 
-        print(f"  {html_path.name}: {len(candidates)} candidates")
+        print(f"  {html_path.name}: {len(candidates)} candidates, {positive_count} positive")
 
     return np.array(X_list), np.array(y_list)
 
