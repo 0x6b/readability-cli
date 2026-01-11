@@ -280,6 +280,12 @@ fn refine_overextracted<'a>(
             continue;
         }
 
+        let has_min_paragraphs =
+            candidate.features.values[FeatureIndex::HasMinParagraphs as usize] > 0.5;
+        if !has_min_paragraphs {
+            continue;
+        }
+
         let ratio = text_len as f32 / best_text_len.max(1) as f32;
         if ratio < 0.2 || ratio > 0.6 {
             continue;
