@@ -206,6 +206,58 @@ fn refine_overextracted<'a>(
         return best;
     }
 
+    if matches!(best.tag, TagId::Main | TagId::Div)
+        && (best_toc > 0.25 || best_link_density > 0.15 || best_clean_ratio < 0.85)
+    {
+        let mut semantic_refined: Option<&Candidate> = None;
+        let mut semantic_score = f32::NEG_INFINITY;
+
+        for candidate in candidates {
+            if candidate.node_id == best.node_id {
+                continue;
+            }
+            if candidate.tag != TagId::Article {
+                continue;
+            }
+            if !is_descendant(arena, candidate.node_id, best.node_id) {
+                continue;
+            }
+
+            let text_len = (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp()
+                - 1.0) as usize;
+            let ratio = text_len as f32 / best_text_len.max(1) as f32;
+            if ratio < 0.6 || ratio > 0.95 {
+                continue;
+            }
+
+            let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+            if cluster < 0.8 {
+                continue;
+            }
+
+            let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
+            if toc_like > best_toc {
+                continue;
+            }
+
+            let link_density = candidate.features.values[FeatureIndex::LinkDensity as usize];
+            let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
+            if link_density > best_link_density - 0.02 && clean_ratio < best_clean_ratio + 0.02 {
+                continue;
+            }
+
+            let score = cluster * 1.5 + clean_ratio - toc_like - link_density + ratio;
+            if score > semantic_score {
+                semantic_refined = Some(candidate);
+                semantic_score = score;
+            }
+        }
+
+        if let Some(candidate) = semantic_refined {
+            return candidate;
+        }
+    }
+
     let mut refined: Option<&Candidate> = None;
     let mut refined_score = f32::NEG_INFINITY;
     let mut refined_candidates = 0usize;
