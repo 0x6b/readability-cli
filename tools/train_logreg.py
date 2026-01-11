@@ -111,7 +111,7 @@ def run_readability_js(html_path: Path) -> Optional[str]:
     const { JSDOM } = require('jsdom');
     const fs = require('fs');
 
-    const html = fs.readFileSync(process.argv[2], 'utf8');
+    const html = fs.readFileSync(process.argv[1], 'utf8');
     const dom = new JSDOM(html);
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
@@ -198,6 +198,11 @@ def generate_training_data(
     Returns (X, y) where:
     - X is feature matrix [n_samples, n_features]
     - y is labels [n_samples] (1 for positive, 0 for negative)
+
+    Labeling strategy:
+    - The top-1 candidate (highest logit) is labeled positive if it has
+      reasonable content characteristics (low link density, enough text)
+    - Other candidates are labeled negative
     """
     X_list = []
     y_list = []
@@ -209,36 +214,29 @@ def generate_training_data(
             print(f"No candidates extracted from {html_path.name}")
             continue
 
-        # Compute overlap for each candidate
-        overlaps = []
-        for candidate in candidates:
-            # Get candidate text (from features or re-extract)
-            text_len = int(np.exp(candidate["features"]["text_len"]) - 1)
-            # Approximate: use node path to identify candidate
-            # In production, we'd extract actual text
-            overlaps.append(0.0)  # Placeholder
-
-        # For now, use heuristic: highest scoring candidates with good features
-        # are positive, low-scoring ones are negative
+        # Candidates are already sorted by logit score (highest first)
         for i, candidate in enumerate(candidates):
+            # Use the raw 64-element feature vector
+            feature_vector = candidate.get("feature_vector", [])
+            if len(feature_vector) != NUM_FEATURES:
+                print(f"Warning: expected {NUM_FEATURES} features, got {len(feature_vector)}")
+                continue
+
+            X_list.append(np.array(feature_vector))
+
+            # Label: top candidate with good characteristics is positive
             features = candidate.get("features", {})
+            link_density = features.get("link_density", 1.0)
+            text_len = features.get("text_len", 0)
 
-            # Build feature vector
-            fv = np.zeros(NUM_FEATURES)
-            fv[0] = np.log1p(features.get("text_len", 0))
-            fv[19] = features.get("link_density", 0)
-            fv[37] = 1.0 if features.get("semantic_main_flag", False) else 0.0
-            # ... (fill in other features from the candidate debug output)
-
-            X_list.append(fv)
-
-            # Label based on position in sorted list and features
             is_positive = (
-                i < 3
-                and features.get("semantic_main_flag", False)
-                and features.get("link_density", 1.0) < 0.5
+                i == 0  # Top candidate
+                and link_density < 0.5  # Not too link-heavy
+                and text_len > 100  # Has substantial text
             )
             y_list.append(1 if is_positive else 0)
+
+        print(f"  {html_path.name}: {len(candidates)} candidates")
 
     return np.array(X_list), np.array(y_list)
 

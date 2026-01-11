@@ -26,6 +26,8 @@ pub struct CandidateDebug {
     pub logit: f32,
     /// Key feature summary
     pub features: FeatureSummary,
+    /// Raw 64-element feature vector for training
+    pub feature_vector: Vec<f32>,
 }
 
 /// Summary of key features for debugging
@@ -74,8 +76,14 @@ pub fn build_debug_info(candidates: &[Candidate], arena: &Arena) -> DebugInfo {
 fn build_candidate_debug(candidate: &Candidate, arena: &Arena) -> CandidateDebug {
     let node_path = build_node_path(arena, candidate.node_id);
     let features = build_feature_summary(&candidate.features, arena, candidate.node_id);
+    let feature_vector = candidate.features.values.to_vec();
 
-    CandidateDebug { node_path, logit: candidate.score, features }
+    CandidateDebug {
+        node_path,
+        logit: candidate.score,
+        features,
+        feature_vector,
+    }
 }
 
 /// Build a path string like "html > body > div#main.content > article"

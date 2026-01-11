@@ -8,5 +8,5 @@ dependencies = [
     "scikit-learn>=1.0",
 ]
 
-[tool.uv]
-dev-dependencies = []
+[dependency-groups]
+dev = []
