@@ -1,0 +1,23 @@
+[package]
+name = "readable_wasm"
+version = "0.1.0"
+edition = "2021"
+description = "WASM wrapper for readable_core"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+readable_core = { path = "../readable_core" }
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "s"
+lto = true

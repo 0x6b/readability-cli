@@ -1,15 +1,34 @@
+use std::io::{self, Read};
+
 use anyhow::Result;
 use clap::Parser;
-use readablility_cli::Scraper;
+use readable_core::{extract, ExtractOptions};
 use reqwest::Url;
 
 #[derive(Parser)]
-#[clap(version, about)]
+#[clap(version, about = "Extract readable content from HTML")]
 pub struct Args {
-    /// A URL to fetch
-    pub url: Url,
+    /// URL to fetch and extract content from
+    #[clap(value_parser)]
+    pub url: Option<Url>,
 
-    /// User agent string to use for the request
+    /// Read HTML from stdin instead of URL
+    #[clap(long, short)]
+    pub stdin: bool,
+
+    /// Output format: markdown, html, text, json
+    #[clap(long, short, default_value = "markdown")]
+    pub format: String,
+
+    /// Minimum text characters for content (default: 200)
+    #[clap(long, default_value = "200")]
+    pub min_text: usize,
+
+    /// Enable debug output
+    #[clap(long)]
+    pub debug: bool,
+
+    /// User agent string for HTTP requests
     #[clap(
         long,
         default_value = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0"
@@ -19,8 +38,69 @@ pub struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let Args { url, user_agent } = Args::parse();
-    let body = Scraper::try_new(&user_agent)?.scrape(&url).await?;
-    println!("{body}");
+    let args = Args::parse();
+
+    // Get HTML content
+    let html = if args.stdin {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer)?;
+        buffer
+    } else if let Some(url) = &args.url {
+        fetch_url(url, &args.user_agent).await?
+    } else {
+        eprintln!("Error: Either provide a URL or use --stdin to read HTML from stdin");
+        std::process::exit(1);
+    };
+
+    // Configure extraction options
+    let options = ExtractOptions {
+        min_text_chars: args.min_text,
+        debug: args.debug,
+        ..Default::default()
+    };
+
+    // Extract content
+    let result = extract(&html, &options);
+
+    // Output based on format
+    match args.format.as_str() {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        "html" => {
+            if let Some(title) = &result.title {
+                println!("<!-- Title: {} -->", title);
+            }
+            println!("{}", result.content_html);
+        }
+        "text" => {
+            if let Some(title) = &result.title {
+                println!("{}\n", title);
+            }
+            println!("{}", result.text);
+        }
+        "markdown" | _ => {
+            // Convert HTML to simple markdown-like format
+            if let Some(title) = &result.title {
+                println!("# {}\n", title);
+            }
+            // For now, output the text (proper markdown conversion can be added later)
+            println!("{}", result.text);
+        }
+    }
+
     Ok(())
+}
+
+async fn fetch_url(url: &Url, user_agent: &str) -> Result<String> {
+    let client = reqwest::Client::builder().user_agent(user_agent).build()?;
+
+    let response = client.get(url.as_str()).send().await?;
+
+    if !response.status().is_success() {
+        anyhow::bail!("HTTP error: {}", response.status());
+    }
+
+    let html = response.text().await?;
+    Ok(html)
 }
