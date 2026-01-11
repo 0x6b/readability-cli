@@ -72,27 +72,12 @@ fn serialize_html_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
 
 /// Serialize attributes
 fn serialize_attrs(attrs: &CleanedAttrs, tag: TagId, output: &mut String) {
-    match tag {
-        TagId::A => {
-            if let Some(href) = &attrs.href {
-                output.push_str(" href=\"");
-                output.push_str(&escape_attr(href));
-                output.push('"');
-            }
+    if tag == TagId::A {
+        if let Some(href) = &attrs.href {
+            output.push_str(" href=\"");
+            output.push_str(&escape_attr(href));
+            output.push('"');
         }
-        TagId::Img => {
-            if let Some(src) = &attrs.src {
-                output.push_str(" src=\"");
-                output.push_str(&escape_attr(src));
-                output.push('"');
-            }
-            if let Some(alt) = &attrs.alt {
-                output.push_str(" alt=\"");
-                output.push_str(&escape_attr(alt));
-                output.push('"');
-            }
-        }
-        _ => {}
     }
 }
 

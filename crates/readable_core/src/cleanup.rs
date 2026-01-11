@@ -32,8 +32,6 @@ pub enum CleanedNodeKind {
 #[derive(Debug, Clone, Default)]
 pub struct CleanedAttrs {
     pub href: Option<String>,
-    pub src: Option<String>,
-    pub alt: Option<String>,
 }
 
 /// Tags allowed in output
@@ -55,7 +53,6 @@ const ALLOWED_TAGS: &[TagId] = &[
     TagId::Em,
     TagId::Strong,
     TagId::A,
-    TagId::Img,
     TagId::Figure,
     TagId::Figcaption,
     TagId::Kbd,
@@ -85,6 +82,7 @@ const REMOVE_TAGS: &[TagId] = &[
     TagId::Input,
     TagId::Select,
     TagId::Textarea,
+    TagId::Img,
 ];
 
 /// Tags to remove but keep children
@@ -348,20 +346,13 @@ fn build_cleaned_attrs(arena: &Arena, node_id: NodeId, tag: TagId) -> CleanedAtt
 
     let mut cleaned = CleanedAttrs::default();
 
-    match tag {
-        TagId::A => {
-            // Keep href, but filter out javascript: URLs
-            if let Some(href) = &attrs.href {
-                if !href.trim_start().to_lowercase().starts_with("javascript:") {
-                    cleaned.href = Some(href.clone());
-                }
+    if tag == TagId::A {
+        // Keep href, but filter out javascript: URLs
+        if let Some(href) = &attrs.href {
+            if !href.trim_start().to_lowercase().starts_with("javascript:") {
+                cleaned.href = Some(href.clone());
             }
         }
-        TagId::Img => {
-            cleaned.src = attrs.src.clone();
-            cleaned.alt = attrs.alt.clone();
-        }
-        _ => {}
     }
 
     cleaned
@@ -383,8 +374,8 @@ pub fn flatten_cleaned_tree(node: CleanedNode) -> Option<CleanedNode> {
             let children: Vec<CleanedNode> =
                 node.children.into_iter().filter_map(flatten_cleaned_tree).collect();
 
-            // Remove empty containers
-            if children.is_empty() && !matches!(tag, TagId::Br | TagId::Img) {
+            // Remove empty containers (except self-closing tags like Br)
+            if children.is_empty() && tag != TagId::Br {
                 return None;
             }
 
