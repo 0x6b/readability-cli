@@ -128,10 +128,16 @@ fn apply_tie_breakers<'a>(
     }
 
     // Tie-breakers for close scores
+    // Only compare candidates within DELTA of the top score to avoid
+    // promoting much larger containers with significantly lower logits.
+    let threshold = top1.score - DELTA;
     let mut best = top1;
     let mut best_score = compute_tie_break_score(top1, options);
 
     for candidate in top_k.iter().skip(1) {
+        if candidate.score < threshold {
+            continue;
+        }
         let score = compute_tie_break_score(candidate, options);
         if score > best_score {
             best = candidate;
