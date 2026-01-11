@@ -10,8 +10,15 @@ use std::collections::HashMap;
 use crate::{
     candidates::{negative_keywords, Candidate},
     dom::{Arena, NodeId, NodeKind, TagId},
-    features::FeatureIndex,
+    features::{extract_features, FeatureIndex},
 };
+
+struct SelectedSiblingMetrics {
+    avg_para_len_strict: f32,
+    long_para_ratio: f32,
+    li_count: usize,
+    p_count: usize,
+}
 
 /// Apply score propagation to candidates
 ///
@@ -83,7 +90,12 @@ pub fn apply_score_propagation(candidates: &mut [Candidate], arena: &Arena) {
 }
 
 /// Check if a sibling should be included based on content similarity
-fn should_include_sibling(arena: &Arena, sibling_id: NodeId, best_text_len: usize) -> bool {
+fn should_include_sibling(
+    arena: &Arena,
+    sibling_id: NodeId,
+    best_text_len: usize,
+    selected_metrics: &SelectedSiblingMetrics,
+) -> bool {
     let sibling = match arena.get(sibling_id) {
         Some(n) => n,
         None => return false,
@@ -132,6 +144,24 @@ fn should_include_sibling(arena: &Arena, sibling_id: NodeId, best_text_len: usiz
             if class_id.contains(kw) {
                 return false;
             }
+        }
+    }
+
+    // Avoid pulling in teaser-heavy sibling lists when the selected content
+    // has meaningfully longer paragraphs.
+    let list_heavy = selected_metrics.li_count >= 5
+        && selected_metrics.li_count.saturating_mul(2) >= selected_metrics.p_count;
+    if list_heavy && selected_metrics.avg_para_len_strict > 0.25 {
+        let sibling_features = extract_features(arena, sibling_id);
+        let sibling_avg_para_len_strict =
+            sibling_features.values[FeatureIndex::AvgParagraphLenStrict as usize];
+        let sibling_long_para_ratio =
+            sibling_features.values[FeatureIndex::LongParagraphRatio as usize];
+
+        let min_avg = selected_metrics.avg_para_len_strict * 0.8;
+        let min_long_ratio = (selected_metrics.long_para_ratio - 0.05).max(0.0);
+        if sibling_avg_para_len_strict < min_avg || sibling_long_para_ratio < min_long_ratio {
+            return false;
         }
     }
 
@@ -244,6 +274,15 @@ pub fn find_expansion_siblings(
     selected_text_len: usize,
 ) -> Vec<NodeId> {
     let mut siblings = Vec::new();
+    let selected_features = extract_features(arena, selected_id);
+    let selected_metrics = SelectedSiblingMetrics {
+        avg_para_len_strict: selected_features.values[FeatureIndex::AvgParagraphLenStrict as usize],
+        long_para_ratio: selected_features.values[FeatureIndex::LongParagraphRatio as usize],
+        li_count: (selected_features.values[FeatureIndex::LogLiCount as usize].exp() - 1.0)
+            as usize,
+        p_count: (selected_features.values[FeatureIndex::LogPCount as usize].exp() - 1.0)
+            as usize,
+    };
 
     // Get the parent
     let _parent_id = match arena.get(selected_id).and_then(|n| n.parent) {
@@ -255,7 +294,7 @@ pub fn find_expansion_siblings(
     let mut skipped = 0usize;
     let mut prev = selected_id;
     while let Some(prev_id) = arena.get(prev).and_then(|n| n.prev_sibling) {
-        if should_include_sibling(arena, prev_id, selected_text_len) {
+        if should_include_sibling(arena, prev_id, selected_text_len, &selected_metrics) {
             siblings.push(prev_id);
             skipped = 0;
         } else if let Some(pass_through) = pass_through_sibling(arena, prev_id, selected_text_len) {
@@ -280,7 +319,7 @@ pub fn find_expansion_siblings(
     let mut skipped = 0usize;
     let mut next = selected_id;
     while let Some(next_id) = arena.get(next).and_then(|n| n.next_sibling) {
-        if should_include_sibling(arena, next_id, selected_text_len) {
+        if should_include_sibling(arena, next_id, selected_text_len, &selected_metrics) {
             siblings.push(next_id);
             skipped = 0;
         } else if let Some(pass_through) = pass_through_sibling(arena, next_id, selected_text_len) {

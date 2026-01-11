@@ -47,6 +47,9 @@ pub fn select_best<'a>(
     // Step 4.5: Refine overly broad containers
     let best = refine_overextracted(best, candidates, arena, options);
 
+    // Step 4.55: Refine multi-column sections to the most content-rich child
+    let best = refine_columnar_children(best, candidates, arena, options);
+
     // Step 4.6: Promote step-based containers
     let best = promote_step_container(best, candidates, arena);
 
@@ -186,6 +189,23 @@ fn refine_overextracted<'a>(
     arena: &Arena,
     options: &ExtractOptions,
 ) -> &'a Candidate {
+    let mut current = best;
+    for _ in 0..2 {
+        let refined = refine_overextracted_once(current, candidates, arena, options);
+        if refined.node_id == current.node_id {
+            break;
+        }
+        current = refined;
+    }
+    current
+}
+
+fn refine_overextracted_once<'a>(
+    best: &'a Candidate,
+    candidates: &'a [Candidate],
+    arena: &Arena,
+    options: &ExtractOptions,
+) -> &'a Candidate {
     let best_text_len =
         (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
     if best_text_len < options.min_text_chars * 4 {
@@ -260,7 +280,7 @@ fn refine_overextracted<'a>(
 
     let mut refined: Option<&Candidate> = None;
     let mut refined_score = f32::NEG_INFINITY;
-    let mut refined_candidates = 0usize;
+    let allow_smaller = best_cluster < 0.35 || best_toc > 0.3;
 
     for candidate in candidates {
         if candidate.node_id == best.node_id {
@@ -287,7 +307,8 @@ fn refine_overextracted<'a>(
         }
 
         let ratio = text_len as f32 / best_text_len.max(1) as f32;
-        if ratio < 0.2 || ratio > 0.6 {
+        let min_ratio = if allow_smaller { 0.15 } else { 0.2 };
+        if ratio < min_ratio || ratio > 0.6 {
             continue;
         }
 
@@ -301,9 +322,20 @@ fn refine_overextracted<'a>(
             continue;
         }
 
-        refined_candidates += 1;
         let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
-        let focus_score = cluster * 2.0 + clean_ratio - toc_like;
+        if ratio < 0.2 && (cluster < 0.9 || clean_ratio < best_clean_ratio + 0.03) {
+            continue;
+        }
+
+        let avg_para_len_strict =
+            candidate.features.values[FeatureIndex::AvgParagraphLenStrict as usize];
+        let long_para_ratio = candidate.features.values[FeatureIndex::LongParagraphRatio as usize];
+        let focus_score = cluster * 2.0
+            + clean_ratio
+            - toc_like
+            - ratio * 0.2
+            + avg_para_len_strict * 0.3
+            + long_para_ratio * 0.2;
 
         if focus_score > refined_score {
             refined = Some(candidate);
@@ -311,9 +343,8 @@ fn refine_overextracted<'a>(
         }
     }
 
-    if refined_candidates > 1
-        && best_toc < 0.2
-        && best_link_density < 0.05
+    if best_toc < 0.15
+        && best_link_density < 0.1
         && best_clean_ratio > 0.9
         && best_p_count >= 8
     {
@@ -321,6 +352,100 @@ fn refine_overextracted<'a>(
     }
 
     refined.unwrap_or(best)
+}
+
+fn refine_columnar_children<'a>(
+    best: &'a Candidate,
+    candidates: &'a [Candidate],
+    arena: &Arena,
+    options: &ExtractOptions,
+) -> &'a Candidate {
+    if !matches!(best.tag, TagId::Section | TagId::Div) {
+        return best;
+    }
+
+    let best_text_len =
+        (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    if best_text_len < options.min_text_chars * 3 {
+        return best;
+    }
+
+    let best_toc = best.features.values[FeatureIndex::TocLike as usize];
+    let best_link_density = best.features.values[FeatureIndex::LinkDensity as usize];
+    let best_clean_ratio = best.features.values[FeatureIndex::CleanTextRatio as usize];
+    if best_toc < 0.15 && best_link_density < 0.1 && best_clean_ratio > 0.9 {
+        return best;
+    }
+
+    let best_li_count =
+        (best.features.values[FeatureIndex::LogLiCount as usize].exp() - 1.0) as usize;
+    if best_li_count < 6 {
+        return best;
+    }
+
+    let mut scored_children: Vec<(&Candidate, f32, f32)> = Vec::new();
+
+    for candidate in candidates {
+        if candidate.node_id == best.node_id {
+            continue;
+        }
+
+        if !matches!(candidate.tag, TagId::Div | TagId::Section | TagId::Article) {
+            continue;
+        }
+
+        if arena.get(candidate.node_id).and_then(|n| n.parent) != Some(best.node_id) {
+            continue;
+        }
+
+        let text_len =
+            (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
+                as usize;
+        if text_len < options.min_text_chars * 2 {
+            continue;
+        }
+
+        let ratio = text_len as f32 / best_text_len.max(1) as f32;
+        if ratio < 0.25 || ratio > 0.8 {
+            continue;
+        }
+
+        let has_min_paragraphs =
+            candidate.features.values[FeatureIndex::HasMinParagraphs as usize] > 0.5;
+        if !has_min_paragraphs {
+            continue;
+        }
+
+        let avg_para_len_strict =
+            candidate.features.values[FeatureIndex::AvgParagraphLenStrict as usize];
+        let long_para_ratio = candidate.features.values[FeatureIndex::LongParagraphRatio as usize];
+        let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
+        let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
+        let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+
+        let score = avg_para_len_strict * 0.8
+            + long_para_ratio * 0.4
+            + clean_ratio
+            + cluster
+            - toc_like
+            - ratio * 0.1;
+
+        scored_children.push((candidate, score, avg_para_len_strict));
+    }
+
+    if scored_children.len() < 2 {
+        return best;
+    }
+
+    scored_children.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let (best_child, best_score, best_avg) = scored_children[0];
+    let (_, runner_score, runner_avg) = scored_children[1];
+
+    if best_score >= runner_score + 0.05 || best_avg >= runner_avg + 0.08 {
+        return best_child;
+    }
+
+    best
 }
 
 fn promote_step_container<'a>(

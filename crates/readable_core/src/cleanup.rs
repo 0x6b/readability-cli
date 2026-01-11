@@ -198,6 +198,36 @@ fn count_descendant_media(arena: &Arena, node_id: NodeId) -> (usize, usize) {
 
 /// Check if a node is a small block with mostly links
 fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
+    let node = match arena.get(node_id) {
+        Some(n) => n,
+        None => return false,
+    };
+
+    let tag = match &node.kind {
+        NodeKind::Element { tag, .. } => *tag,
+        _ => return false,
+    };
+
+    // Preserve headings even if they're wrapped in links.
+    if matches!(tag, TagId::H1 | TagId::H2 | TagId::H3 | TagId::H4 | TagId::H5 | TagId::H6) {
+        return false;
+    }
+
+    if tag == TagId::A {
+        if let Some(parent_id) = node.parent {
+            if let Some(parent) = arena.get(parent_id) {
+                if let NodeKind::Element { tag: parent_tag, .. } = parent.kind {
+                    if matches!(
+                        parent_tag,
+                        TagId::H1 | TagId::H2 | TagId::H3 | TagId::H4 | TagId::H5 | TagId::H6
+                    ) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
     let text = arena.collect_text(node_id);
     let text_len = text.chars().count();
 
