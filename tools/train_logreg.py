@@ -6,10 +6,10 @@ This script trains a logistic regression model using Readability.js as a teacher
 It generates labeled data by comparing candidate features against teacher output.
 
 Usage:
-    python train_logreg.py --corpus tests/corpus --output model_weights.json
+    cd tools && uv run train_logreg.py --corpus ../tests/corpus --output model_weights.json
 
 Requirements:
-    pip install numpy scikit-learn
+    uv sync  # in tools/ directory
 """
 
 import argparse
