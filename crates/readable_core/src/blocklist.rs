@@ -3,7 +3,7 @@
 //! Inspired by EasyList/uBlock Origin annoyances lists, but curated to ~200 generic rules.
 //! These are structural patterns (class/id based) that appear across many sites.
 
-use crate::dom::{Arena, NodeId, NodeKind, TagId};
+use crate::dom::{Arena, NodeId, TagId};
 
 /// Blocklist entry with pattern and behavior
 struct BlockRule {
@@ -308,13 +308,8 @@ const ALL_RULES: &[&[BlockRule]] = &[
 
 /// Check if a node should be blocked based on its class/id attributes
 pub fn should_block(arena: &Arena, node_id: NodeId) -> bool {
-    let node = match arena.get(node_id) {
-        Some(n) => n,
-        None => return false,
-    };
-
     // Only check element nodes
-    if !matches!(&node.kind, NodeKind::Element { .. }) {
+    if arena.get(node_id).and_then(|n| n.tag()).is_none() {
         return false;
     }
 
@@ -413,18 +408,9 @@ pub fn is_always_remove(arena: &Arena, node_id: NodeId) -> bool {
 
 /// Check common fixed/sticky positioning patterns that indicate UI chrome
 pub fn is_fixed_chrome(arena: &Arena, node_id: NodeId) -> bool {
-    let node = match arena.get(node_id) {
-        Some(n) => n,
-        None => return false,
-    };
-
     // Check tag - typically divs
-    let tag = match &node.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
-    };
-
-    if !matches!(tag, TagId::Div | TagId::Section | TagId::Aside) {
+    let tag = arena.get(node_id).and_then(|n| n.tag());
+    if !matches!(tag, Some(TagId::Div | TagId::Section | TagId::Aside)) {
         return false;
     }
 
