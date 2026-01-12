@@ -21,7 +21,10 @@ use debug::{build_debug_info, DebugInfo};
 use features::extract_features;
 use model::score;
 use parse::parse_html;
-use postprocess::{apply_score_propagation, find_expansion_siblings};
+use postprocess::{
+    apply_score_propagation, find_expansion_siblings, find_highlight_ancestor, find_step_modules,
+    has_heading_descendant, should_include_highlight_sibling,
+};
 use select::select_best;
 use serde::{Deserialize, Serialize};
 use serialize::{to_html, to_text};
@@ -344,119 +347,4 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         text,
         debug: debug_info,
     }
-}
-
-fn find_highlight_ancestor(arena: &dom::Arena, node_id: dom::NodeId) -> Option<dom::NodeId> {
-    if is_highlight_container(arena, node_id) {
-        return Some(node_id);
-    }
-
-    for ancestor_id in arena.ancestors(node_id) {
-        if is_highlight_container(arena, ancestor_id) {
-            return Some(ancestor_id);
-        }
-    }
-
-    None
-}
-
-fn is_highlight_container(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
-    let node = match arena.get(node_id) {
-        Some(node) => node,
-        None => return false,
-    };
-    let tag = match &node.kind {
-        dom::NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
-    };
-    if !matches!(tag, dom::TagId::Section | dom::TagId::Div) {
-        return false;
-    }
-    if let Some(attrs) = arena.get_attributes(node_id) {
-        return attrs.contains_keyword(&["highlight", "highlights"]);
-    }
-    false
-}
-
-fn should_include_highlight_sibling(
-    arena: &dom::Arena,
-    node_id: dom::NodeId,
-    min_text_chars: usize,
-) -> bool {
-    let tag = arena.get(node_id).and_then(|n| match n.kind {
-        dom::NodeKind::Element { tag, .. } => Some(tag),
-        _ => None,
-    });
-    if !matches!(tag, Some(dom::TagId::Section | dom::TagId::Div | dom::TagId::Article)) {
-        return false;
-    }
-    let sibling_features = extract_features(arena, node_id);
-    let sibling_text_len = sibling_features.get_count(features::FeatureIndex::LogTextLenChars);
-    sibling_text_len >= min_text_chars / 2
-}
-
-fn has_heading_descendant(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
-    for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let dom::NodeKind::Element { tag, .. } = node.kind {
-                if matches!(tag, dom::TagId::H2 | dom::TagId::H3) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
-
-fn find_step_modules(arena: &dom::Arena, node_id: dom::NodeId) -> Option<Vec<dom::NodeId>> {
-    for ancestor_id in arena.ancestors(node_id) {
-        let mut step_children = Vec::new();
-        for child_id in arena.children(ancestor_id) {
-            if is_step_module(arena, child_id) {
-                step_children.push(child_id);
-            }
-        }
-
-        if step_children.len() >= 3 {
-            return Some(step_children);
-        }
-    }
-
-    None
-}
-
-fn is_step_module(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
-    let tag = match arena.get(node_id) {
-        Some(node) => match &node.kind {
-            dom::NodeKind::Element { tag, .. } => *tag,
-            _ => return false,
-        },
-        None => return false,
-    };
-
-    if !matches!(tag, dom::TagId::Div | dom::TagId::Section | dom::TagId::Article) {
-        return false;
-    }
-
-    let attrs = match arena.get_attributes(node_id) {
-        Some(attrs) => attrs,
-        None => return false,
-    };
-
-    if !attrs.contains_keyword(&["step"]) {
-        return false;
-    }
-
-    has_step_content_descendant(arena, node_id)
-}
-
-fn has_step_content_descendant(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
-    for desc_id in arena.descendants(node_id) {
-        if let Some(attrs) = arena.get_attributes(desc_id) {
-            if attrs.contains_keyword(&["stepcontent", "step-content"]) {
-                return true;
-            }
-        }
-    }
-    false
 }
