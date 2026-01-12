@@ -605,38 +605,41 @@ impl Arena {
         }
     }
 
+    /// Get parent node ID
+    #[inline]
+    pub fn parent(&self, id: NodeId) -> Option<NodeId> {
+        self.get(id).and_then(|n| n.parent)
+    }
+
+    /// Iterate over children with their nodes (skips invalid IDs)
+    pub fn child_nodes(&self, id: NodeId) -> impl Iterator<Item = (NodeId, &Node)> {
+        self.children(id)
+            .filter_map(move |cid| self.get(cid).map(|n| (cid, n)))
+    }
+
     /// Find the body element
     pub fn find_body(&self) -> Option<NodeId> {
-        for (i, node) in self.nodes.iter().enumerate() {
-            if let NodeKind::Element { tag: TagId::Body, .. } = node.kind {
-                return Some(i as NodeId);
-            }
-        }
-        None
+        self.nodes
+            .iter()
+            .enumerate()
+            .find(|(_, n)| n.tag() == Some(TagId::Body))
+            .map(|(i, _)| i as NodeId)
     }
 
     /// Find the head element
     pub fn find_head(&self) -> Option<NodeId> {
-        for (i, node) in self.nodes.iter().enumerate() {
-            if let NodeKind::Element { tag: TagId::Head, .. } = node.kind {
-                return Some(i as NodeId);
-            }
-        }
-        None
+        self.nodes
+            .iter()
+            .enumerate()
+            .find(|(_, n)| n.tag() == Some(TagId::Head))
+            .map(|(i, _)| i as NodeId)
     }
 
     /// Check if any descendant has one of the specified tags
     pub fn has_descendant_with_tags(&self, id: NodeId, tags: &[TagId]) -> bool {
-        for desc_id in self.descendants(id) {
-            if let Some(node) = self.get(desc_id) {
-                if let NodeKind::Element { tag, .. } = node.kind {
-                    if tags.contains(&tag) {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
+        self.descendants(id)
+            .filter_map(|desc_id| self.get(desc_id)?.tag())
+            .any(|tag| tags.contains(&tag))
     }
 
     /// Collect all text content within a subtree

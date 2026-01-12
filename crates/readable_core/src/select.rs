@@ -4,7 +4,7 @@
 
 use crate::{
     candidates::Candidate,
-    dom::{Arena, NodeId, NodeKind, TagId},
+    dom::{Arena, NodeId, TagId},
     features::FeatureIndex,
     tags::{is_content_container, is_refinement_container, is_small_content_tag},
     ExtractOptions,
@@ -546,16 +546,12 @@ fn ancestor_fallback<'a>(
 
 /// Check if a node is inside a boilerplate ancestor
 pub fn has_boilerplate_ancestor(arena: &Arena, node_id: NodeId) -> bool {
-    for ancestor_id in arena.ancestors(node_id) {
-        if let Some(ancestor) = arena.get(ancestor_id) {
-            if let NodeKind::Element { tag, .. } = &ancestor.kind {
-                if tag.is_boilerplate() {
-                    return true;
-                }
-            }
-        }
-    }
-    false
+    arena.ancestors(node_id).any(|aid| {
+        arena
+            .get(aid)
+            .and_then(|n| n.tag())
+            .map_or(false, |t| t.is_boilerplate())
+    })
 }
 
 #[cfg(test)]

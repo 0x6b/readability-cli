@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::{
     candidates::Candidate,
-    dom::{Arena, NodeId, NodeKind, TagId},
+    dom::{Arena, NodeId, TagId},
     features::{extract_features, FeatureIndex},
     keywords::negative_keywords,
     tags::is_media_tag,
@@ -103,9 +103,9 @@ fn should_include_sibling(
     };
 
     // Only consider element nodes
-    let tag = match &sibling.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
+    let tag = match sibling.tag() {
+        Some(t) => t,
+        None => return false,
     };
 
     // Skip obvious boilerplate tags
@@ -179,11 +179,9 @@ enum PassThrough {
 
 fn has_media_descendant(arena: &Arena, node_id: NodeId) -> bool {
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = &node.kind {
-                if is_media_tag(*tag) {
-                    return true;
-                }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
+            if is_media_tag(tag) {
+                return true;
             }
         }
     }
@@ -196,10 +194,7 @@ fn pass_through_sibling(
     best_text_len: usize,
 ) -> Option<PassThrough> {
     let sibling = arena.get(sibling_id)?;
-    let tag = match &sibling.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return None,
-    };
+    let tag = sibling.tag()?;
 
     let sibling_text_len = arena.collect_text(sibling_id).chars().count();
 
@@ -245,10 +240,8 @@ fn pass_through_sibling(
 pub fn compute_link_text_len(arena: &Arena, node_id: NodeId) -> usize {
     let mut total = 0;
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag: TagId::A, .. } = &node.kind {
-                total += arena.collect_text(desc_id).chars().count();
-            }
+        if arena.get(desc_id).and_then(|n| n.tag()) == Some(TagId::A) {
+            total += arena.collect_text(desc_id).chars().count();
         }
     }
     total
@@ -348,14 +341,9 @@ pub fn is_boilerplate_for_cleanup(arena: &Arena, node_id: NodeId) -> bool {
 /// Check if a descendant element should be removed as boilerplate
 /// This is more conservative than the original to avoid false positives
 fn is_boilerplate_element(arena: &Arena, node_id: NodeId) -> bool {
-    let node = match arena.get(node_id) {
-        Some(n) => n,
+    let tag = match arena.get(node_id).and_then(|n| n.tag()) {
+        Some(t) => t,
         None => return false,
-    };
-
-    let tag = match &node.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
     };
 
     // Only check nav/aside tags with very high confidence
@@ -413,21 +401,16 @@ pub fn find_highlight_ancestor(arena: &Arena, node_id: NodeId) -> Option<NodeId>
 }
 
 fn is_highlight_container(arena: &Arena, node_id: NodeId) -> bool {
-    let node = match arena.get(node_id) {
-        Some(node) => node,
+    let tag = match arena.get(node_id).and_then(|n| n.tag()) {
+        Some(t) => t,
         None => return false,
-    };
-    let tag = match &node.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
     };
     if !matches!(tag, TagId::Section | TagId::Div) {
         return false;
     }
-    if let Some(attrs) = arena.get_attributes(node_id) {
-        return attrs.contains_keyword(&["highlight", "highlights"]);
-    }
-    false
+    arena
+        .get_attributes(node_id)
+        .map_or(false, |attrs| attrs.contains_keyword(&["highlight", "highlights"]))
 }
 
 /// Check if a sibling should be included with highlight content
@@ -436,10 +419,7 @@ pub fn should_include_highlight_sibling(
     node_id: NodeId,
     min_text_chars: usize,
 ) -> bool {
-    let tag = arena.get(node_id).and_then(|n| match n.kind {
-        NodeKind::Element { tag, .. } => Some(tag),
-        _ => None,
-    });
+    let tag = arena.get(node_id).and_then(|n| n.tag());
     if !matches!(tag, Some(TagId::Section | TagId::Div | TagId::Article)) {
         return false;
     }
@@ -472,11 +452,8 @@ pub fn find_step_modules(arena: &Arena, node_id: NodeId) -> Option<Vec<NodeId>> 
 }
 
 fn is_step_module(arena: &Arena, node_id: NodeId) -> bool {
-    let tag = match arena.get(node_id) {
-        Some(node) => match &node.kind {
-            NodeKind::Element { tag, .. } => *tag,
-            _ => return false,
-        },
+    let tag = match arena.get(node_id).and_then(|n| n.tag()) {
+        Some(t) => t,
         None => return false,
     };
 
@@ -484,12 +461,8 @@ fn is_step_module(arena: &Arena, node_id: NodeId) -> bool {
         return false;
     }
 
-    let attrs = match arena.get_attributes(node_id) {
-        Some(attrs) => attrs,
-        None => return false,
-    };
-
-    if !attrs.contains_keyword(&["step"]) {
+    let attrs = arena.get_attributes(node_id);
+    if !attrs.map_or(false, |a| a.contains_keyword(&["step"])) {
         return false;
     }
 
@@ -581,7 +554,7 @@ mod tests {
             .nodes
             .iter()
             .enumerate()
-            .find(|(_, n)| matches!(&n.kind, NodeKind::Element { tag: TagId::Article, .. }))
+            .find(|(_, n)| n.tag() == Some(TagId::Article))
             .map(|(i, _)| i as NodeId)
             .unwrap();
 

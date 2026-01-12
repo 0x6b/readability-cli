@@ -16,7 +16,7 @@ use text_metrics::is_cjk;
 use text_metrics::{count_punctuation, count_text_metrics};
 
 use crate::{
-    dom::{Arena, Attributes, NodeId, NodeKind, TagId},
+    dom::{Arena, Attributes, NodeId, TagId},
     keywords::{negative_keywords, positive_keywords},
 };
 
@@ -333,11 +333,10 @@ pub fn extract_features(arena: &Arena, node_id: NodeId) -> FeatureVector {
     features.values[FeatureIndex::AvgParagraphLen as usize] = (avg_para_len / 500.0).min(1.0);
 
     // IsArticleTag, IsMainTag, IsSemanticContainer: tag identity features
-    let is_article =
-        matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Article, .. }));
-    let is_main = matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Main, .. }));
-    let is_section =
-        matches!(node.map(|n| &n.kind), Some(NodeKind::Element { tag: TagId::Section, .. }));
+    let tag = node.and_then(|n| n.tag());
+    let is_article = tag == Some(TagId::Article);
+    let is_main = tag == Some(TagId::Main);
+    let is_section = tag == Some(TagId::Section);
     features.values[FeatureIndex::IsArticleTag as usize] = if is_article { 1.0 } else { 0.0 };
     features.values[FeatureIndex::IsMainTag as usize] = if is_main { 1.0 } else { 0.0 };
     features.values[FeatureIndex::IsSemanticContainer as usize] =
@@ -409,21 +408,15 @@ fn is_semantic_main(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    if let NodeKind::Element { tag, .. } = &node.kind {
-        if tag.is_semantic_main() {
-            return true;
-        }
+    if node.tag().map_or(false, |t| t.is_semantic_main()) {
+        return true;
     }
 
-    // Check for role="main"
+    // Check for role="main" or positive keywords
     if let Some(attrs) = arena.get_attributes(node_id) {
         if attrs.role.as_ref().map_or(false, |r| r.eq_ignore_ascii_case("main")) {
             return true;
         }
-    }
-
-    // Check for positive keywords
-    if let Some(attrs) = arena.get_attributes(node_id) {
         if attrs.contains_keyword(positive_keywords()) {
             return true;
         }
@@ -434,13 +427,8 @@ fn is_semantic_main(arena: &Arena, node_id: NodeId) -> bool {
 
 /// Get tag prior value
 fn get_tag_prior(arena: &Arena, node_id: NodeId) -> f32 {
-    let node = match arena.get(node_id) {
-        Some(n) => n,
-        None => return 0.0,
-    };
-
-    if let NodeKind::Element { tag, .. } = &node.kind {
-        match tag {
+    match arena.get(node_id).and_then(|n| n.tag()) {
+        Some(tag) => match tag {
             TagId::Article => 1.0,
             TagId::Main => 0.9,
             TagId::Section => 0.5,
@@ -451,9 +439,8 @@ fn get_tag_prior(arena: &Arena, node_id: NodeId) -> f32 {
             TagId::Li => 0.1,
             TagId::Blockquote => 0.5,
             _ => 0.2,
-        }
-    } else {
-        0.0
+        },
+        None => 0.0,
     }
 }
 
@@ -485,16 +472,9 @@ fn has_keyword_in_attrs(attrs: Option<&Attributes>, keywords: &[&str]) -> bool {
 
 /// Check if node has ancestor with specific tag
 fn has_ancestor_tag(arena: &Arena, node_id: NodeId, tag: TagId) -> bool {
-    for ancestor_id in arena.ancestors(node_id) {
-        if let Some(ancestor) = arena.get(ancestor_id) {
-            if let NodeKind::Element { tag: ancestor_tag, .. } = &ancestor.kind {
-                if *ancestor_tag == tag {
-                    return true;
-                }
-            }
-        }
-    }
-    false
+    arena
+        .ancestors(node_id)
+        .any(|aid| arena.get(aid).and_then(|n| n.tag()) == Some(tag))
 }
 
 /// Compute normalized distance to nearest semantic ancestor (article/main)
@@ -503,12 +483,10 @@ fn compute_ancestor_semantic_depth(arena: &Arena, node_id: NodeId) -> f32 {
     let mut depth = 0;
     for ancestor_id in arena.ancestors(node_id) {
         depth += 1;
-        if let Some(ancestor) = arena.get(ancestor_id) {
-            if let NodeKind::Element { tag, .. } = &ancestor.kind {
-                if matches!(tag, TagId::Article | TagId::Main) {
-                    // Found semantic container - normalize by depth
-                    return clamp01(depth as f32 / 10.0);
-                }
+        if let Some(tag) = arena.get(ancestor_id).and_then(|n| n.tag()) {
+            if matches!(tag, TagId::Article | TagId::Main) {
+                // Found semantic container - normalize by depth
+                return clamp01(depth as f32 / 10.0);
             }
         }
     }
@@ -567,12 +545,10 @@ fn compute_child_diversity(arena: &Arena, node_id: NodeId) -> f32 {
     let mut tag_set = std::collections::HashSet::new();
     let mut child_count = 0;
 
-    for child_id in arena.children(node_id) {
-        if let Some(child) = arena.get(child_id) {
-            if let NodeKind::Element { tag, .. } = &child.kind {
-                tag_set.insert(*tag);
-                child_count += 1;
-            }
+    for (_, child) in arena.child_nodes(node_id) {
+        if let Some(tag) = child.tag() {
+            tag_set.insert(tag);
+            child_count += 1;
         }
     }
 
@@ -615,13 +591,12 @@ mod tests {
         let arena = parse_html(html);
 
         // Find the article
-        let mut article_id = None;
-        for (id, node) in arena.nodes.iter().enumerate() {
-            if let NodeKind::Element { tag: TagId::Article, .. } = &node.kind {
-                article_id = Some(id as NodeId);
-                break;
-            }
-        }
+        let article_id = arena
+            .nodes
+            .iter()
+            .enumerate()
+            .find(|(_, n)| n.tag() == Some(TagId::Article))
+            .map(|(i, _)| i as NodeId);
 
         let features = extract_features(&arena, article_id.unwrap());
 
@@ -657,15 +632,9 @@ mod tests {
         let body_id = arena.find_body().unwrap();
 
         // Find the pre element
-        let mut pre_id = None;
-        for desc_id in arena.descendants(body_id) {
-            if let Some(node) = arena.get(desc_id) {
-                if let NodeKind::Element { tag: TagId::Pre, .. } = &node.kind {
-                    pre_id = Some(desc_id);
-                    break;
-                }
-            }
-        }
+        let pre_id = arena
+            .descendants(body_id)
+            .find(|&id| arena.get(id).and_then(|n| n.tag()) == Some(TagId::Pre));
 
         let features = extract_features(&arena, pre_id.unwrap());
 

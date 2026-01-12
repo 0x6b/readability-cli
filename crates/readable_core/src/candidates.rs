@@ -5,7 +5,7 @@
 // Re-export keywords for backward compatibility
 pub use crate::keywords::{negative_keywords, positive_keywords};
 use crate::{
-    dom::{Arena, Attributes, NodeId, NodeKind, TagId},
+    dom::{Arena, Attributes, NodeId, TagId},
     features::FeatureVector,
     keywords::{has_negative_keywords, has_positive_keywords},
 };
@@ -99,7 +99,7 @@ fn collect_candidates_recursive(
         None => return,
     };
 
-    if let NodeKind::Element { tag, .. } = &node.kind {
+    if let Some(tag) = node.tag() {
         let attrs = arena.get_attributes(node_id);
 
         // Skip obvious boilerplate
@@ -127,7 +127,7 @@ fn collect_candidates_recursive(
             // Compute approximate text length (quick estimate)
             let approx_text_len = estimate_text_length(arena, node_id);
 
-            let candidate = Candidate::new(node_id, *tag, node.depth, approx_text_len, is_semantic);
+            let candidate = Candidate::new(node_id, tag, node.depth, approx_text_len, is_semantic);
 
             if is_semantic {
                 semantic_candidates.push(candidate);

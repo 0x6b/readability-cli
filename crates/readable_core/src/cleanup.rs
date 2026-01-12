@@ -121,9 +121,9 @@ fn mark_for_removal(
         None => return,
     };
 
-    if let NodeKind::Element { tag, .. } = &node.kind {
+    if let Some(tag) = node.tag() {
         // Remove certain tags completely
-        if REMOVE_TAGS.contains(tag) {
+        if REMOVE_TAGS.contains(&tag) {
             remove_set.insert(node_id);
             return;
         }
@@ -147,20 +147,16 @@ fn mark_for_removal(
                 return;
             }
 
-            if tag == &TagId::Section && attrs.contains_keyword(&["5-band"]) {
+            if tag == TagId::Section && attrs.contains_keyword(&["5-band"]) {
                 let is_opinion = attrs.contains_keyword(&["5-band-intl-opinion"]);
                 prune_band_section_text(arena, node_id, remove_set, is_opinion);
             }
 
             if attrs.contains_keyword(&["highlight", "highlights"]) {
                 if let Some(primary_child) = find_primary_highlight_child(arena, node_id) {
-                    for child_id in arena.children(node_id) {
-                        if child_id != primary_child {
-                            if let Some(child) = arena.get(child_id) {
-                                if matches!(child.kind, NodeKind::Element { .. }) {
-                                    remove_set.insert(child_id);
-                                }
-                            }
+                    for (child_id, child) in arena.child_nodes(node_id) {
+                        if child_id != primary_child && child.tag().is_some() {
+                            remove_set.insert(child_id);
                         }
                     }
                 }
@@ -206,13 +202,11 @@ fn count_descendant_media(arena: &Arena, node_id: NodeId) -> (usize, usize) {
     let mut li_count = 0;
 
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = &node.kind {
-                match tag {
-                    TagId::Img => img_count += 1,
-                    TagId::Li => li_count += 1,
-                    _ => {}
-                }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
+            match tag {
+                TagId::Img => img_count += 1,
+                TagId::Li => li_count += 1,
+                _ => {}
             }
         }
     }
@@ -227,9 +221,9 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    let tag = match &node.kind {
-        NodeKind::Element { tag, .. } => *tag,
-        _ => return false,
+    let tag = match node.tag() {
+        Some(t) => t,
+        None => return false,
     };
 
     // Preserve headings even if they're wrapped in links.
@@ -242,21 +236,16 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
     }
 
     if tag == TagId::A {
-        if let Some(parent_id) = node.parent {
-            if let Some(parent) = arena.get(parent_id) {
-                if let NodeKind::Element { tag: parent_tag, .. } = parent.kind {
-                    if matches!(parent_tag, TagId::Header) {
-                        return false;
-                    }
-                    if matches!(
-                        parent_tag,
-                        TagId::H1 | TagId::H2 | TagId::H3 | TagId::H4 | TagId::H5 | TagId::H6
-                    ) {
-                        return false;
-                    }
-                    if matches!(parent_tag, TagId::P | TagId::Blockquote) {
-                        return false;
-                    }
+        if let Some(parent) = arena.parent(node_id).and_then(|pid| arena.get(pid)) {
+            if let Some(parent_tag) = parent.tag() {
+                if matches!(parent_tag, TagId::Header) {
+                    return false;
+                }
+                if parent_tag.is_heading() {
+                    return false;
+                }
+                if matches!(parent_tag, TagId::P | TagId::Blockquote) {
+                    return false;
                 }
             }
         }
@@ -279,13 +268,9 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
 }
 
 fn find_primary_highlight_child(arena: &Arena, node_id: NodeId) -> Option<NodeId> {
-    for child_id in arena.children(node_id) {
-        if let Some(node) = arena.get(child_id) {
-            if matches!(node.kind, NodeKind::Element { .. }) {
-                if has_heading_descendant(arena, child_id) {
-                    return Some(child_id);
-                }
-            }
+    for (child_id, child) in arena.child_nodes(node_id) {
+        if child.tag().is_some() && has_heading_descendant(arena, child_id) {
+            return Some(child_id);
         }
     }
     None
@@ -305,14 +290,12 @@ fn prune_band_section_text(
     let mut article_count = 0;
 
     for desc_id in arena.descendants(section_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag: TagId::Article, .. } = node.kind {
-                article_count += 1;
-                if let Some(text_container) = find_article_text_container(arena, desc_id) {
-                    let headline_len =
-                        find_headline_length(arena, text_container).unwrap_or(usize::MAX);
-                    text_blocks.push((text_container, headline_len));
-                }
+        if arena.get(desc_id).and_then(|n| n.tag()) == Some(TagId::Article) {
+            article_count += 1;
+            if let Some(text_container) = find_article_text_container(arena, desc_id) {
+                let headline_len =
+                    find_headline_length(arena, text_container).unwrap_or(usize::MAX);
+                text_blocks.push((text_container, headline_len));
             }
         }
     }
@@ -347,13 +330,9 @@ fn prune_band_section_text(
 }
 
 fn find_article_text_container(arena: &Arena, article_id: NodeId) -> Option<NodeId> {
-    for child_id in arena.children(article_id) {
-        if let Some(child) = arena.get(child_id) {
-            if let NodeKind::Element { tag: TagId::Div, .. } = child.kind {
-                if has_textual_descendant(arena, child_id) {
-                    return Some(child_id);
-                }
-            }
+    for (child_id, child) in arena.child_nodes(article_id) {
+        if child.tag() == Some(TagId::Div) && has_textual_descendant(arena, child_id) {
+            return Some(child_id);
         }
     }
     None
@@ -361,13 +340,11 @@ fn find_article_text_container(arena: &Arena, article_id: NodeId) -> Option<Node
 
 fn find_headline_length(arena: &Arena, node_id: NodeId) -> Option<usize> {
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag: TagId::H2, .. } = node.kind {
-                let text = arena.collect_text(desc_id);
-                let len = text.chars().count();
-                if len > 0 {
-                    return Some(len);
-                }
+        if arena.get(desc_id).and_then(|n| n.tag()) == Some(TagId::H2) {
+            let text = arena.collect_text(desc_id);
+            let len = text.chars().count();
+            if len > 0 {
+                return Some(len);
             }
         }
     }
@@ -376,20 +353,9 @@ fn find_headline_length(arena: &Arena, node_id: NodeId) -> Option<usize> {
 
 fn has_textual_descendant(arena: &Arena, node_id: NodeId) -> bool {
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = node.kind {
-                if matches!(
-                    tag,
-                    TagId::P
-                        | TagId::H1
-                        | TagId::H2
-                        | TagId::H3
-                        | TagId::H4
-                        | TagId::H5
-                        | TagId::H6
-                ) {
-                    return true;
-                }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
+            if tag == TagId::P || tag.is_heading() {
+                return true;
             }
         }
     }
@@ -431,13 +397,10 @@ fn build_cleaned_node(
                     continue;
                 }
 
-                let child_node = arena.get(child_id);
-                if let Some(child) = child_node {
-                    // Check if child element should be removed
-                    if let NodeKind::Element { tag: child_tag, .. } = &child.kind {
-                        if REMOVE_TAGS.contains(child_tag) {
-                            continue;
-                        }
+                // Check if child element should be removed
+                if let Some(child_tag) = arena.get(child_id).and_then(|c| c.tag()) {
+                    if REMOVE_TAGS.contains(&child_tag) {
+                        continue;
                     }
                 }
 
