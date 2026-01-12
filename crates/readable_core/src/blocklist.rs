@@ -150,6 +150,21 @@ const RELATED: &[BlockRule] = &[
 
 /// Comments sections
 const COMMENTS: &[BlockRule] = &[
+    BlockRule::always("comment-wrapper"),
+    BlockRule::always("comments-wrapper"),
+    BlockRule::always("comments-header"),
+    BlockRule::always("comments-title"),
+    BlockRule::always("comments-tou"),
+    BlockRule::always("comment-form"),
+    BlockRule::always("comment-body"),
+    BlockRule::always("comment-content"),
+    BlockRule::always("comment-by-"),
+    BlockRule::always("comment-reply"),
+    BlockRule::always("comment-thread"),
+    BlockRule::always("comment-count"),
+    BlockRule::always("comment-login"),
+    BlockRule::always("comment-nav"),
+    BlockRule::always("pane-aclu-social-comments"),
     BlockRule::if_medium("comments-section"),
     BlockRule::if_medium("comments-area"),
     BlockRule::if_medium("comments-container"),
@@ -227,6 +242,25 @@ const UTILITY_BUTTONS: &[BlockRule] = &[
     BlockRule::if_small("post-tools"),
 ];
 
+/// Pagination / page navigation
+const PAGINATION: &[BlockRule] = &[
+    BlockRule::if_small("pager"),
+    BlockRule::if_small("pagination"),
+    BlockRule::if_small("page-nav"),
+    BlockRule::if_small("page-navigation"),
+    BlockRule::if_small("page-numbers"),
+];
+
+/// Hidden utility text (screen reader helpers, etc.)
+const HIDDEN_TEXT: &[BlockRule] = &[
+    BlockRule::always("element-invisible"),
+    BlockRule::always("visually-hidden"),
+    BlockRule::always("sr-only"),
+    BlockRule::always("screen-reader"),
+    BlockRule::always("sr-hidden"),
+    BlockRule::always("u-visually-hidden"),
+];
+
 /// Sticky elements that are usually UI chrome
 const STICKY: &[BlockRule] = &[
     BlockRule::if_small("sticky-header"),
@@ -253,6 +287,8 @@ const ALL_RULES: &[&[BlockRule]] = &[
     OVERLAYS,
     AUTHOR_BIO,
     UTILITY_BUTTONS,
+    PAGINATION,
+    HIDDEN_TEXT,
     STICKY,
 ];
 

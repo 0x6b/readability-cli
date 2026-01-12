@@ -254,6 +254,9 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
                     ) {
                         return false;
                     }
+                    if matches!(parent_tag, TagId::P | TagId::Blockquote) {
+                        return false;
+                    }
                 }
             }
         }
