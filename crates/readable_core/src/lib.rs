@@ -15,6 +15,7 @@ pub mod parse;
 pub mod postprocess;
 pub mod select;
 pub mod serialize;
+pub mod tags;
 pub mod title;
 
 use candidates::generate_candidates;

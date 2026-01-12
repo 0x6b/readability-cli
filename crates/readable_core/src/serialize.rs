@@ -5,6 +5,7 @@
 use crate::{
     cleanup::{CleanedAttrs, CleanedNode, CleanedNodeKind},
     dom::TagId,
+    tags::is_void_tag,
 };
 
 /// Convert a cleaned tree to sanitized HTML
@@ -42,7 +43,7 @@ fn serialize_html_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
             let new_in_pre = in_pre || tag.is_code_container();
 
             // Skip empty non-void elements
-            if node.children.is_empty() && !is_void_element(*tag) {
+            if node.children.is_empty() && !is_void_tag(*tag) {
                 return;
             }
 
@@ -53,7 +54,7 @@ fn serialize_html_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
             output.push('>');
 
             // Void elements don't have closing tags
-            if is_void_element(*tag) {
+            if is_void_tag(*tag) {
                 return;
             }
 
@@ -223,11 +224,6 @@ fn normalize_whitespace(text: &str) -> String {
     }
 
     result
-}
-
-/// Check if a tag is a void element (no closing tag)
-fn is_void_element(tag: TagId) -> bool {
-    matches!(tag, TagId::Br | TagId::Img | TagId::Input | TagId::Meta | TagId::Link)
 }
 
 /// Normalize HTML output (remove excessive whitespace between tags)

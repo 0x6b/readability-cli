@@ -12,6 +12,7 @@ use crate::{
     dom::{Arena, NodeId, NodeKind, TagId},
     features::{extract_features, FeatureIndex},
     keywords::negative_keywords,
+    tags::is_media_tag,
 };
 
 struct SelectedSiblingMetrics {
@@ -174,10 +175,6 @@ fn should_include_sibling(
 enum PassThrough {
     Include,
     Skip,
-}
-
-fn is_media_tag(tag: TagId) -> bool {
-    matches!(tag, TagId::Img | TagId::Figure | TagId::Figcaption | TagId::Video | TagId::Audio)
 }
 
 fn has_media_descendant(arena: &Arena, node_id: NodeId) -> bool {

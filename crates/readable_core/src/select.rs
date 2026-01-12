@@ -6,6 +6,7 @@ use crate::{
     candidates::Candidate,
     dom::{Arena, NodeId, NodeKind, TagId},
     features::FeatureIndex,
+    tags::{is_content_container, is_refinement_container, is_small_content_tag},
     ExtractOptions,
 };
 
@@ -209,7 +210,7 @@ fn refine_overextracted_once<'a>(
         return best;
     }
 
-    if !matches!(best.tag, TagId::Div | TagId::Section | TagId::Main | TagId::Article) {
+    if !is_content_container(best.tag) {
         return best;
     }
 
@@ -285,7 +286,7 @@ fn refine_overextracted_once<'a>(
             continue;
         }
 
-        if !matches!(candidate.tag, TagId::Div | TagId::Section | TagId::Main | TagId::Article) {
+        if !is_content_container(candidate.tag) {
             continue;
         }
 
@@ -373,7 +374,7 @@ fn refine_columnar_children<'a>(
             continue;
         }
 
-        if !matches!(candidate.tag, TagId::Div | TagId::Section | TagId::Article) {
+        if !is_refinement_container(candidate.tag) {
             continue;
         }
 
@@ -475,7 +476,7 @@ fn ancestor_fallback<'a>(
     _options: &ExtractOptions,
 ) -> Option<&'a Candidate> {
     // Only consider fallback for small containers like <p>
-    let should_fallback = matches!(best.tag, TagId::P | TagId::Li | TagId::Td);
+    let should_fallback = is_small_content_tag(best.tag);
 
     if !should_fallback {
         return Some(best);

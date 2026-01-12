@@ -646,6 +646,12 @@ impl Arena {
         result
     }
 
+    /// Get text length (character count) for a subtree
+    #[inline]
+    pub fn text_len(&self, id: NodeId) -> usize {
+        self.collect_text(id).chars().count()
+    }
+
     /// Collect text content, with option to preserve whitespace (for pre/code)
     fn collect_text_recursive(&self, id: NodeId, result: &mut String, preserve_ws: bool) {
         let node = match self.get(id) {
