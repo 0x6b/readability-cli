@@ -83,6 +83,9 @@ const NEWSLETTER: &[BlockRule] = &[
 
 /// Social sharing widgets
 const SOCIAL: &[BlockRule] = &[
+    BlockRule::always("social-share-box"),
+    BlockRule::always("social-sharing-modal"),
+    BlockRule::always("social-share-link"),
     BlockRule::if_small("share-buttons"),
     BlockRule::if_small("share-icons"),
     BlockRule::if_small("share-links"),
@@ -204,6 +207,11 @@ const ADS: &[BlockRule] = &[
 
 /// Overlays and modals (non-cookie)
 const OVERLAYS: &[BlockRule] = &[
+    BlockRule::always("modal fade"),
+    BlockRule::always("modal-dialog"),
+    BlockRule::always("modal-content"),
+    BlockRule::always("modal-header"),
+    BlockRule::always("modal-body"),
     BlockRule::if_small("modal-overlay"),
     BlockRule::if_small("popup-overlay"),
     BlockRule::if_small("lightbox-overlay"),
@@ -226,10 +234,15 @@ const AUTHOR_BIO: &[BlockRule] = &[
     BlockRule::if_medium("about-author"),
     BlockRule::if_medium("writer-bio"),
     BlockRule::if_medium("contributor-bio"),
+    BlockRule::if_small("article-author"),
 ];
 
 /// Print/email/save buttons
 const UTILITY_BUTTONS: &[BlockRule] = &[
+    BlockRule::always("article-view-action"),
+    BlockRule::if_small("viewcount"),
+    BlockRule::if_small("article-category-tags"),
+    BlockRule::if_medium("card-box-header"),
     BlockRule::if_small("print-button"),
     BlockRule::if_small("print-link"),
     BlockRule::if_small("email-button"),
@@ -259,6 +272,7 @@ const HIDDEN_TEXT: &[BlockRule] = &[
     BlockRule::always("screen-reader"),
     BlockRule::always("sr-hidden"),
     BlockRule::always("u-visually-hidden"),
+    BlockRule::if_small("hidden"),
 ];
 
 /// Sticky elements that are usually UI chrome
