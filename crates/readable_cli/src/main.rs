@@ -1,12 +1,12 @@
 use std::{
-    io::{stdin, Read},
+    io::{Read, stdin},
     process::exit,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 use html2md::parse_html;
-use readable_core::{extract, ExtractOptions};
+use readable_core::{ExtractOptions, extract};
 use reqwest::Url;
 use serde_json::to_string_pretty;
 

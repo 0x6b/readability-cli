@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use crate::{
     candidates::Candidate,
     dom::{Arena, NodeId, TagId},
-    features::{extract_features, FeatureIndex},
+    features::{FeatureIndex, extract_features},
     keywords::negative_keywords,
     tags::is_media_tag,
 };

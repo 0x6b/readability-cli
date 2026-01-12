@@ -19,7 +19,7 @@ pub mod tags;
 pub mod title;
 
 use candidates::generate_candidates;
-use debug::{build_debug_info, DebugInfo};
+use debug::{DebugInfo, build_debug_info};
 use features::extract_features;
 use model::score;
 use parse::parse_html;

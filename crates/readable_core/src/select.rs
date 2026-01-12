@@ -3,11 +3,11 @@
 //! Selects the best candidate from scored candidates using heuristic rules.
 
 use crate::{
+    ExtractOptions,
     candidates::Candidate,
     dom::{Arena, NodeId, TagId},
     features::FeatureIndex,
     tags::{is_content_container, is_refinement_container, is_small_content_tag},
-    ExtractOptions,
 };
 
 /// Select the best candidate from the list

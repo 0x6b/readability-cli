@@ -5,11 +5,11 @@
 use std::collections::HashSet;
 
 use crate::{
+    ExtractOptions,
     blocklist::should_block,
     dom::{Arena, NodeId, NodeKind, TagId},
     keywords::{negative_keywords, positive_keywords},
     postprocess::{compute_link_text_len, is_boilerplate_for_cleanup},
-    ExtractOptions,
 };
 
 /// A cleaned node for output
@@ -372,7 +372,7 @@ fn build_cleaned_node(
             return CleanedNode {
                 kind: CleanedNodeKind::Text(String::new()),
                 children: Vec::new(),
-            }
+            };
         }
     };
 
@@ -486,11 +486,7 @@ pub fn flatten_cleaned_tree(node: CleanedNode) -> Option<CleanedNode> {
     match node.kind {
         CleanedNodeKind::Text(ref text) => {
             // Remove empty text nodes
-            if text.trim().is_empty() {
-                None
-            } else {
-                Some(node)
-            }
+            if text.trim().is_empty() { None } else { Some(node) }
         }
         CleanedNodeKind::Element { tag, attrs } => {
             // Recursively flatten children

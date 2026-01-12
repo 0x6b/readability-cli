@@ -1,27 +1,20 @@
 [package]
 name = "readable_core"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 description = "Pure Rust readability extractor using logistic regression"
-license = "MIT"
 
 [dependencies]
-# HTML parsing
-html5ever = "0.27"
-markup5ever_rcdom = "0.3"
-
-# Encoding detection and conversion
-encoding_rs = "0.8"
-
-# Serialization for options/debug output
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Lazy initialization
-lazy_static = "1.5"
+html5ever.workspace = true
+markup5ever_rcdom.workspace = true
+encoding_rs.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+lazy_static.workspace = true
 
 [dev-dependencies]
-pretty_assertions = "1.4"
+pretty_assertions.workspace = true
 
 [features]
 default = []
