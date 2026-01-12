@@ -1,6 +1,6 @@
 //! DOM structure metrics: element counting and structural analysis
 
-use crate::dom::{Arena, NodeId, NodeKind, TagId};
+use crate::dom::{Arena, NodeId, TagId};
 
 /// Element counts for feature extraction
 pub struct ElementCounts {
@@ -92,7 +92,7 @@ fn count_elements_recursive(
     let mut current_in_pre = in_pre;
     let mut current_list_depth = list_depth;
 
-    if let NodeKind::Element { tag, .. } = &node.kind {
+    if let Some(tag) = node.tag() {
         match tag {
             TagId::A => {
                 counts.a += 1;
@@ -147,7 +147,7 @@ fn count_elements_recursive(
             TagId::Img => counts.img += 1,
             TagId::Table => counts.table += 1,
             TagId::Ul | TagId::Ol => {
-                if *tag == TagId::Ul {
+                if tag == TagId::Ul {
                     counts.ul += 1;
                 } else {
                     counts.ol += 1;
@@ -165,7 +165,7 @@ fn count_elements_recursive(
     let mut prev_was_link = false;
     for child_id in arena.children(node_id) {
         if let Some(child) = arena.get(child_id) {
-            if let NodeKind::Element { tag: TagId::A, .. } = &child.kind {
+            if child.tag() == Some(TagId::A) {
                 if prev_was_link {
                     counts.consecutive_links += 1;
                 }
@@ -184,12 +184,5 @@ fn count_elements_recursive(
 
 /// Check if a node has a direct link child
 fn has_direct_link_child(arena: &Arena, node_id: NodeId) -> bool {
-    for child_id in arena.children(node_id) {
-        if let Some(child) = arena.get(child_id) {
-            if let NodeKind::Element { tag: TagId::A, .. } = &child.kind {
-                return true;
-            }
-        }
-    }
-    false
+    arena.child_elements(node_id).any(|(_, tag)| tag == TagId::A)
 }

@@ -2,7 +2,7 @@
 //!
 //! Extracts title and author information from HTML documents.
 
-use crate::dom::{Arena, NodeId, NodeKind, TagId};
+use crate::dom::{Arena, NodeId, TagId};
 
 /// Extract the title from the document
 pub fn extract_title(arena: &Arena) -> Option<String> {
@@ -63,10 +63,8 @@ fn find_meta_content(
     property: &str,
     use_property: bool,
 ) -> Option<String> {
-    for child_id in arena.children(head_id) {
-        let node = arena.get(child_id)?;
-
-        if let NodeKind::Element { tag: TagId::Meta, .. } = &node.kind {
+    for (child_id, tag) in arena.child_elements(head_id) {
+        if tag == TagId::Meta {
             if let Some(attrs) = arena.get_attributes(child_id) {
                 let matches = if use_property {
                     attrs
@@ -100,10 +98,8 @@ fn find_meta_by_name(arena: &Arena, head_id: NodeId, name: &str) -> Option<Strin
 
 /// Find the <title> tag content
 fn find_title_tag(arena: &Arena, head_id: NodeId) -> Option<String> {
-    for child_id in arena.children(head_id) {
-        let node = arena.get(child_id)?;
-
-        if let NodeKind::Element { tag: TagId::Title, .. } = &node.kind {
+    for (child_id, tag) in arena.child_elements(head_id) {
+        if tag == TagId::Title {
             let text = arena.collect_text(child_id);
             if !text.trim().is_empty() {
                 return Some(text);
@@ -116,14 +112,10 @@ fn find_title_tag(arena: &Arena, head_id: NodeId) -> Option<String> {
 /// Find the first heading of a specific level
 fn find_first_heading(arena: &Arena, node_id: NodeId, target_tag: TagId) -> Option<String> {
     for desc_id in arena.descendants(node_id) {
-        let node = arena.get(desc_id)?;
-
-        if let NodeKind::Element { tag, .. } = &node.kind {
-            if *tag == target_tag {
-                let text = arena.collect_text(desc_id);
-                if !text.trim().is_empty() {
-                    return Some(text);
-                }
+        if arena.get(desc_id).and_then(|n| n.tag()) == Some(target_tag) {
+            let text = arena.collect_text(desc_id);
+            if !text.trim().is_empty() {
+                return Some(text);
             }
         }
     }

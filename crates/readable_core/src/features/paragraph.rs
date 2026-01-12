@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::dom::{Arena, NodeId, NodeKind, TagId};
+use crate::dom::{Arena, NodeId, TagId};
 
 /// Paragraph statistics for anti-over-extraction features
 pub struct ParagraphStats {
@@ -19,11 +19,9 @@ pub fn compute_paragraph_stats(arena: &Arena, node_id: NodeId) -> ParagraphStats
 
     // Find all <p> elements and their text lengths
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag: TagId::P, .. } = &node.kind {
-                let text_len = arena.collect_text(desc_id).chars().count();
-                paragraphs.push((desc_id, text_len));
-            }
+        if arena.get(desc_id).and_then(|n| n.tag()) == Some(TagId::P) {
+            let text_len = arena.collect_text(desc_id).chars().count();
+            paragraphs.push((desc_id, text_len));
         }
     }
 
@@ -109,11 +107,9 @@ pub fn compute_descendant_diversity(arena: &Arena, node_id: NodeId) -> f32 {
     let mut found_tags: HashSet<TagId> = HashSet::new();
 
     for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = &node.kind {
-                if content_tags.contains(tag) {
-                    found_tags.insert(*tag);
-                }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
+            if content_tags.contains(&tag) {
+                found_tags.insert(tag);
             }
         }
     }
