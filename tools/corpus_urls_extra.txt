@@ -1,0 +1,7 @@
+# Replacement URLs for failed ones
+https://www.stonebucklabs.com/blog/kelp-log-parser
+https://fast.github.io/blog/stop-forwarding-errors-start-designing-them/
+https://ettolrach.com/blog/bidirectional_inference.html
+https://felix.dognebula.com/art/html-parsers-in-portland.html
+https://bastrich.tech/perfect-code-review
+https://riggraz.dev/dialogue-developer.html

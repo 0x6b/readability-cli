@@ -1,0 +1,47 @@
+# Hatena Bookmark IT hotentry (10 pages)
+https://zenn.dev/dhc4aki/articles/af82b70c904faa
+https://syu-m-5151.hatenablog.com/entry/2026/01/12/003013
+https://ascii.jp/elem/000/004/365/4365434/
+https://gigazine.net/news/20260111-vibium/
+https://www.itmedia.co.jp/news/articles/2601/12/news019.html
+https://fulghum.io/self-hosting
+https://zenn.dev/shunk031/articles/ghq-gwq-fzf-worktree
+https://antirez.com/news/158
+https://mitchellh.com/writing/ghostty-memory-leak-fix
+https://cursor.com/blog/agent-best-practices
+
+# Lobste.rs vibecoding (10 pages)
+https://archaeologist.dev/artifacts/anthropic
+https://chrisgregori.dev/opinion/code-is-cheap-now-software-isnt
+https://penberg.org/blog/disaggregated-agentfs.html
+https://www.cursor.com/blog/instant-apply
+https://blog.val.town/blog/codegen/
+https://simonwillison.net/2025/Mar/19/writing-code-for-llms/
+https://sketch.dev/blog/first-look
+https://zed.dev/blog/predict-edits
+https://www.lesswrong.com/posts/Y4xCw5CAJaLxTgmYx/please-don-t-make-me-code-ai-in-2027
+https://www.marginalia.nu/log/a_117_claude_chungus/
+
+# Lobste.rs rust (10 pages)
+https://predr.ag/blog/cargo-semver-checks-2025-year-in-review/
+https://kobzol.github.io/rust/rustc/2026/01/05/my-rust-contributions-in-2025.html
+https://trynova.dev/blog/garbage-collection-is-contrarian
+https://ohadravid.github.io/posts/2026-01-09-fourteen-ref/
+https://kerkour.com/introduction-rust-simd
+https://www.redox-os.org/news/this-month-251231/
+https://timbran.org/announcing-moor-1-0-beta1.html
+https://lukefleed.xyz/posts/who-owns-the-memory-pt3/
+https://seri.tools/blog/rust9x-1-93/
+https://claytonwramsey.com/blog/dumpster2/
+
+# Lobste.rs programming (10 pages)
+https://hackerfactor.com/blog/index.php?/archives/1085-A-Typical-PDF.html
+https://www.gingerbill.org/article/2026/01/11/mitigating-the-billion-dollar-mistake/
+https://ryelang.org/blog/posts/learn_80_rye_in_20_time_code/
+https://rybicki.io/blog/2026/01/01/mutexes-from-scratch-in-go.html
+https://f5n.org/blog/2026/shell-scripts/
+https://maximullaris.com/program-in-awk.html
+https://nullprogram.com/blog/2025/12/31/
+https://fhur.me/posts/2026/change-is-the-root-of-all-evil-bugs
+https://www.hillelwayne.com/post/what-comments/
+https://stoppels.ch/2022/11/27/io-is-no-longer-the-bottleneck.html
