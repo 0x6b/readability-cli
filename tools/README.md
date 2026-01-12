@@ -1,6 +1,6 @@
 # Training Tools
 
-Tools for training the logistic regression model used by `readable_core`.
+Tools for training the logistic regression model used by `rdbl_core`.
 
 ## Setup
 
@@ -56,7 +56,7 @@ Options:
 ## Exporting Weights to Rust
 
 ```bash
-uv run export_weights.py --input weights.json --output ../crates/readable_core/src/model.rs
+uv run export_weights.py --input weights.json --output ../crates/rdbl_core/src/model.rs
 ```
 
 This generates a complete `model.rs` file with trained weights.

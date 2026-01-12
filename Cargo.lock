@@ -943,20 +943,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "readable_cli"
+name = "rdbl_cli"
 version = "0.10.0"
 dependencies = [
  "anyhow",
  "clap",
  "html2md",
- "readable_core",
+ "rdbl_core",
  "reqwest",
  "serde_json",
  "tokio",
 ]
 
 [[package]]
-name = "readable_core"
+name = "rdbl_core"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
@@ -969,11 +969,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "readable_wasm"
+name = "rdbl_wasm"
 version = "0.1.0"
 dependencies = [
  "js-sys",
- "readable_core",
+ "rdbl_core",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",

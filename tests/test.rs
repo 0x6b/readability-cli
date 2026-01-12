@@ -1,4 +1,4 @@
-use readable_core::{extract, ExtractOptions};
+use rdbl_core::{ExtractOptions, extract};
 
 #[test]
 fn test_extract_article() {

@@ -1,6 +1,6 @@
-//! Readable Core - Pure Rust readability extractor using logistic regression
+//! rdbl_core - Pure Rust content extractor using logistic regression
 //!
-//! This library extracts the main readable content from HTML documents
+//! This library extracts the main content from HTML documents
 //! using a logistic regression model over engineered features.
 
 pub mod blocklist;

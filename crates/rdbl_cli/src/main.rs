@@ -6,7 +6,7 @@ use std::{
 use anyhow::{Result, bail};
 use clap::Parser;
 use html2md::parse_html;
-use readable_core::{ExtractOptions, extract};
+use rdbl_core::{ExtractOptions, extract};
 use reqwest::Url;
 use serde_json::to_string_pretty;
 
@@ -84,7 +84,7 @@ async fn main() -> Result<()> {
             }
             println!("{}", result.text);
         }
-        "markdown" | _ => {
+        _ => {
             // Convert HTML to markdown
             if let Some(title) = &result.title {
                 println!("# {title}\n");

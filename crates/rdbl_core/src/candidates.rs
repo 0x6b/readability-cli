@@ -212,7 +212,10 @@ mod tests {
         for candidate in &candidates {
             if let Some(attrs) = arena.get_attributes(candidate.node_id) {
                 assert!(
-                    !attrs.class.as_ref().map_or(false, |c| c.contains("sidebar")),
+                    !attrs
+                        .class
+                        .as_ref()
+                        .map_or(false, |c| c.contains("sidebar")),
                     "Sidebar should not be a candidate"
                 );
             }

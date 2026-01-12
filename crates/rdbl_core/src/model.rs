@@ -104,8 +104,8 @@ const BIAS: f32 = -6.5116;
 /// Compute logit score for a feature vector
 pub fn score(features: &FeatureVector) -> f32 {
     let mut sum = BIAS;
-    for i in 0..NUM_FEATURES {
-        sum += WEIGHTS[i] * features.values[i];
+    for (weight, value) in WEIGHTS.iter().zip(features.values.iter()) {
+        sum += weight * value;
     }
     sum
 }

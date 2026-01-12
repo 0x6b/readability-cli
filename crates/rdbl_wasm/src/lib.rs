@@ -1,8 +1,8 @@
-//! WASM wrapper for readable_core
+//! WASM wrapper for rdbl_core
 //!
 //! Provides a JavaScript-friendly API for content extraction.
 
-use readable_core::ExtractOptions;
+use rdbl_core::ExtractOptions;
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
@@ -24,7 +24,7 @@ pub fn extract(html: &str, opts: JsValue) -> Result<JsValue, JsValue> {
     };
 
     // Run extraction
-    let result = readable_core::extract(html, &options);
+    let result = rdbl_core::extract(html, &options);
 
     // Convert to JS
     to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
@@ -57,7 +57,7 @@ mod tests {
         "#;
 
         let options = ExtractOptions::default();
-        let result = readable_core::extract(html, &options);
+        let result = rdbl_core::extract(html, &options);
 
         assert!(result.title.is_some());
         assert!(!result.content_html.is_empty() || !result.text.is_empty());

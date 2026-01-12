@@ -27,8 +27,7 @@ struct SelectedSiblingMetrics {
 /// Readability.js propagates scores from content elements to their ancestors:
 /// - Parent gets score / 1
 /// - Grandparent gets score / 2
-/// - Great-grandparent gets score / 3
-/// etc.
+/// - Great-grandparent gets score / 3 etc.
 ///
 /// This helps containers with multiple good paragraphs "bubble up" their quality.
 pub fn apply_score_propagation(candidates: &mut [Candidate], arena: &Arena) {

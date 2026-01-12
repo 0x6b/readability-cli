@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/readable_core", "crates/readable_wasm", "crates/readable_cli"]
+members = ["crates/rdbl_core", "crates/rdbl_wasm", "crates/rdbl_cli"]
 resolver = "3"
 
 [workspace.package]
@@ -8,7 +8,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Internal crates
-readable_core = { path = "crates/readable_core" }
+rdbl_core = { path = "crates/rdbl_core" }
 
 # HTML parsing
 html5ever = "0.27"

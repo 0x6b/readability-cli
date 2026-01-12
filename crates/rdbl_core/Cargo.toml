@@ -1,9 +1,9 @@
 [package]
-name = "readable_core"
+name = "rdbl_core"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Pure Rust readability extractor using logistic regression"
+description = "Pure Rust content extractor using logistic regression"
 
 [dependencies]
 html5ever.workspace = true
