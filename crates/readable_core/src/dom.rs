@@ -486,12 +486,8 @@ impl Attributes {
 
     /// Get normalized class and id combined for pattern matching
     pub fn normalized_class_id(&self) -> String {
-        format!(
-            "{} {}",
-            self.class.as_deref().unwrap_or(""),
-            self.id.as_deref().unwrap_or("")
-        )
-        .to_lowercase()
+        format!("{} {}", self.class.as_deref().unwrap_or(""), self.id.as_deref().unwrap_or(""))
+            .to_lowercase()
     }
 }
 

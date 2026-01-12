@@ -322,10 +322,7 @@ fn refine_overextracted_once<'a>(
 
         let avg_para_len_strict = candidate.features.get(FeatureIndex::AvgParagraphLenStrict);
         let long_para_ratio = candidate.features.get(FeatureIndex::LongParagraphRatio);
-        let focus_score = cluster * 2.0
-            + clean_ratio
-            - toc_like
-            - ratio * 0.2
+        let focus_score = cluster * 2.0 + clean_ratio - toc_like - ratio * 0.2
             + avg_para_len_strict * 0.3
             + long_para_ratio * 0.2;
 
@@ -335,11 +332,7 @@ fn refine_overextracted_once<'a>(
         }
     }
 
-    if best_toc < 0.15
-        && best_link_density < 0.1
-        && best_clean_ratio > 0.9
-        && best_p_count >= 8
-    {
+    if best_toc < 0.15 && best_link_density < 0.1 && best_clean_ratio > 0.9 && best_p_count >= 8 {
         return best;
     }
 
@@ -409,10 +402,7 @@ fn refine_columnar_children<'a>(
         let toc_like = candidate.features.get(FeatureIndex::TocLike);
         let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
 
-        let score = avg_para_len_strict * 0.8
-            + long_para_ratio * 0.4
-            + clean_ratio
-            + cluster
+        let score = avg_para_len_strict * 0.8 + long_para_ratio * 0.4 + clean_ratio + cluster
             - toc_like
             - ratio * 0.1;
 
@@ -514,8 +504,7 @@ fn ancestor_fallback<'a>(
         for candidate in candidates {
             if candidate.node_id == parent_id {
                 // Check if parent is suitable
-                let parent_text_len =
-                    candidate.features.get_count(FeatureIndex::LogTextLenChars);
+                let parent_text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
 
                 // Parent should have substantially more text
                 if parent_text_len > best_text_len * 3 {

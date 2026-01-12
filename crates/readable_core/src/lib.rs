@@ -148,8 +148,9 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
     {
         let selected_id = selected_candidate.node_id;
-        let selected_text_len =
-            selected_candidate.features.get_count(features::FeatureIndex::LogTextLenChars);
+        let selected_text_len = selected_candidate
+            .features
+            .get_count(features::FeatureIndex::LogTextLenChars);
 
         let mut selected_id = Some(selected_id);
         let mut selected_text_len = selected_text_len;
@@ -158,7 +159,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         if html_has_body {
             if let Some(body_id) = arena.find_body() {
                 let body_features = extract_features(&arena, body_id);
-                let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
+                let body_text_len =
+                    body_features.get_count(features::FeatureIndex::LogTextLenChars);
                 let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
                 let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
 
