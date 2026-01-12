@@ -617,6 +617,22 @@ impl Arena {
             .filter_map(move |cid| self.get(cid).map(|n| (cid, n)))
     }
 
+    /// Iterate over previous siblings (not including self)
+    pub fn prev_siblings(&self, id: NodeId) -> PrevSiblingsIter<'_> {
+        PrevSiblingsIter {
+            arena: self,
+            current: self.nodes.get(id as usize).and_then(|n| n.prev_sibling),
+        }
+    }
+
+    /// Iterate over next siblings (not including self)
+    pub fn next_siblings(&self, id: NodeId) -> NextSiblingsIter<'_> {
+        NextSiblingsIter {
+            arena: self,
+            current: self.nodes.get(id as usize).and_then(|n| n.next_sibling),
+        }
+    }
+
     /// Find the body element
     pub fn find_body(&self) -> Option<NodeId> {
         self.nodes
@@ -776,6 +792,38 @@ impl Iterator for AncestorsIter<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current?;
         self.current = self.arena.nodes.get(current as usize)?.parent;
+        Some(current)
+    }
+}
+
+/// Iterator over previous siblings (towards first child)
+pub struct PrevSiblingsIter<'a> {
+    arena: &'a Arena,
+    current: Option<NodeId>,
+}
+
+impl Iterator for PrevSiblingsIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.current?;
+        self.current = self.arena.nodes.get(current as usize)?.prev_sibling;
+        Some(current)
+    }
+}
+
+/// Iterator over next siblings (towards last child)
+pub struct NextSiblingsIter<'a> {
+    arena: &'a Arena,
+    current: Option<NodeId>,
+}
+
+impl Iterator for NextSiblingsIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.current?;
+        self.current = self.arena.nodes.get(current as usize)?.next_sibling;
         Some(current)
     }
 }

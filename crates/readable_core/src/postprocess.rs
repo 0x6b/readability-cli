@@ -273,8 +273,7 @@ pub fn find_expansion_siblings(
 
     // Check preceding siblings
     let mut skipped = 0usize;
-    let mut prev = selected_id;
-    while let Some(prev_id) = arena.get(prev).and_then(|n| n.prev_sibling) {
+    for prev_id in arena.prev_siblings(selected_id) {
         if should_include_sibling(arena, prev_id, selected_text_len, &selected_metrics) {
             siblings.push(prev_id);
             skipped = 0;
@@ -290,7 +289,6 @@ pub fn find_expansion_siblings(
             // Stop at first non-matching sibling to maintain contiguity
             break;
         }
-        prev = prev_id;
     }
 
     // Reverse to maintain document order
@@ -298,8 +296,7 @@ pub fn find_expansion_siblings(
 
     // Check following siblings
     let mut skipped = 0usize;
-    let mut next = selected_id;
-    while let Some(next_id) = arena.get(next).and_then(|n| n.next_sibling) {
+    for next_id in arena.next_siblings(selected_id) {
         if should_include_sibling(arena, next_id, selected_text_len, &selected_metrics) {
             siblings.push(next_id);
             skipped = 0;
@@ -314,7 +311,6 @@ pub fn find_expansion_siblings(
         } else {
             break;
         }
-        next = next_id;
     }
 
     siblings
