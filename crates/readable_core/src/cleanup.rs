@@ -142,6 +142,11 @@ fn mark_for_removal(
 
         // Check for negative keywords in class/id
         if let Some(attrs) = arena.get_attributes(node_id) {
+            if attrs.contains_keyword(&["mwe-math", "mathml"]) {
+                remove_set.insert(node_id);
+                return;
+            }
+
             if tag == &TagId::Section && attrs.contains_keyword(&["5-band"]) {
                 let is_opinion = attrs.contains_keyword(&["5-band-intl-opinion"]);
                 prune_band_section_text(arena, node_id, remove_set, is_opinion);
