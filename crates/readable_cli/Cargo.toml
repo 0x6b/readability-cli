@@ -1,0 +1,29 @@
+[package]
+name = "readable_cli"
+version = "0.10.0"
+edition.workspace = true
+license.workspace = true
+description = "A CLI to extract main content from HTML using logistic regression"
+
+[[bin]]
+name = "rdbl"
+path = "src/main.rs"
+
+[dependencies]
+readable_core = { path = "../readable_core" }
+
+# Command line argument parsing
+clap = { version = "4.5", features = ["derive", "wrap_help", "env"] }
+
+# Fetch the webpage
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# Async runtime
+tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+
+# Error handling and JSON output
+anyhow = "1.0"
+serde_json = "1.0"
+
+# HTML to Markdown conversion
+html2md = "0.2"

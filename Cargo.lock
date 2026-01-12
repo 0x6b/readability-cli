@@ -943,7 +943,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "readability-cli"
+name = "readable_cli"
 version = "0.10.0"
 dependencies = [
  "anyhow",
