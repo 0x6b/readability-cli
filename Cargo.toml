@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/rdbl_core", "crates/rdbl_wasm", "crates/rdbl_cli"]
+default-members = ["crates/rdbl_cli"]
 resolver = "3"
 
 [workspace.package]
