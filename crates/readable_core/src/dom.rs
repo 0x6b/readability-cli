@@ -617,6 +617,12 @@ impl Arena {
             .filter_map(move |cid| self.get(cid).map(|n| (cid, n)))
     }
 
+    /// Iterate over element children only (returns NodeId and TagId)
+    pub fn child_elements(&self, id: NodeId) -> impl Iterator<Item = (NodeId, TagId)> + '_ {
+        self.child_nodes(id)
+            .filter_map(|(cid, node)| node.tag().map(|tag| (cid, tag)))
+    }
+
     /// Iterate over previous siblings (not including self)
     pub fn prev_siblings(&self, id: NodeId) -> PrevSiblingsIter<'_> {
         PrevSiblingsIter {

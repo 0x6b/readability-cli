@@ -545,11 +545,9 @@ fn compute_child_diversity(arena: &Arena, node_id: NodeId) -> f32 {
     let mut tag_set = std::collections::HashSet::new();
     let mut child_count = 0;
 
-    for (_, child) in arena.child_nodes(node_id) {
-        if let Some(tag) = child.tag() {
-            tag_set.insert(tag);
-            child_count += 1;
-        }
+    for (_, tag) in arena.child_elements(node_id) {
+        tag_set.insert(tag);
+        child_count += 1;
     }
 
     if child_count == 0 {

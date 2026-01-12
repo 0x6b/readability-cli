@@ -154,8 +154,8 @@ fn mark_for_removal(
 
             if attrs.contains_keyword(&["highlight", "highlights"]) {
                 if let Some(primary_child) = find_primary_highlight_child(arena, node_id) {
-                    for (child_id, child) in arena.child_nodes(node_id) {
-                        if child_id != primary_child && child.tag().is_some() {
+                    for (child_id, _) in arena.child_elements(node_id) {
+                        if child_id != primary_child {
                             remove_set.insert(child_id);
                         }
                     }
@@ -268,12 +268,10 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
 }
 
 fn find_primary_highlight_child(arena: &Arena, node_id: NodeId) -> Option<NodeId> {
-    for (child_id, child) in arena.child_nodes(node_id) {
-        if child.tag().is_some() && has_heading_descendant(arena, child_id) {
-            return Some(child_id);
-        }
-    }
-    None
+    arena
+        .child_elements(node_id)
+        .find(|&(cid, _)| has_heading_descendant(arena, cid))
+        .map(|(cid, _)| cid)
 }
 
 fn has_heading_descendant(arena: &Arena, node_id: NodeId) -> bool {
@@ -330,12 +328,10 @@ fn prune_band_section_text(
 }
 
 fn find_article_text_container(arena: &Arena, article_id: NodeId) -> Option<NodeId> {
-    for (child_id, child) in arena.child_nodes(article_id) {
-        if child.tag() == Some(TagId::Div) && has_textual_descendant(arena, child_id) {
-            return Some(child_id);
-        }
-    }
-    None
+    arena
+        .child_elements(article_id)
+        .find(|&(cid, tag)| tag == TagId::Div && has_textual_descendant(arena, cid))
+        .map(|(cid, _)| cid)
 }
 
 fn find_headline_length(arena: &Arena, node_id: NodeId) -> Option<usize> {
