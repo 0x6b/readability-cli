@@ -8,9 +8,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    candidates::{negative_keywords, Candidate},
+    candidates::Candidate,
     dom::{Arena, NodeId, NodeKind, TagId},
     features::{extract_features, FeatureIndex},
+    keywords::negative_keywords,
 };
 
 struct SelectedSiblingMetrics {

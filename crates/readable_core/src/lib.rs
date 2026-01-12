@@ -9,6 +9,7 @@ pub mod cleanup;
 pub mod debug;
 pub mod dom;
 pub mod features;
+pub mod keywords;
 pub mod model;
 pub mod parse;
 pub mod postprocess;

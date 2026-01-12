@@ -16,8 +16,8 @@ use text_metrics::is_cjk;
 use text_metrics::{count_punctuation, count_text_metrics};
 
 use crate::{
-    candidates::{negative_keywords, positive_keywords},
     dom::{Arena, Attributes, NodeId, NodeKind, TagId},
+    keywords::{negative_keywords, positive_keywords},
 };
 
 /// Number of features in the feature vector

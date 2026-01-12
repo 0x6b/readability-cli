@@ -6,8 +6,8 @@ use std::collections::HashSet;
 
 use crate::{
     blocklist::should_block,
-    candidates::{negative_keywords, positive_keywords},
     dom::{Arena, NodeId, NodeKind, TagId},
+    keywords::{negative_keywords, positive_keywords},
     postprocess::is_boilerplate_for_cleanup,
     ExtractOptions,
 };
