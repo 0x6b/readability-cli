@@ -313,6 +313,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
                 all_roots.sort_unstable();
             }
             (all_roots, expanded)
+        } else if let Some(step_modules) = find_step_modules(&arena, selected_id) {
+            (step_modules, true)
         } else {
             (content_roots, use_sibling_expansion)
         }
@@ -413,6 +415,59 @@ fn has_heading_descendant(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
                 if matches!(tag, dom::TagId::H2 | dom::TagId::H3) {
                     return true;
                 }
+            }
+        }
+    }
+    false
+}
+
+fn find_step_modules(arena: &dom::Arena, node_id: dom::NodeId) -> Option<Vec<dom::NodeId>> {
+    for ancestor_id in arena.ancestors(node_id) {
+        let mut step_children = Vec::new();
+        for child_id in arena.children(ancestor_id) {
+            if is_step_module(arena, child_id) {
+                step_children.push(child_id);
+            }
+        }
+
+        if step_children.len() >= 3 {
+            return Some(step_children);
+        }
+    }
+
+    None
+}
+
+fn is_step_module(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
+    let tag = match arena.get(node_id) {
+        Some(node) => match &node.kind {
+            dom::NodeKind::Element { tag, .. } => *tag,
+            _ => return false,
+        },
+        None => return false,
+    };
+
+    if !matches!(tag, dom::TagId::Div | dom::TagId::Section | dom::TagId::Article) {
+        return false;
+    }
+
+    let attrs = match arena.get_attributes(node_id) {
+        Some(attrs) => attrs,
+        None => return false,
+    };
+
+    if !attrs.contains_keyword(&["step"]) {
+        return false;
+    }
+
+    has_step_content_descendant(arena, node_id)
+}
+
+fn has_step_content_descendant(arena: &dom::Arena, node_id: dom::NodeId) -> bool {
+    for desc_id in arena.descendants(node_id) {
+        if let Some(attrs) = arena.get_attributes(desc_id) {
+            if attrs.contains_keyword(&["stepcontent", "step-content"]) {
+                return true;
             }
         }
     }
