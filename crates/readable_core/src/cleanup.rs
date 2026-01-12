@@ -292,16 +292,7 @@ fn find_primary_highlight_child(arena: &Arena, node_id: NodeId) -> Option<NodeId
 }
 
 fn has_heading_descendant(arena: &Arena, node_id: NodeId) -> bool {
-    for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = node.kind {
-                if matches!(tag, TagId::H1 | TagId::H2 | TagId::H3) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
+    arena.has_descendant_with_tags(node_id, &[TagId::H1, TagId::H2, TagId::H3])
 }
 
 fn prune_band_section_text(

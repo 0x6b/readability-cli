@@ -629,6 +629,20 @@ impl Arena {
         None
     }
 
+    /// Check if any descendant has one of the specified tags
+    pub fn has_descendant_with_tags(&self, id: NodeId, tags: &[TagId]) -> bool {
+        for desc_id in self.descendants(id) {
+            if let Some(node) = self.get(desc_id) {
+                if let NodeKind::Element { tag, .. } = node.kind {
+                    if tags.contains(&tag) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
     /// Collect all text content within a subtree
     pub fn collect_text(&self, id: NodeId) -> String {
         let mut result = String::new();

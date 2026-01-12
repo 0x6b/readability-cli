@@ -452,16 +452,7 @@ pub fn should_include_highlight_sibling(
 
 /// Check if node has H2 or H3 heading descendants
 pub fn has_heading_descendant(arena: &Arena, node_id: NodeId) -> bool {
-    for desc_id in arena.descendants(node_id) {
-        if let Some(node) = arena.get(desc_id) {
-            if let NodeKind::Element { tag, .. } = node.kind {
-                if matches!(tag, TagId::H2 | TagId::H3) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
+    arena.has_descendant_with_tags(node_id, &[TagId::H2, TagId::H3])
 }
 
 /// Find step modules in ancestors (for step-by-step instruction pages)
