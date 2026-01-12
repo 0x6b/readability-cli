@@ -130,12 +130,7 @@ fn should_include_sibling(
 
     // Check for negative keywords in class/id
     if let Some(attrs) = arena.get_attributes(sibling_id) {
-        let class_id = format!(
-            "{} {}",
-            attrs.class.as_deref().unwrap_or(""),
-            attrs.id.as_deref().unwrap_or("")
-        )
-        .to_lowercase();
+        let class_id = attrs.normalized_class_id();
 
         let negative =
             ["sidebar", "nav", "footer", "header", "comment", "ad", "promo", "related", "social"];
@@ -385,12 +380,7 @@ fn is_boilerplate_element(arena: &Arena, node_id: NodeId) -> bool {
 
     // Check class/id for strong boilerplate signals only
     if let Some(attrs) = arena.get_attributes(node_id) {
-        let class_id = format!(
-            "{} {}",
-            attrs.class.as_deref().unwrap_or(""),
-            attrs.id.as_deref().unwrap_or("")
-        )
-        .to_lowercase();
+        let class_id = attrs.normalized_class_id();
 
         // Only very strong negative signals with small content
         let strong_negative = ["advertisement", "ad-container", "promo-box"];

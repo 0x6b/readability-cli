@@ -324,13 +324,10 @@ pub fn should_block(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    let class = attrs.class.as_deref().unwrap_or("");
-    let id = attrs.id.as_deref().unwrap_or("");
-
     // Combine and lowercase for matching
-    let combined = format!("{} {}", class, id).to_lowercase();
+    let combined = attrs.normalized_class_id();
 
-    if combined.is_empty() {
+    if combined.trim().is_empty() {
         return false;
     }
 
@@ -363,11 +360,9 @@ pub fn is_always_remove(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    let class = attrs.class.as_deref().unwrap_or("");
-    let id = attrs.id.as_deref().unwrap_or("");
-    let combined = format!("{} {}", class, id).to_lowercase();
+    let combined = attrs.normalized_class_id();
 
-    if combined.is_empty() {
+    if combined.trim().is_empty() {
         return false;
     }
 
@@ -438,30 +433,21 @@ pub fn is_fixed_chrome(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    let class = attrs.class.as_deref().unwrap_or("").to_lowercase();
-    let id = attrs.id.as_deref().unwrap_or("").to_lowercase();
+    let combined = attrs.normalized_class_id();
 
     // Fixed/sticky patterns
-    let is_fixed = class.contains("fixed")
-        || class.contains("sticky")
-        || class.contains("floating")
-        || id.contains("fixed")
-        || id.contains("sticky")
-        || id.contains("floating");
+    let is_fixed =
+        combined.contains("fixed") || combined.contains("sticky") || combined.contains("floating");
 
     if !is_fixed {
         return false;
     }
 
     // Check it's not the main content area
-    let has_content_signal = class.contains("content")
-        || class.contains("article")
-        || class.contains("post")
-        || class.contains("entry")
-        || id.contains("content")
-        || id.contains("article")
-        || id.contains("post")
-        || id.contains("entry");
+    let has_content_signal = combined.contains("content")
+        || combined.contains("article")
+        || combined.contains("post")
+        || combined.contains("entry");
 
     if has_content_signal {
         return false;

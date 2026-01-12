@@ -455,14 +455,7 @@ fn promote_step_container<'a>(
 
     let class_id = arena
         .get_attributes(parent_id)
-        .map(|attrs| {
-            format!(
-                "{} {}",
-                attrs.class.as_deref().unwrap_or(""),
-                attrs.id.as_deref().unwrap_or("")
-            )
-            .to_lowercase()
-        })
+        .map(|attrs| attrs.normalized_class_id())
         .unwrap_or_default();
 
     if !class_id.contains("step") && !class_id.contains("instruction") {
