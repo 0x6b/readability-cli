@@ -271,29 +271,11 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
     }
 
     // Count link text
-    let mut link_text_len = 0;
-    count_link_text(arena, node_id, &mut link_text_len);
+    let link_text_len = crate::postprocess::compute_link_text_len(arena, node_id);
 
     // High link density = likely nav
     let link_density = link_text_len as f32 / text_len.max(1) as f32;
     link_density > 0.7 && text_len > 20
-}
-
-/// Count total text length inside links
-fn count_link_text(arena: &Arena, node_id: NodeId, total: &mut usize) {
-    let node = match arena.get(node_id) {
-        Some(n) => n,
-        None => return,
-    };
-
-    if let NodeKind::Element { tag: TagId::A, .. } = &node.kind {
-        *total += arena.collect_text(node_id).chars().count();
-        return; // Don't recurse into link
-    }
-
-    for child_id in arena.children(node_id) {
-        count_link_text(arena, child_id, total);
-    }
 }
 
 fn find_primary_highlight_child(arena: &Arena, node_id: NodeId) -> Option<NodeId> {

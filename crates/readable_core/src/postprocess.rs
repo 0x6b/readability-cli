@@ -244,7 +244,7 @@ fn pass_through_sibling(
 }
 
 /// Compute link text length in a subtree
-fn compute_link_text_len(arena: &Arena, node_id: NodeId) -> usize {
+pub fn compute_link_text_len(arena: &Arena, node_id: NodeId) -> usize {
     let mut total = 0;
     for desc_id in arena.descendants(node_id) {
         if let Some(node) = arena.get(desc_id) {
