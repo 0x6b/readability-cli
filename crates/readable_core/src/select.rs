@@ -242,7 +242,7 @@ fn refine_overextracted_once<'a>(
 
             let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
             let ratio = text_len as f32 / best_text_len.max(1) as f32;
-            if ratio < 0.6 || ratio > 0.95 {
+            if !(0.6..=0.95).contains(&ratio) {
                 continue;
             }
 
@@ -388,7 +388,7 @@ fn refine_columnar_children<'a>(
         }
 
         let ratio = text_len as f32 / best_text_len.max(1) as f32;
-        if ratio < 0.25 || ratio > 0.8 {
+        if !(0.25..=0.8).contains(&ratio) {
             continue;
         }
 
@@ -550,7 +550,7 @@ pub fn has_boilerplate_ancestor(arena: &Arena, node_id: NodeId) -> bool {
         arena
             .get(aid)
             .and_then(|n| n.tag())
-            .map_or(false, |t| t.is_boilerplate())
+            .is_some_and(|t| t.is_boilerplate())
     })
 }
 

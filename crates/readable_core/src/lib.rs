@@ -158,33 +158,30 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         let mut selected_text_len = selected_text_len;
         let mut selected_tag = Some(selected_candidate.tag);
 
-        if html_has_body {
-            if let Some(body_id) = arena.find_body() {
-                let body_features = extract_features(&arena, body_id);
-                let body_text_len =
-                    body_features.get_count(features::FeatureIndex::LogTextLenChars);
-                let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
-                let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
+        if html_has_body && let Some(body_id) = arena.find_body() {
+            let body_features = extract_features(&arena, body_id);
+            let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
+            let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
+            let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
 
-                let should_promote = match selected_tag {
-                    Some(dom::TagId::P | dom::TagId::Td) => {
-                        body_text_len > selected_text_len * 3
-                            && body_link_density < 0.05
-                            && body_toc_like < 0.2
-                    }
-                    Some(dom::TagId::Table) => {
-                        body_text_len > selected_text_len * 2
-                            && body_link_density < 0.1
-                            && body_toc_like < 0.2
-                    }
-                    _ => false,
-                };
-
-                if should_promote {
-                    selected_id = Some(body_id);
-                    selected_text_len = body_text_len;
-                    selected_tag = Some(dom::TagId::Body);
+            let should_promote = match selected_tag {
+                Some(dom::TagId::P | dom::TagId::Td) => {
+                    body_text_len > selected_text_len * 3
+                        && body_link_density < 0.05
+                        && body_toc_like < 0.2
                 }
+                Some(dom::TagId::Table) => {
+                    body_text_len > selected_text_len * 2
+                        && body_link_density < 0.1
+                        && body_toc_like < 0.2
+                }
+                _ => false,
+            };
+
+            if should_promote {
+                selected_id = Some(body_id);
+                selected_text_len = body_text_len;
+                selected_tag = Some(dom::TagId::Body);
             }
         }
 
@@ -216,13 +213,13 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
             let mut section_siblings = 0usize;
             if let Some(parent_id) = arena.get(selected_id).and_then(|n| n.parent) {
                 for child_id in arena.children(parent_id) {
-                    if let Some(node) = arena.get(child_id) {
-                        if matches!(
+                    if let Some(node) = arena.get(child_id)
+                        && matches!(
                             node.kind,
                             dom::NodeKind::Element { tag: dom::TagId::Section, .. }
-                        ) {
-                            section_siblings += 1;
-                        }
+                        )
+                    {
+                        section_siblings += 1;
                     }
                 }
             }

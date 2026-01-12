@@ -457,28 +457,28 @@ impl Attributes {
         for kw in keywords {
             let kw_lower = kw.to_ascii_lowercase();
             if kw_lower.len() <= 3 {
-                if let Some(ref id) = id_lower {
-                    if has_token_prefix(id, &kw_lower) {
-                        return true;
-                    }
+                if let Some(ref id) = id_lower
+                    && has_token_prefix(id, &kw_lower)
+                {
+                    return true;
                 }
-                if let Some(ref class) = class_lower {
-                    if has_token_prefix(class, &kw_lower) {
-                        return true;
-                    }
+                if let Some(ref class) = class_lower
+                    && has_token_prefix(class, &kw_lower)
+                {
+                    return true;
                 }
                 continue;
             }
 
-            if let Some(ref id) = id_lower {
-                if id.contains(&kw_lower) {
-                    return true;
-                }
+            if let Some(ref id) = id_lower
+                && id.contains(&kw_lower)
+            {
+                return true;
             }
-            if let Some(ref class) = class_lower {
-                if class.contains(&kw_lower) {
-                    return true;
-                }
+            if let Some(ref class) = class_lower
+                && class.contains(&kw_lower)
+            {
+                return true;
             }
         }
         false

@@ -107,10 +107,10 @@ pub fn compute_descendant_diversity(arena: &Arena, node_id: NodeId) -> f32 {
     let mut found_tags: HashSet<TagId> = HashSet::new();
 
     for desc_id in arena.descendants(node_id) {
-        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
-            if content_tags.contains(&tag) {
-                found_tags.insert(tag);
-            }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag())
+            && content_tags.contains(&tag)
+        {
+            found_tags.insert(tag);
         }
     }
 

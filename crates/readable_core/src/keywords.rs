@@ -84,10 +84,10 @@ pub fn negative_keywords() -> &'static [&'static str] {
 
 /// Check if attributes contain positive keywords
 pub fn has_positive_keywords(attrs: Option<&Attributes>) -> bool {
-    attrs.map_or(false, |a| a.contains_keyword(POSITIVE_KEYWORDS))
+    attrs.is_some_and(|a| a.contains_keyword(POSITIVE_KEYWORDS))
 }
 
 /// Check if attributes contain negative keywords
 pub fn has_negative_keywords(attrs: Option<&Attributes>) -> bool {
-    attrs.map_or(false, |a| a.contains_keyword(NEGATIVE_KEYWORDS))
+    attrs.is_some_and(|a| a.contains_keyword(NEGATIVE_KEYWORDS))
 }

@@ -73,12 +73,12 @@ fn serialize_html_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
 
 /// Serialize attributes
 fn serialize_attrs(attrs: &CleanedAttrs, tag: TagId, output: &mut String) {
-    if tag == TagId::A {
-        if let Some(href) = &attrs.href {
-            output.push_str(" href=\"");
-            output.push_str(&escape_attr(href));
-            output.push('"');
-        }
+    if tag == TagId::A
+        && let Some(href) = &attrs.href
+    {
+        output.push_str(" href=\"");
+        output.push_str(&escape_attr(href));
+        output.push('"');
     }
 }
 
@@ -155,10 +155,10 @@ fn serialize_text_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
                     | TagId::H5
                     | TagId::H6
                     | TagId::Blockquote
-            ) {
-                if !output.ends_with("\n\n") && !output.ends_with('\n') {
-                    output.push('\n');
-                }
+            ) && !output.ends_with("\n\n")
+                && !output.ends_with('\n')
+            {
+                output.push('\n');
             }
         }
     }

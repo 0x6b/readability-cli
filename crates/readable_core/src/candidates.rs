@@ -52,7 +52,7 @@ impl Candidate {
 
 /// Check if node has role="main"
 fn has_role_main(attrs: Option<&Attributes>) -> bool {
-    attrs.map_or(false, |a| a.role.as_ref().map_or(false, |r| r.eq_ignore_ascii_case("main")))
+    attrs.is_some_and(|a| a.role.as_ref().is_some_and(|r| r.eq_ignore_ascii_case("main")))
 }
 
 /// Generate candidates from the arena

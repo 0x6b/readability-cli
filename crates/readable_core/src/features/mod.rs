@@ -264,13 +264,12 @@ pub fn extract_features(arena: &Arena, node_id: NodeId) -> FeatureVector {
         if has_keyword_in_attrs(attrs, &["content", "body"]) { 1.0 } else { 0.0 };
     features.values[FeatureIndex::HasArticleClass as usize] =
         if has_keyword_in_attrs(attrs, &["article", "post", "entry"]) { 1.0 } else { 0.0 };
-    features.values[FeatureIndex::HasMainRole as usize] = if attrs
-        .map_or(false, |a| a.role.as_ref().map_or(false, |r| r.eq_ignore_ascii_case("main")))
-    {
-        1.0
-    } else {
-        0.0
-    };
+    features.values[FeatureIndex::HasMainRole as usize] =
+        if attrs.is_some_and(|a| a.role.as_ref().is_some_and(|r| r.eq_ignore_ascii_case("main"))) {
+            1.0
+        } else {
+            0.0
+        };
     features.values[FeatureIndex::HasNavClass as usize] =
         if has_keyword_in_attrs(attrs, &["nav", "navigation", "menu"]) { 1.0 } else { 0.0 };
     features.values[FeatureIndex::HasSidebarClass as usize] =
@@ -408,13 +407,13 @@ fn is_semantic_main(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
-    if node.tag().map_or(false, |t| t.is_semantic_main()) {
+    if node.tag().is_some_and(|t| t.is_semantic_main()) {
         return true;
     }
 
     // Check for role="main" or positive keywords
     if let Some(attrs) = arena.get_attributes(node_id) {
-        if attrs.role.as_ref().map_or(false, |r| r.eq_ignore_ascii_case("main")) {
+        if attrs.role.as_ref().is_some_and(|r| r.eq_ignore_ascii_case("main")) {
             return true;
         }
         if attrs.contains_keyword(positive_keywords()) {
@@ -467,7 +466,7 @@ fn count_keyword_hits(arena: &Arena, node_id: NodeId) -> (usize, usize) {
 
 /// Check if attributes contain specific keywords
 fn has_keyword_in_attrs(attrs: Option<&Attributes>, keywords: &[&str]) -> bool {
-    attrs.map_or(false, |a| a.contains_keyword(keywords))
+    attrs.is_some_and(|a| a.contains_keyword(keywords))
 }
 
 /// Check if node has ancestor with specific tag
@@ -483,11 +482,11 @@ fn compute_ancestor_semantic_depth(arena: &Arena, node_id: NodeId) -> f32 {
     let mut depth = 0;
     for ancestor_id in arena.ancestors(node_id) {
         depth += 1;
-        if let Some(tag) = arena.get(ancestor_id).and_then(|n| n.tag()) {
-            if matches!(tag, TagId::Article | TagId::Main) {
-                // Found semantic container - normalize by depth
-                return clamp01(depth as f32 / 10.0);
-            }
+        if let Some(tag) = arena.get(ancestor_id).and_then(|n| n.tag())
+            && matches!(tag, TagId::Article | TagId::Main)
+        {
+            // Found semantic container - normalize by depth
+            return clamp01(depth as f32 / 10.0);
         }
     }
     // No semantic ancestor found

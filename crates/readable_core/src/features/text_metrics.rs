@@ -21,11 +21,9 @@ pub fn count_text_metrics(text: &str) -> (usize, usize, usize) {
             if is_cjk(c) {
                 cjk_count += 1;
             }
-        } else {
-            if in_word {
-                word_count += 1;
-                in_word = false;
-            }
+        } else if in_word {
+            word_count += 1;
+            in_word = false;
         }
     }
 

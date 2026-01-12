@@ -152,12 +152,12 @@ fn mark_for_removal(
                 prune_band_section_text(arena, node_id, remove_set, is_opinion);
             }
 
-            if attrs.contains_keyword(&["highlight", "highlights"]) {
-                if let Some(primary_child) = find_primary_highlight_child(arena, node_id) {
-                    for (child_id, _) in arena.child_elements(node_id) {
-                        if child_id != primary_child {
-                            remove_set.insert(child_id);
-                        }
+            if attrs.contains_keyword(&["highlight", "highlights"])
+                && let Some(primary_child) = find_primary_highlight_child(arena, node_id)
+            {
+                for (child_id, _) in arena.child_elements(node_id) {
+                    if child_id != primary_child {
+                        remove_set.insert(child_id);
                     }
                 }
             }
@@ -235,19 +235,18 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
         return false;
     }
 
-    if tag == TagId::A {
-        if let Some(parent) = arena.parent(node_id).and_then(|pid| arena.get(pid)) {
-            if let Some(parent_tag) = parent.tag() {
-                if matches!(parent_tag, TagId::Header) {
-                    return false;
-                }
-                if parent_tag.is_heading() {
-                    return false;
-                }
-                if matches!(parent_tag, TagId::P | TagId::Blockquote) {
-                    return false;
-                }
-            }
+    if tag == TagId::A
+        && let Some(parent) = arena.parent(node_id).and_then(|pid| arena.get(pid))
+        && let Some(parent_tag) = parent.tag()
+    {
+        if matches!(parent_tag, TagId::Header) {
+            return false;
+        }
+        if parent_tag.is_heading() {
+            return false;
+        }
+        if matches!(parent_tag, TagId::P | TagId::Blockquote) {
+            return false;
         }
     }
 
@@ -349,10 +348,10 @@ fn find_headline_length(arena: &Arena, node_id: NodeId) -> Option<usize> {
 
 fn has_textual_descendant(arena: &Arena, node_id: NodeId) -> bool {
     for desc_id in arena.descendants(node_id) {
-        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
-            if tag == TagId::P || tag.is_heading() {
-                return true;
-            }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag())
+            && (tag == TagId::P || tag.is_heading())
+        {
+            return true;
         }
     }
     false
@@ -394,21 +393,22 @@ fn build_cleaned_node(
                 }
 
                 // Check if child element should be removed
-                if let Some(child_tag) = arena.get(child_id).and_then(|c| c.tag()) {
-                    if REMOVE_TAGS.contains(&child_tag) {
-                        continue;
-                    }
+                if let Some(child_tag) = arena.get(child_id).and_then(|c| c.tag())
+                    && REMOVE_TAGS.contains(&child_tag)
+                {
+                    continue;
                 }
 
                 let cleaned = build_cleaned_node(arena, child_id, remove_set, allowed, unwrap);
 
                 // Flatten if this child is unwrapped
-                if let CleanedNodeKind::Element { tag: child_tag, .. } = &cleaned.kind {
-                    if unwrap.contains(child_tag) && !allowed.contains(child_tag) {
-                        // Unwrap: add children directly
-                        children.extend(cleaned.children);
-                        continue;
-                    }
+                if let CleanedNodeKind::Element { tag: child_tag, .. } = &cleaned.kind
+                    && unwrap.contains(child_tag)
+                    && !allowed.contains(child_tag)
+                {
+                    // Unwrap: add children directly
+                    children.extend(cleaned.children);
+                    continue;
                 }
 
                 children.push(cleaned);
@@ -471,10 +471,10 @@ fn build_cleaned_attrs(arena: &Arena, node_id: NodeId, tag: TagId) -> CleanedAtt
 
     if tag == TagId::A {
         // Keep href, but filter out javascript: URLs
-        if let Some(href) = &attrs.href {
-            if !href.trim_start().to_lowercase().starts_with("javascript:") {
-                cleaned.href = Some(href.clone());
-            }
+        if let Some(href) = &attrs.href
+            && !href.trim_start().to_lowercase().starts_with("javascript:")
+        {
+            cleaned.href = Some(href.clone());
         }
     }
 

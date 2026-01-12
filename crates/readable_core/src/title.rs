@@ -27,10 +27,10 @@ pub fn extract_title(arena: &Arena) -> Option<String> {
     }
 
     // 2. Look for first h1 in body
-    if let Some(body_id) = arena.find_body() {
-        if let Some(h1_text) = find_first_heading(arena, body_id, TagId::H1) {
-            return Some(clean_title(&h1_text));
-        }
+    if let Some(body_id) = arena.find_body()
+        && let Some(h1_text) = find_first_heading(arena, body_id, TagId::H1)
+    {
+        return Some(clean_title(&h1_text));
     }
 
     None
@@ -64,27 +64,23 @@ fn find_meta_content(
     use_property: bool,
 ) -> Option<String> {
     for (child_id, tag) in arena.child_elements(head_id) {
-        if tag == TagId::Meta {
-            if let Some(attrs) = arena.get_attributes(child_id) {
-                let matches = if use_property {
-                    attrs
-                        .property
-                        .as_ref()
-                        .map_or(false, |p| p.eq_ignore_ascii_case(property))
-                } else {
-                    attrs
-                        .name
-                        .as_ref()
-                        .map_or(false, |n| n.eq_ignore_ascii_case(property))
-                };
+        if tag == TagId::Meta
+            && let Some(attrs) = arena.get_attributes(child_id)
+        {
+            let matches = if use_property {
+                attrs
+                    .property
+                    .as_ref()
+                    .is_some_and(|p| p.eq_ignore_ascii_case(property))
+            } else {
+                attrs.name.as_ref().is_some_and(|n| n.eq_ignore_ascii_case(property))
+            };
 
-                if matches {
-                    if let Some(content) = &attrs.content {
-                        if !content.trim().is_empty() {
-                            return Some(content.clone());
-                        }
-                    }
-                }
+            if matches
+                && let Some(content) = &attrs.content
+                && !content.trim().is_empty()
+            {
+                return Some(content.clone());
             }
         }
     }

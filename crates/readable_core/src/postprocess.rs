@@ -179,10 +179,10 @@ enum PassThrough {
 
 fn has_media_descendant(arena: &Arena, node_id: NodeId) -> bool {
     for desc_id in arena.descendants(node_id) {
-        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag()) {
-            if is_media_tag(tag) {
-                return true;
-            }
+        if let Some(tag) = arena.get(desc_id).and_then(|n| n.tag())
+            && is_media_tag(tag)
+        {
+            return true;
         }
     }
     false
@@ -217,13 +217,13 @@ fn pass_through_sibling(
         return None;
     }
 
-    if let Some(attrs) = arena.get_attributes(sibling_id) {
-        if attrs.contains_keyword(negative_keywords()) {
-            if sibling_text_len < best_text_len / 3 {
-                return Some(PassThrough::Skip);
-            }
-            return None;
+    if let Some(attrs) = arena.get_attributes(sibling_id)
+        && attrs.contains_keyword(negative_keywords())
+    {
+        if sibling_text_len < best_text_len / 3 {
+            return Some(PassThrough::Skip);
         }
+        return None;
     }
 
     let link_text_len = compute_link_text_len(arena, sibling_id);
@@ -387,13 +387,9 @@ pub fn find_highlight_ancestor(arena: &Arena, node_id: NodeId) -> Option<NodeId>
         return Some(node_id);
     }
 
-    for ancestor_id in arena.ancestors(node_id) {
-        if is_highlight_container(arena, ancestor_id) {
-            return Some(ancestor_id);
-        }
-    }
-
-    None
+    arena
+        .ancestors(node_id)
+        .find(|&ancestor_id| is_highlight_container(arena, ancestor_id))
 }
 
 fn is_highlight_container(arena: &Arena, node_id: NodeId) -> bool {
@@ -406,7 +402,7 @@ fn is_highlight_container(arena: &Arena, node_id: NodeId) -> bool {
     }
     arena
         .get_attributes(node_id)
-        .map_or(false, |attrs| attrs.contains_keyword(&["highlight", "highlights"]))
+        .is_some_and(|attrs| attrs.contains_keyword(&["highlight", "highlights"]))
 }
 
 /// Check if a sibling should be included with highlight content
@@ -458,7 +454,7 @@ fn is_step_module(arena: &Arena, node_id: NodeId) -> bool {
     }
 
     let attrs = arena.get_attributes(node_id);
-    if !attrs.map_or(false, |a| a.contains_keyword(&["step"])) {
+    if !attrs.is_some_and(|a| a.contains_keyword(&["step"])) {
         return false;
     }
 
@@ -467,10 +463,10 @@ fn is_step_module(arena: &Arena, node_id: NodeId) -> bool {
 
 fn has_step_content_descendant(arena: &Arena, node_id: NodeId) -> bool {
     for desc_id in arena.descendants(node_id) {
-        if let Some(attrs) = arena.get_attributes(desc_id) {
-            if attrs.contains_keyword(&["stepcontent", "step-content"]) {
-                return true;
-            }
+        if let Some(attrs) = arena.get_attributes(desc_id)
+            && attrs.contains_keyword(&["stepcontent", "step-content"])
+        {
+            return true;
         }
     }
     false

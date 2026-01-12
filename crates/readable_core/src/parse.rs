@@ -77,9 +77,9 @@ fn detect_meta_charset(bytes: &[u8]) -> Option<&'static Encoding> {
     if let Some(pos) = text.find("charset") {
         let rest = &text[pos..];
         // Find the value after = or "
-        if let Some(start) = rest.find(|c| c == '"' || c == '\'') {
+        if let Some(start) = rest.find(['"', '\'']) {
             let rest = &rest[start + 1..];
-            if let Some(end) = rest.find(|c| c == '"' || c == '\'') {
+            if let Some(end) = rest.find(['"', '\'']) {
                 let charset = rest[..end].trim();
                 return Encoding::for_label(charset.as_bytes());
             }
@@ -183,12 +183,11 @@ fn convert_node(handle: &Handle, parent_id: NodeId, arena: &mut Arena) {
 /// Check if a node has a preformatted ancestor (pre, code)
 fn has_preformatted_ancestor(arena: &Arena, node_id: NodeId) -> bool {
     for ancestor_id in arena.ancestors(node_id) {
-        if let Some(node) = arena.get(ancestor_id) {
-            if let NodeKind::Element { tag, .. } = &node.kind {
-                if tag.is_code_container() {
-                    return true;
-                }
-            }
+        if let Some(node) = arena.get(ancestor_id)
+            && let NodeKind::Element { tag, .. } = &node.kind
+            && tag.is_code_container()
+        {
+            return true;
         }
     }
     false
