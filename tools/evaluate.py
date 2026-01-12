@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -52,6 +53,7 @@ def main():
         default=Path(__file__).parent.parent / "tests" / "corpus",
     )
     parser.add_argument("--verbose", "-v", action="store_true")
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
     args = parser.parse_args()
 
     results = []
@@ -80,15 +82,26 @@ def main():
             print(f"{status} {html_file.stem}: {similarity:.2%}")
 
     # Summary
-    print(f"\n{'='*60}")
-    print(f"Evaluated {len(results)} test cases")
-
     similarities = [r[1] for r in results]
     avg = sum(similarities) / len(similarities) if similarities else 0
 
     high = sum(1 for s in similarities if s >= 0.7)
     medium = sum(1 for s in similarities if 0.5 <= s < 0.7)
     low = sum(1 for s in similarities if s < 0.5)
+
+    if args.json:
+        output = {
+            "total": len(results),
+            "average_jaccard": avg,
+            "high": high,
+            "medium": medium,
+            "low": low,
+        }
+        print(json.dumps(output))
+        return
+
+    print(f"\n{'='*60}")
+    print(f"Evaluated {len(results)} test cases")
 
     print(f"\nJaccard similarity:")
     print(f"  Average: {avg:.1%}")

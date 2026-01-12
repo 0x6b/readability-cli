@@ -462,13 +462,12 @@ mod tests {
 
         // Find the cookie banner
         for id in 0..arena.nodes.len() {
-            if let Some(attrs) = arena.get_attributes(id as NodeId) {
-                if attrs.class.as_deref() == Some("cookie-banner") {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("cookie-banner") {
                     assert!(should_block(&arena, id as NodeId));
                     assert!(is_always_remove(&arena, id as NodeId));
                     return;
                 }
-            }
         }
         panic!("Cookie banner not found");
     }
@@ -485,12 +484,11 @@ mod tests {
         let arena = parse_html(html);
 
         for id in 0..arena.nodes.len() {
-            if let Some(attrs) = arena.get_attributes(id as NodeId) {
-                if attrs.class.as_deref() == Some("social-share") {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("social-share") {
                     assert!(should_block(&arena, id as NodeId));
                     return;
                 }
-            }
         }
         panic!("Social share not found");
     }
@@ -518,13 +516,12 @@ mod tests {
         let arena = parse_html(html);
 
         for id in 0..arena.nodes.len() {
-            if let Some(attrs) = arena.get_attributes(id as NodeId) {
-                if attrs.class.as_deref() == Some("newsletter") {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("newsletter") {
                     // Large content should not be blocked
                     assert!(!should_block(&arena, id as NodeId));
                     return;
                 }
-            }
         }
         panic!("Newsletter not found");
     }

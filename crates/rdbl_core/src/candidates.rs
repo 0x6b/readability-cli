@@ -215,7 +215,7 @@ mod tests {
                     !attrs
                         .class
                         .as_ref()
-                        .map_or(false, |c| c.contains("sidebar")),
+                        .is_some_and(|c| c.contains("sidebar")),
                     "Sidebar should not be a candidate"
                 );
             }
