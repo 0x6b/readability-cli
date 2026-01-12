@@ -61,17 +61,16 @@ pub fn select_best<'a>(
 fn passes_guardrails(candidate: &Candidate, options: &ExtractOptions) -> bool {
     let features = &candidate.features;
 
-    // Get text length from features (exp of log1p - 1)
-    let text_len = (features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    // Get text length from features
+    let text_len = features.get_count(FeatureIndex::LogTextLenChars);
 
     // Get code block text length
-    let code_block_len =
-        (features.values[FeatureIndex::LogCodeBlockTextLen as usize].exp() - 1.0) as usize;
+    let code_block_len = features.get_count(FeatureIndex::LogCodeBlockTextLen);
 
     // Guardrail 1: Minimum text length (unless code-heavy)
     if text_len < options.min_text_chars {
         // Exception for code-heavy content
-        let pre_count = (features.values[FeatureIndex::LogPreCount as usize].exp() - 1.0) as usize;
+        let pre_count = features.get_count(FeatureIndex::LogPreCount);
         let is_code_heavy = code_block_len > 300 && pre_count > 0;
 
         if !is_code_heavy || !options.code_friendly {
@@ -80,8 +79,8 @@ fn passes_guardrails(candidate: &Candidate, options: &ExtractOptions) -> bool {
     }
 
     // Guardrail 2: TOC detection
-    let toc_like = features.values[FeatureIndex::TocLike as usize];
-    let semantic_flag = features.values[FeatureIndex::SemanticMainFlag as usize];
+    let toc_like = features.get(FeatureIndex::TocLike);
+    let semantic_flag = features.get(FeatureIndex::SemanticMainFlag);
 
     // High TOC score and not semantic = likely TOC
     if toc_like > 0.5 && semantic_flag < 0.5 {
@@ -89,19 +88,19 @@ fn passes_guardrails(candidate: &Candidate, options: &ExtractOptions) -> bool {
     }
 
     // Guardrail 3: High link density without content
-    let link_density = features.values[FeatureIndex::LinkDensity as usize];
+    let link_density = features.get(FeatureIndex::LinkDensity);
     if link_density > 0.7 && text_len < 500 && code_block_len < 200 {
         return false;
     }
 
     // Guardrail 4: Nav/sidebar class
-    let has_nav_class = features.values[FeatureIndex::HasNavClass as usize] > 0.5;
-    let has_sidebar_class = features.values[FeatureIndex::HasSidebarClass as usize] > 0.5;
+    let has_nav_class = features.get(FeatureIndex::HasNavClass) > 0.5;
+    let has_sidebar_class = features.get(FeatureIndex::HasSidebarClass) > 0.5;
 
     if has_nav_class || has_sidebar_class {
         // Allow if it has positive semantic signals overriding
-        let has_article_class = features.values[FeatureIndex::HasArticleClass as usize] > 0.5;
-        let has_main_role = features.values[FeatureIndex::HasMainRole as usize] > 0.5;
+        let has_article_class = features.get(FeatureIndex::HasArticleClass) > 0.5;
+        let has_main_role = features.get(FeatureIndex::HasMainRole) > 0.5;
 
         if !has_article_class && !has_main_role {
             return false;
@@ -158,27 +157,26 @@ fn compute_tie_break_score(candidate: &Candidate, options: &ExtractOptions) -> f
 
     // Prefer semantic containers
     if options.prefer_semantic {
-        score += features.values[FeatureIndex::SemanticMainFlag as usize] * 2.0;
+        score += features.get(FeatureIndex::SemanticMainFlag) * 2.0;
     }
 
     // Prefer lower TOC-like score
-    score -= features.values[FeatureIndex::TocLike as usize] * 1.5;
+    score -= features.get(FeatureIndex::TocLike) * 1.5;
 
     // Prefer lower link density (but not if code-heavy)
-    let code_block_len =
-        (features.values[FeatureIndex::LogCodeBlockTextLen as usize].exp() - 1.0) as f32;
+    let code_block_len = features.get_count(FeatureIndex::LogCodeBlockTextLen) as f32;
     if code_block_len < 500.0 {
-        score -= features.values[FeatureIndex::LinkDensity as usize] * 1.0;
+        score -= features.get(FeatureIndex::LinkDensity) * 1.0;
     }
 
     // Prefer larger text
-    score += features.values[FeatureIndex::LogTextLenChars as usize] * 0.1;
+    score += features.get(FeatureIndex::LogTextLenChars) * 0.1;
 
     // Prefer more paragraphs
-    score += features.values[FeatureIndex::LogPCount as usize] * 0.2;
+    score += features.get(FeatureIndex::LogPCount) * 0.2;
 
     // Prefer positive keywords
-    score += features.values[FeatureIndex::PosMinusNeg as usize] * 0.5;
+    score += features.get(FeatureIndex::PosMinusNeg) * 0.5;
 
     score
 }
@@ -206,8 +204,7 @@ fn refine_overextracted_once<'a>(
     arena: &Arena,
     options: &ExtractOptions,
 ) -> &'a Candidate {
-    let best_text_len =
-        (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    let best_text_len = best.features.get_count(FeatureIndex::LogTextLenChars);
     if best_text_len < options.min_text_chars * 4 {
         return best;
     }
@@ -216,12 +213,11 @@ fn refine_overextracted_once<'a>(
         return best;
     }
 
-    let best_toc = best.features.values[FeatureIndex::TocLike as usize];
-    let best_cluster = best.features.values[FeatureIndex::ContentClusterScore as usize];
-    let best_link_density = best.features.values[FeatureIndex::LinkDensity as usize];
-    let best_clean_ratio = best.features.values[FeatureIndex::CleanTextRatio as usize];
-    let best_p_count =
-        (best.features.values[FeatureIndex::LogPCount as usize].exp() - 1.0) as usize;
+    let best_toc = best.features.get(FeatureIndex::TocLike);
+    let best_cluster = best.features.get(FeatureIndex::ContentClusterScore);
+    let best_link_density = best.features.get(FeatureIndex::LinkDensity);
+    let best_clean_ratio = best.features.get(FeatureIndex::CleanTextRatio);
+    let best_p_count = best.features.get_count(FeatureIndex::LogPCount);
     if best_toc < 0.2 && best_cluster > 0.4 {
         return best;
     }
@@ -243,25 +239,24 @@ fn refine_overextracted_once<'a>(
                 continue;
             }
 
-            let text_len = (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp()
-                - 1.0) as usize;
+            let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
             let ratio = text_len as f32 / best_text_len.max(1) as f32;
             if ratio < 0.6 || ratio > 0.95 {
                 continue;
             }
 
-            let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+            let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
             if cluster < 0.8 {
                 continue;
             }
 
-            let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
+            let toc_like = candidate.features.get(FeatureIndex::TocLike);
             if toc_like > best_toc {
                 continue;
             }
 
-            let link_density = candidate.features.values[FeatureIndex::LinkDensity as usize];
-            let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
+            let link_density = candidate.features.get(FeatureIndex::LinkDensity);
+            let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
             if link_density > best_link_density - 0.02 && clean_ratio < best_clean_ratio + 0.02 {
                 continue;
             }
@@ -294,14 +289,12 @@ fn refine_overextracted_once<'a>(
             continue;
         }
 
-        let text_len = (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp()
-            - 1.0) as usize;
+        let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
         if text_len < options.min_text_chars * 2 {
             continue;
         }
 
-        let has_min_paragraphs =
-            candidate.features.values[FeatureIndex::HasMinParagraphs as usize] > 0.5;
+        let has_min_paragraphs = candidate.features.get(FeatureIndex::HasMinParagraphs) > 0.5;
         if !has_min_paragraphs {
             continue;
         }
@@ -312,24 +305,23 @@ fn refine_overextracted_once<'a>(
             continue;
         }
 
-        let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+        let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
         if cluster < 0.8 {
             continue;
         }
 
-        let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
+        let toc_like = candidate.features.get(FeatureIndex::TocLike);
         if toc_like > best_toc {
             continue;
         }
 
-        let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
+        let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
         if ratio < 0.2 && (cluster < 0.9 || clean_ratio < best_clean_ratio + 0.03) {
             continue;
         }
 
-        let avg_para_len_strict =
-            candidate.features.values[FeatureIndex::AvgParagraphLenStrict as usize];
-        let long_para_ratio = candidate.features.values[FeatureIndex::LongParagraphRatio as usize];
+        let avg_para_len_strict = candidate.features.get(FeatureIndex::AvgParagraphLenStrict);
+        let long_para_ratio = candidate.features.get(FeatureIndex::LongParagraphRatio);
         let focus_score = cluster * 2.0
             + clean_ratio
             - toc_like
@@ -364,21 +356,19 @@ fn refine_columnar_children<'a>(
         return best;
     }
 
-    let best_text_len =
-        (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    let best_text_len = best.features.get_count(FeatureIndex::LogTextLenChars);
     if best_text_len < options.min_text_chars * 3 {
         return best;
     }
 
-    let best_toc = best.features.values[FeatureIndex::TocLike as usize];
-    let best_link_density = best.features.values[FeatureIndex::LinkDensity as usize];
-    let best_clean_ratio = best.features.values[FeatureIndex::CleanTextRatio as usize];
+    let best_toc = best.features.get(FeatureIndex::TocLike);
+    let best_link_density = best.features.get(FeatureIndex::LinkDensity);
+    let best_clean_ratio = best.features.get(FeatureIndex::CleanTextRatio);
     if best_toc < 0.15 && best_link_density < 0.1 && best_clean_ratio > 0.9 {
         return best;
     }
 
-    let best_li_count =
-        (best.features.values[FeatureIndex::LogLiCount as usize].exp() - 1.0) as usize;
+    let best_li_count = best.features.get_count(FeatureIndex::LogLiCount);
     if best_li_count < 6 {
         return best;
     }
@@ -398,9 +388,7 @@ fn refine_columnar_children<'a>(
             continue;
         }
 
-        let text_len =
-            (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
-                as usize;
+        let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
         if text_len < options.min_text_chars * 2 {
             continue;
         }
@@ -410,18 +398,16 @@ fn refine_columnar_children<'a>(
             continue;
         }
 
-        let has_min_paragraphs =
-            candidate.features.values[FeatureIndex::HasMinParagraphs as usize] > 0.5;
+        let has_min_paragraphs = candidate.features.get(FeatureIndex::HasMinParagraphs) > 0.5;
         if !has_min_paragraphs {
             continue;
         }
 
-        let avg_para_len_strict =
-            candidate.features.values[FeatureIndex::AvgParagraphLenStrict as usize];
-        let long_para_ratio = candidate.features.values[FeatureIndex::LongParagraphRatio as usize];
-        let clean_ratio = candidate.features.values[FeatureIndex::CleanTextRatio as usize];
-        let toc_like = candidate.features.values[FeatureIndex::TocLike as usize];
-        let cluster = candidate.features.values[FeatureIndex::ContentClusterScore as usize];
+        let avg_para_len_strict = candidate.features.get(FeatureIndex::AvgParagraphLenStrict);
+        let long_para_ratio = candidate.features.get(FeatureIndex::LongParagraphRatio);
+        let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
+        let toc_like = candidate.features.get(FeatureIndex::TocLike);
+        let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
 
         let score = avg_para_len_strict * 0.8
             + long_para_ratio * 0.4
@@ -457,7 +443,7 @@ fn promote_step_container<'a>(
         return best;
     }
 
-    let p_count = (best.features.values[FeatureIndex::LogPCount as usize].exp() - 1.0) as usize;
+    let p_count = best.features.get_count(FeatureIndex::LogPCount);
     if p_count > 1 {
         return best;
     }
@@ -513,8 +499,7 @@ fn ancestor_fallback<'a>(
     }
 
     // Get text length
-    let best_text_len =
-        (best.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
+    let best_text_len = best.features.get_count(FeatureIndex::LogTextLenChars);
 
     // If already substantial, don't fallback
     if best_text_len > 500 {
@@ -537,8 +522,7 @@ fn ancestor_fallback<'a>(
             if candidate.node_id == parent_id {
                 // Check if parent is suitable
                 let parent_text_len =
-                    (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
-                        as usize;
+                    candidate.features.get_count(FeatureIndex::LogTextLenChars);
 
                 // Parent should have substantially more text
                 if parent_text_len > best_text_len * 3 {
@@ -548,7 +532,7 @@ fn ancestor_fallback<'a>(
                         TagId::Div | TagId::Section | TagId::Article | TagId::Main
                     ) {
                         // Use tie-break score that favors more paragraphs
-                        let p_count = candidate.features.values[FeatureIndex::LogPCount as usize];
+                        let p_count = candidate.features.get(FeatureIndex::LogPCount);
                         let tie_score = candidate.score + p_count * 0.5;
 
                         if tie_score > best_ancestor_score {

@@ -154,22 +154,21 @@ fn build_feature_summary(
 ) -> FeatureSummary {
     let depth = arena.get(node_id).map(|n| n.depth).unwrap_or(0);
 
-    // Extract values from log1p features (exp - 1)
-    let text_len = (features.values[FeatureIndex::LogTextLenChars as usize].exp() - 1.0) as usize;
-    let code_block_text_len =
-        (features.values[FeatureIndex::LogCodeBlockTextLen as usize].exp() - 1.0) as usize;
-    let pos_kw_hits = (features.values[FeatureIndex::LogPosKwHits as usize].exp() - 1.0) as usize;
-    let neg_kw_hits = (features.values[FeatureIndex::LogNegKwHits as usize].exp() - 1.0) as usize;
-    let p_count = (features.values[FeatureIndex::LogPCount as usize].exp() - 1.0) as usize;
-    let h_count = (features.values[FeatureIndex::LogHCount as usize].exp() - 1.0) as usize;
-    let li_count = (features.values[FeatureIndex::LogLiCount as usize].exp() - 1.0) as usize;
+    // Extract values from log1p features
+    let text_len = features.get_count(FeatureIndex::LogTextLenChars);
+    let code_block_text_len = features.get_count(FeatureIndex::LogCodeBlockTextLen);
+    let pos_kw_hits = features.get_count(FeatureIndex::LogPosKwHits);
+    let neg_kw_hits = features.get_count(FeatureIndex::LogNegKwHits);
+    let p_count = features.get_count(FeatureIndex::LogPCount);
+    let h_count = features.get_count(FeatureIndex::LogHCount);
+    let li_count = features.get_count(FeatureIndex::LogLiCount);
 
     FeatureSummary {
         text_len,
-        link_density: features.values[FeatureIndex::LinkDensity as usize],
-        toc_like: features.values[FeatureIndex::TocLike as usize],
+        link_density: features.get(FeatureIndex::LinkDensity),
+        toc_like: features.get(FeatureIndex::TocLike),
         code_block_text_len,
-        semantic_main_flag: features.values[FeatureIndex::SemanticMainFlag as usize] > 0.5,
+        semantic_main_flag: features.get(FeatureIndex::SemanticMainFlag) > 0.5,
         pos_kw_hits,
         neg_kw_hits,
         p_count,

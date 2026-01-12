@@ -27,6 +27,16 @@ impl FeatureVector {
     pub fn as_slice(&self) -> &[f32] {
         &self.values
     }
+
+    /// Extract a log1p-encoded count value: exp(value) - 1
+    pub fn get_count(&self, index: FeatureIndex) -> usize {
+        (self.values[index as usize].exp() - 1.0) as usize
+    }
+
+    /// Get raw feature value by index
+    pub fn get(&self, index: FeatureIndex) -> f32 {
+        self.values[index as usize]
+    }
 }
 
 /// Feature indices - keep these stable for model compatibility

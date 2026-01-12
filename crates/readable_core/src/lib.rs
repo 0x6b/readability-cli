@@ -145,10 +145,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
     {
         let selected_id = selected_candidate.node_id;
-        let selected_text_len = (selected_candidate.features.values
-            [features::FeatureIndex::LogTextLenChars as usize]
-            .exp()
-            - 1.0) as usize;
+        let selected_text_len =
+            selected_candidate.features.get_count(features::FeatureIndex::LogTextLenChars);
 
         let mut selected_id = Some(selected_id);
         let mut selected_text_len = selected_text_len;
@@ -157,12 +155,9 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         if html_has_body {
             if let Some(body_id) = arena.find_body() {
                 let body_features = extract_features(&arena, body_id);
-                let body_text_len =
-                    (body_features.values[features::FeatureIndex::LogTextLenChars as usize].exp()
-                        - 1.0) as usize;
-                let body_link_density =
-                    body_features.values[features::FeatureIndex::LinkDensity as usize];
-                let body_toc_like = body_features.values[features::FeatureIndex::TocLike as usize];
+                let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
+                let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
+                let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
 
                 let should_promote = match selected_tag {
                     Some(dom::TagId::P | dom::TagId::Td) => {
@@ -190,13 +185,9 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     } else if html_has_body {
         if let Some(body_id) = arena.find_body() {
             let body_features = extract_features(&arena, body_id);
-            let body_text_len = (body_features.values
-                [features::FeatureIndex::LogTextLenChars as usize]
-                .exp()
-                - 1.0) as usize;
-            let body_link_density =
-                body_features.values[features::FeatureIndex::LinkDensity as usize];
-            let body_toc_like = body_features.values[features::FeatureIndex::TocLike as usize];
+            let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
+            let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
+            let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
 
             if body_text_len > 0 && body_link_density < 0.05 && body_toc_like < 0.2 {
                 (Some(body_id), body_text_len, Some(dom::TagId::Body))
@@ -266,10 +257,8 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
         if let Some(highlight_id) = find_highlight_ancestor(&arena, selected_id) {
             let highlight_features = extract_features(&arena, highlight_id);
-            let highlight_text_len = (highlight_features.values
-                [features::FeatureIndex::LogTextLenChars as usize]
-                .exp()
-                - 1.0) as usize;
+            let highlight_text_len =
+                highlight_features.get_count(features::FeatureIndex::LogTextLenChars);
             let highlight_siblings =
                 find_expansion_siblings(&arena, highlight_id, highlight_text_len);
 
@@ -402,9 +391,7 @@ fn should_include_highlight_sibling(
         return false;
     }
     let sibling_features = extract_features(arena, node_id);
-    let sibling_text_len =
-        (sibling_features.values[features::FeatureIndex::LogTextLenChars as usize].exp() - 1.0)
-            as usize;
+    let sibling_text_len = sibling_features.get_count(features::FeatureIndex::LogTextLenChars);
     sibling_text_len >= min_text_chars / 2
 }
 

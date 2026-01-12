@@ -47,8 +47,7 @@ pub fn apply_score_propagation(candidates: &mut [Candidate], arena: &Arena) {
         }
 
         // Skip very small candidates (not enough signal)
-        let text_len = (candidate.features.values[FeatureIndex::LogTextLenChars as usize].exp()
-            - 1.0) as usize;
+        let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
         if text_len < 50 {
             continue;
         }
@@ -153,10 +152,8 @@ fn should_include_sibling(
         && selected_metrics.li_count.saturating_mul(2) >= selected_metrics.p_count;
     if list_heavy && selected_metrics.avg_para_len_strict > 0.25 {
         let sibling_features = extract_features(arena, sibling_id);
-        let sibling_avg_para_len_strict =
-            sibling_features.values[FeatureIndex::AvgParagraphLenStrict as usize];
-        let sibling_long_para_ratio =
-            sibling_features.values[FeatureIndex::LongParagraphRatio as usize];
+        let sibling_avg_para_len_strict = sibling_features.get(FeatureIndex::AvgParagraphLenStrict);
+        let sibling_long_para_ratio = sibling_features.get(FeatureIndex::LongParagraphRatio);
 
         let min_avg = selected_metrics.avg_para_len_strict * 0.8;
         let min_long_ratio = (selected_metrics.long_para_ratio - 0.05).max(0.0);
@@ -276,12 +273,10 @@ pub fn find_expansion_siblings(
     let mut siblings = Vec::new();
     let selected_features = extract_features(arena, selected_id);
     let selected_metrics = SelectedSiblingMetrics {
-        avg_para_len_strict: selected_features.values[FeatureIndex::AvgParagraphLenStrict as usize],
-        long_para_ratio: selected_features.values[FeatureIndex::LongParagraphRatio as usize],
-        li_count: (selected_features.values[FeatureIndex::LogLiCount as usize].exp() - 1.0)
-            as usize,
-        p_count: (selected_features.values[FeatureIndex::LogPCount as usize].exp() - 1.0)
-            as usize,
+        avg_para_len_strict: selected_features.get(FeatureIndex::AvgParagraphLenStrict),
+        long_para_ratio: selected_features.get(FeatureIndex::LongParagraphRatio),
+        li_count: selected_features.get_count(FeatureIndex::LogLiCount),
+        p_count: selected_features.get_count(FeatureIndex::LogPCount),
     };
 
     // Get the parent
