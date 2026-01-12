@@ -233,7 +233,7 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
     };
 
     // Preserve headings even if they're wrapped in links.
-    if matches!(tag, TagId::H1 | TagId::H2 | TagId::H3 | TagId::H4 | TagId::H5 | TagId::H6) {
+    if tag.is_heading() {
         return false;
     }
 
