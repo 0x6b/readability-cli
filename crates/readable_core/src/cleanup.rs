@@ -8,7 +8,7 @@ use crate::{
     blocklist::should_block,
     dom::{Arena, NodeId, NodeKind, TagId},
     keywords::{negative_keywords, positive_keywords},
-    postprocess::is_boilerplate_for_cleanup,
+    postprocess::{compute_link_text_len, is_boilerplate_for_cleanup},
     ExtractOptions,
 };
 
@@ -271,7 +271,7 @@ fn is_link_heavy_microblock(arena: &Arena, node_id: NodeId) -> bool {
     }
 
     // Count link text
-    let link_text_len = crate::postprocess::compute_link_text_len(arena, node_id);
+    let link_text_len = compute_link_text_len(arena, node_id);
 
     // High link density = likely nav
     let link_density = link_text_len as f32 / text_len.max(1) as f32;
