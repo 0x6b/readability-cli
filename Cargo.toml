@@ -1,45 +1,31 @@
 [package]
 name = "readablility-cli"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
-description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout, while optionally summarizing the content with OpenAI."
+description = "A CLI to fetch a webpage from a URL provided, extract the main content, then convert the HTML to markdown, and dump it to the stdout."
 
 [[bin]]
 name = "rdbl"
 path = "src/main.rs"
 
-[dependencies]
-# Error handling
-anyhow = "1.0.89"
+[lib]
+name = "readablility_cli"
+path = "src/lib.rs"
 
+[dependencies]
 # Command line argument parsing
-clap = { version = "4.5.20", features = ["derive", "wrap_help", "env"] }
+clap = { version = "4.5.40", features = ["derive", "wrap_help", "env"] }
 
 # Convert HTML to markdown
-html2md = "0.2.14"
-
-# Extract the main content from HTML
-readable-readability = "0.4.0"
+html2md = "0.2.15"
 
 # Fetch the webpage
-reqwest = "0.12.8"
-
-# Serialize and deserialize
-serde = { version = "1.0.210", features = ["derive"] }
-toml = "0.8.19"
-
-# Configuration directory
-xdg = "2.5.2"
-
-# Prompt selection
-termimad = "0.30.1"
+reqwest = "0.12.20"
+article_scraper = "2.1.2"
 
 # Async runtime
-tokio = { version = "1.40.0", features = ["full"] }
-
-# OpenAI API client
-async-openai = "0.25.0"
-regex = "1.11.0"
+tokio = { version = "1.45.1", features = ["full"] }
+anyhow = "1.0.98"
 
 [profile.dev]
 debug = 0
