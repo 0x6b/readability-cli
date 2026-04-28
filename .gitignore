@@ -1,5 +1,6 @@
 /target
 config.toml
 tools/node_modules/
+tools/__pycache__/
 tools/.venv/
 tools/pnpm-lock.yaml
