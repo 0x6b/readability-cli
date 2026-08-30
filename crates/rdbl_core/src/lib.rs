@@ -217,7 +217,10 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
 
     let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
         // Find siblings that should be included
-        let siblings = if matches!(selected_tag, Some(dom::TagId::Article)) {
+        let siblings = if matches!(
+            selected_tag,
+            Some(dom::TagId::Article | dom::TagId::Main)
+        ) {
             Vec::new()
         } else if matches!(selected_tag, Some(dom::TagId::Section)) {
             let mut section_siblings = 0usize;

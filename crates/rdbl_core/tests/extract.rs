@@ -66,6 +66,37 @@ fn test_extract_article() {
 }
 
 #[test]
+fn test_extract_main_does_not_expand_to_external_sibling() {
+    let html = r#"
+    <html><body>
+        <main class="article-content">
+            <h1>Selected article</h1>
+            <p>The first article paragraph contains enough meaningful text to identify this
+            semantic main element as the primary content of the page.</p>
+            <p>The second article paragraph continues the report with relevant details and
+            context that belong in the extracted result.</p>
+            <p>The final article paragraph completes the story for readers.</p>
+        </main>
+        <div class="below-content">
+            <p>External sibling teaser one contains substantial descriptive copy that could
+            otherwise satisfy sibling expansion thresholds.</p>
+            <p>External sibling teaser two is not part of the selected semantic main element
+            and must therefore remain outside the extraction.</p>
+        </div>
+    </body></html>
+    "#;
+    let options = ExtractOptions {
+        min_text_chars: 100,
+        ..Default::default()
+    };
+
+    let result = extract(html, &options);
+
+    assert!(result.text.contains("first article paragraph"));
+    assert!(!result.text.contains("External sibling teaser"));
+}
+
+#[test]
 fn test_extract_code_heavy_page() {
     let html = r#"
     <!DOCTYPE html>
