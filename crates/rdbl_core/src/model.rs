@@ -7,99 +7,99 @@ use crate::features::{FeatureVector, NUM_FEATURES};
 /// Model weights - trained via tools/train_logreg.py
 const WEIGHTS: [f32; NUM_FEATURES] = [
     // Text quantity (0-7)
-    0.0113,  // LogTextLenChars
-    0.0068,  // LogTextLenBytes
-    0.0116,  // LogWordLikeCount
-    0.0437,  // LogCjkCharCount
-    2.1303,  // WhitespaceRatio
-    0.1555,  // LineCount
-    -0.1193,  // ShortLineRatio
-    0.7986,  // AvgLineLen
+    0.1194,  // LogTextLenChars
+    -0.0475, // LogTextLenBytes
+    0.3646,  // LogWordLikeCount
+    0.529,   // LogCjkCharCount
+    -1.022,  // WhitespaceRatio
+    0.2275,  // LineCount
+    -1.6231, // ShortLineRatio
+    -1.7209, // AvgLineLen
     // Punctuation (8-15)
-    -2.0428,  // DotQRatio
-    0.0154,  // JpPunctRatio
-    -2.6033,  // CommaRatio
-    -3.2228,  // QuoteRatio
-    -1.9166,  // SentenceEndRatio
-    -14.6084,  // ColonRatio
-    -24.2575,  // SemicolonRatio
-    -2.732,  // ParenRatio
+    -23.0217,  // DotQRatio
+    38.6705,   // JpPunctRatio
+    -105.709,  // CommaRatio
+    -18.2197,  // QuoteRatio
+    -18.1652,  // SentenceEndRatio
+    -287.8379, // ColonRatio
+    -65.336,   // SemicolonRatio
+    -17.0769,  // ParenRatio
     // Link/boilerplate (16-23)
-    0.0588,  // LogATagCount
-    -0.0069,  // LogLiCount
-    -0.0679,  // LogButtonInputFormCount
-    -0.4184,  // LinkDensity
-    0.3115,  // NavTagInSubtreeCount
-    -0.1002,  // LogFormElementCount
-    -0.1112,  // LogScriptStyleCount
-    -0.4278,  // HighLinkDensityFlag
+    1.3533,  // LogATagCount
+    -0.1949, // LogLiCount
+    0.5564,  // LogButtonInputFormCount
+    -8.8969, // LinkDensity
+    0.4747,  // NavTagInSubtreeCount
+    -1.1584, // LogFormElementCount
+    -0.7057, // LogScriptStyleCount
+    -0.9467, // HighLinkDensityFlag
     // Code-ness (24-31)
-    0.295,  // LogPreCount
-    0.1226,  // LogCodeCount
-    0.0452,  // LogCodeBlockTextLen
-    -0.4391,  // InlineCodeRatio
-    -2.7837,  // BraceRatio
-    -35.3325,  // BacktickRatio
-    -1.6105,  // IndentLineRatio
-    -0.9662,  // CamelCaseRatio
+    3.9492,   // LogPreCount
+    0.0453,   // LogCodeCount
+    -0.4876,  // LogCodeBlockTextLen
+    -5.9397,  // InlineCodeRatio
+    4.8269,   // BraceRatio
+    -419.342, // BacktickRatio
+    -3.2281,  // IndentLineRatio
+    -11.6244, // CamelCaseRatio
     // Structure (32-39)
-    3.3191,  // DepthNorm
-    0.0516,  // LogSubtreeNodeCount
-    0.1813,  // LogPCount
-    0.2004,  // LogHCount
-    -0.0272,  // LogImgCount
-    -0.2116,  // SemanticMainFlag
-    0.7674,  // TagPrior
-    0.6288,  // LogTableCount
+    11.6456, // DepthNorm
+    0.1441,  // LogSubtreeNodeCount
+    -0.5786, // LogPCount
+    -0.3164, // LogHCount
+    -0.4829, // LogImgCount
+    0.3498,  // SemanticMainFlag
+    -0.2024, // TagPrior
+    0.3182,  // LogTableCount
     // Keywords (40-47)
-    -0.187,  // LogPosKwHits
-    0.0,  // LogNegKwHits
-    -0.3867,  // PosMinusNeg
-    0.0415,  // HasContentClass
-    0.0956,  // HasArticleClass
-    -0.3793,  // HasMainRole
-    0.0,  // HasNavClass
-    -0.4702,  // HasSidebarClass
+    -1.3695, // LogPosKwHits
+    0.0,     // LogNegKwHits
+    8.3073,  // PosMinusNeg
+    -0.0076, // HasContentClass
+    -0.3015, // HasArticleClass
+    -0.4067, // HasMainRole
+    0.0,     // HasNavClass
+    -6.4595, // HasSidebarClass
     // TOC signature (48-55)
-    -0.1875,  // TocLike
-    -1.8015,  // ListLinkInteraction
-    0.2742,  // LogNestedListCount
-    -0.0112,  // ListItemLinkRatio
-    -0.2613,  // ShortTextLinkRatio
-    0.2485,  // RepetitiveStructure
-    0.0646,  // LogUlOlCount
-    -0.1282,  // ConsecutiveLinks
+    1.0551,  // TocLike
+    1.9567,  // ListLinkInteraction
+    0.2339,  // LogNestedListCount
+    0.8727,  // ListItemLinkRatio
+    -0.948,  // ShortTextLinkRatio
+    -0.0416, // RepetitiveStructure
+    -1.0496, // LogUlOlCount
+    -0.9755, // ConsecutiveLinks
     // Position/context (56-63)
-    -0.7405,  // RelativePosition
-    -3.2915,  // DistanceFromBody
-    0.4672,  // HasParentArticle
-    -0.3398,  // HasParentMain
-    1.5572,  // SiblingContentRatio
-    -0.3592,  // ChildDiversity
-    -0.2138,  // TextDensity
-    0.3478,  // ContentToBoilerplateRatio
+    0.0115,   // RelativePosition
+    -12.4536, // DistanceFromBody
+    1.4813,   // HasParentArticle
+    -0.5362,  // HasParentMain
+    2.6177,   // SiblingContentRatio
+    -0.1278,  // ChildDiversity
+    -3.0048,  // TextDensity
+    -1.0559,  // ContentToBoilerplateRatio
     // Readability-style (64-71)
-    0.0301,  // LogCommaCount
-    -0.5967,  // AvgParagraphLen
-    0.8861,  // IsArticleTag
-    1.3272,  // IsMainTag
-    0.5864,  // IsSemanticContainer
-    -0.4306,  // ParagraphTextScore
-    0.5411,  // CleanTextRatio
-    -0.6717,  // AncestorArticleDepth
+    1.2352,  // LogCommaCount
+    0.3253,  // AvgParagraphLen
+    2.446,   // IsArticleTag
+    3.2538,  // IsMainTag
+    -0.0202, // IsSemanticContainer
+    0.14,    // ParagraphTextScore
+    5.9434,  // CleanTextRatio
+    -2.6125, // AncestorArticleDepth
     // Anti-over-extraction (72-79)
-    -0.0815,  // ContentDensity
-    0.0326,  // LogCleanTextLen
-    -0.0108,  // AvgParagraphLenStrict
-    0.8653,  // LongParagraphRatio
-    0.1181,  // TextToMarkupRatio
-    0.2141,  // HasMinParagraphs
-    0.1256,  // DescendantDiversity
-    0.3565  // ContentClusterScore
+    0.6607,  // ContentDensity
+    0.4619,  // LogCleanTextLen
+    2.1728,  // AvgParagraphLenStrict
+    -0.3496, // LongParagraphRatio
+    0.4159,  // TextToMarkupRatio
+    -1.4704, // HasMinParagraphs
+    4.0131,  // DescendantDiversity
+    0.5186,  // ContentClusterScore
 ];
 
 /// Model bias term
-const BIAS: f32 = -4.2058;
+const BIAS: f32 = -16.2786;
 
 /// Compute logit score for a feature vector
 pub fn score(features: &FeatureVector) -> f32 {
