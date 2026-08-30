@@ -99,7 +99,7 @@ def export_and_evaluate(
     bias: float,
     corpus_dir: Path,
     evaluation_split: str,
-) -> float:
+) -> tuple[float, float]:
     """Export weights to Rust, rebuild, and evaluate."""
     tools_dir = Path(__file__).parent
 
@@ -123,7 +123,7 @@ def export_and_evaluate(
         )
         if result.returncode != 0:
             print(f"Export failed: {result.stderr}")
-            return 0.0
+            return 0.0, 0.0
 
         # Rebuild
         result = subprocess.run(
@@ -134,7 +134,7 @@ def export_and_evaluate(
         )
         if result.returncode != 0:
             print(f"Build failed: {result.stderr}")
-            return 0.0
+            return 0.0, 0.0
 
         # Evaluate
         result = subprocess.run(
@@ -150,17 +150,20 @@ def export_and_evaluate(
         )
         if result.returncode != 0:
             print(f"Evaluate failed: {result.stderr}")
-            return 0.0
+            return 0.0, 0.0
 
         # Parse result
         for line in result.stdout.strip().split('\n'):
             if line.startswith('{'):
                 data = json.loads(line)
-                return data.get("average_family_f1", 0.0)
+                return (
+                    data.get("average_family_f1", 0.0),
+                    data.get("average_structure_f1", 0.0),
+                )
     finally:
         Path(temp_json).unlink(missing_ok=True)
 
-    return 0.0
+    return 0.0, 0.0
 
 
 def main():
@@ -239,13 +242,23 @@ def main():
         baseline_weights = np.asarray(baseline["weights"])
         baseline_bias = float(baseline["bias"])
         baseline_params = baseline.get("metadata", {}).get("parameters", {"baseline": True})
-        baseline_score = export_and_evaluate(
+        baseline_score, baseline_structure_score = export_and_evaluate(
             baseline_weights, baseline_bias, args.corpus, args.evaluation_split
         )
         evaluated_models.append(
-            (baseline_score, baseline_params, baseline_weights, baseline_bias, "baseline")
+            (
+                baseline_score,
+                baseline_structure_score,
+                baseline_params,
+                baseline_weights,
+                baseline_bias,
+                "baseline",
+            )
         )
-        print(f"Baseline {baseline_params}: {baseline_score:.1%}")
+        print(
+            f"Baseline {baseline_params}: text={baseline_score:.1%}, "
+            f"structure={baseline_structure_score:.1%}"
+        )
 
     # Pre-generate training data for each threshold
     threshold_data = {}
@@ -280,37 +293,56 @@ def main():
 
                         # Evaluate
                         print(f"[{tried}/{total_combinations}] {params}...", end=" ", flush=True)
-                        score = export_and_evaluate(
+                        score, structure_score = export_and_evaluate(
                             weights, bias, args.corpus, args.evaluation_split
                         )
-                        print(f"{score:.1%}")
+                        print(f"text={score:.1%}, structure={structure_score:.1%}")
 
                         evaluated_models.append(
-                            (score, params.copy(), weights.copy(), bias, "search")
+                            (
+                                score,
+                                structure_score,
+                                params.copy(),
+                                weights.copy(),
+                                bias,
+                                "search",
+                            )
                         )
                     continue
 
                 # Evaluate (for non-HNM)
                 print(f"[{tried}/{total_combinations}] {params}...", end=" ", flush=True)
-                score = export_and_evaluate(
+                score, structure_score = export_and_evaluate(
                     weights, bias, args.corpus, args.evaluation_split
                 )
-                print(f"{score:.1%}")
+                print(f"text={score:.1%}, structure={structure_score:.1%}")
 
-                evaluated_models.append((score, params.copy(), weights.copy(), bias, "search"))
+                evaluated_models.append(
+                    (score, structure_score, params.copy(), weights.copy(), bias, "search")
+                )
 
     max_score = max(model[0] for model in evaluated_models)
+    max_structure_score = max(model[1] for model in evaluated_models)
     eligible_models = [
-        model for model in evaluated_models if model[0] >= max_score - args.selection_tolerance
+        model
+        for model in evaluated_models
+        if model[0] >= max_score - args.selection_tolerance
+        and model[1] >= max_structure_score - args.selection_tolerance
     ]
-    best_score, best_params, best_weights, best_bias, best_source = min(
+    if not eligible_models:
+        eligible_models = [max(evaluated_models, key=lambda model: model[0] + model[1])]
+    best_score, best_structure_score, best_params, best_weights, best_bias, best_source = min(
         eligible_models,
-        key=lambda model: (model[1].get("C", float("inf")), -model[0]),
+        key=lambda model: (model[2].get("C", float("inf")), -model[0], -model[1]),
     )
 
     print(f"\n{'='*60}")
     print(f"Maximum score: {max_score:.1%}")
-    print(f"Selected score: {best_score:.1%} ({best_source})")
+    print(f"Maximum structure score: {max_structure_score:.1%}")
+    print(
+        f"Selected: text={best_score:.1%}, structure={best_structure_score:.1%} "
+        f"({best_source})"
+    )
     print(f"Selected params: {best_params}")
 
     if best_weights is not None:
@@ -323,7 +355,9 @@ def main():
                 "selection_split": args.evaluation_split,
                 "selection_metric": "family_macro_token_f1",
                 "selection_score": best_score,
+                "selection_structure_score": best_structure_score,
                 "maximum_selection_score": max_score,
+                "maximum_structure_score": max_structure_score,
                 "selection_tolerance": args.selection_tolerance,
                 "parameters": best_params,
             },

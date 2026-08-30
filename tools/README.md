@@ -103,6 +103,8 @@ pages or candidate nodes. This prevents large pages and repeated site templates
 from dominating the fitted model. Weight search uses a one-standard-error-style
 rule: among models within one percentage point of the best validation score, it
 selects the strongest regularization (lowest `C`) instead of the absolute peak.
+A model must be within that tolerance for both family text F1 and structural F1,
+so regularization cannot hide a rich-content regression.
 
 These metrics measure agreement with the frozen Mozilla Readability/Readability.js
 teacher output, not an absolute judgment of article quality. Review the lowest-F1
