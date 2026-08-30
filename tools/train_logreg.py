@@ -27,6 +27,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 from corpus_splits import PROTECTED_SPLITS, SPLITS, corpus_family, in_split
 from text_metrics import compute_metrics, extract_text_from_html
+from training_weights import candidate_sample_weight
 
 # Feature names in order (must match features.rs)
 FEATURE_NAMES = [
@@ -282,13 +283,7 @@ def generate_training_data(
             is_positive = overlap >= overlap_threshold
             y_list.append(1 if is_positive else 0)
 
-            # Weight by overlap quality (squared to heavily favor high overlap)
-            # Positive samples: weight by overlap^2
-            # Negative samples: weight by (1-overlap) to penalize near-misses more
-            if is_positive:
-                weight_list.append(overlap ** 2)
-            else:
-                weight_list.append((1 - overlap) ** 0.5)  # Sqrt to not over-penalize
+            weight_list.append(candidate_sample_weight(overlap, overlap_threshold))
 
             if is_positive:
                 positive_count += 1

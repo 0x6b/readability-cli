@@ -106,6 +106,11 @@ selects the strongest regularization (lowest `C`) instead of the absolute peak.
 A model must be within that tolerance for both family text F1 and structural F1,
 so regularization cannot hide a rich-content regression.
 
+Candidate labels are weighted by confidence in teacher overlap: positive weight
+increases with overlap, while negatives near the positive threshold are treated
+as ambiguous and downweighted. Hard-negative mining separately reweights model
+errors. All weights are then normalized per page and site family.
+
 These metrics measure agreement with the frozen Mozilla Readability/Readability.js
 teacher output, not an absolute judgment of article quality. Review the lowest-F1
 cases manually and keep structural tests for links, tables, code, images, and video.
@@ -113,8 +118,8 @@ cases manually and keep structural tests for links, tables, code, images, and vi
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
 for a release decision, then move those cases to `REGRESSION_CASES` before any
-further tuning. An empty holdout is intentional and means no unbiased performance
-claim can currently be made.
+further tuning. Holdout provenance and evaluation status are recorded in
+`holdout_manifest.json` so accidental reuse fails the split integrity tests.
 
 ## Training the Model
 
