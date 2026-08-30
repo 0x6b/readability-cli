@@ -235,6 +235,56 @@ fn pass_through_sibling(
     None
 }
 
+fn starts_with_horizontal_rule(arena: &Arena, node_id: NodeId) -> bool {
+    for child_id in arena.children(node_id) {
+        let Some(child) = arena.get(child_id) else {
+            continue;
+        };
+        match &child.kind {
+            crate::dom::NodeKind::Text => {
+                if arena
+                    .get_text(child_id)
+                    .is_some_and(|text| !text.trim().is_empty())
+                {
+                    return false;
+                }
+            }
+            crate::dom::NodeKind::Element { tag, tag_name } => {
+                if *tag == TagId::Other
+                    && tag_name
+                        .as_deref()
+                        .is_some_and(|name| name.eq_ignore_ascii_case("hr"))
+                {
+                    return true;
+                }
+                if matches!(tag, TagId::Div | TagId::Section | TagId::Span) {
+                    return starts_with_horizontal_rule(arena, child_id);
+                }
+                return false;
+            }
+            crate::dom::NodeKind::Document => return starts_with_horizontal_rule(arena, child_id),
+            crate::dom::NodeKind::Comment => {}
+        }
+    }
+    false
+}
+
+fn is_trailing_postscript(
+    arena: &Arena,
+    sibling_id: NodeId,
+    best_text_len: usize,
+    selected_metrics: &SelectedSiblingMetrics,
+) -> bool {
+    if selected_metrics.p_count < 5 || !starts_with_horizontal_rule(arena, sibling_id) {
+        return false;
+    }
+
+    let sibling_features = extract_features(arena, sibling_id);
+    let sibling_text_len = sibling_features.get_count(FeatureIndex::LogTextLenChars);
+    let sibling_p_count = sibling_features.get_count(FeatureIndex::LogPCount);
+    sibling_text_len < best_text_len / 2 && sibling_p_count <= 2
+}
+
 /// Compute link text length in a subtree
 pub fn compute_link_text_len(arena: &Arena, node_id: NodeId) -> usize {
     let mut total = 0;
@@ -296,6 +346,9 @@ pub fn find_expansion_siblings(
     // Check following siblings
     let mut skipped = 0usize;
     for next_id in arena.next_siblings(selected_id) {
+        if is_trailing_postscript(arena, next_id, selected_text_len, &selected_metrics) {
+            break;
+        }
         if should_include_sibling(arena, next_id, selected_text_len, &selected_metrics) {
             siblings.push(next_id);
             skipped = 0;
@@ -553,5 +606,81 @@ mod tests {
 
         // Should find nav and aside as boilerplate
         assert!(!boilerplate.is_empty());
+    }
+
+    #[test]
+    fn test_sibling_expansion_stops_at_trailing_postscript() {
+        let html = r#"
+        <html><body><div>
+            <div id="content">
+                <p>First substantial article paragraph with enough detail for extraction.</p>
+                <p>Second substantial article paragraph with enough detail for extraction.</p>
+                <p>Third substantial article paragraph with enough detail for extraction.</p>
+                <p>Fourth substantial article paragraph with enough detail for extraction.</p>
+                <p>Fifth substantial article paragraph with enough detail for extraction.</p>
+                <p>Sixth substantial article paragraph with enough detail for extraction and
+                additional context that makes the primary body clearly longer than the postscript.</p>
+            </div>
+            <div id="postscript"><div><hr>
+                <p>A shorter corporate profile follows the article after a thematic break. It
+                contains enough text to satisfy the normal sibling expansion threshold, but it
+                is a separate postscript rather than another fragment of the selected article.</p>
+            </div></div>
+        </div></body></html>
+        "#;
+        let arena = parse_html(html);
+        let selected_id = (0..arena.nodes.len() as NodeId)
+            .find(|&id| {
+                arena
+                    .get_attributes(id)
+                    .and_then(|attrs| attrs.id.as_deref())
+                    == Some("content")
+            })
+            .unwrap();
+        let selected_text_len = arena.collect_text(selected_id).chars().count();
+
+        assert!(find_expansion_siblings(&arena, selected_id, selected_text_len).is_empty());
+    }
+
+    #[test]
+    fn test_sibling_expansion_keeps_normal_content_fragment() {
+        let html = r#"
+        <html><body><div>
+            <div id="content">
+                <p>First substantial article paragraph with enough detail for extraction.</p>
+                <p>Second substantial article paragraph with enough detail for extraction.</p>
+                <p>Third substantial article paragraph with enough detail for extraction.</p>
+                <p>Fourth substantial article paragraph with enough detail for extraction.</p>
+                <p>Fifth substantial article paragraph with enough detail for extraction.</p>
+            </div>
+            <div id="continuation">
+                <p>A normal continuation remains eligible for sibling expansion because it does
+                not begin with a horizontal rule marking a separate postscript section.</p>
+            </div>
+        </div></body></html>
+        "#;
+        let arena = parse_html(html);
+        let selected_id = (0..arena.nodes.len() as NodeId)
+            .find(|&id| {
+                arena
+                    .get_attributes(id)
+                    .and_then(|attrs| attrs.id.as_deref())
+                    == Some("content")
+            })
+            .unwrap();
+        let continuation_id = (0..arena.nodes.len() as NodeId)
+            .find(|&id| {
+                arena
+                    .get_attributes(id)
+                    .and_then(|attrs| attrs.id.as_deref())
+                    == Some("continuation")
+            })
+            .unwrap();
+        let selected_text_len = arena.collect_text(selected_id).chars().count();
+
+        assert_eq!(
+            find_expansion_siblings(&arena, selected_id, selected_text_len),
+            vec![continuation_id]
+        );
     }
 }
