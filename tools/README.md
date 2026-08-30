@@ -79,12 +79,13 @@ If `.expected.html` exists, it's used as the teacher output. Otherwise, Readabil
 
 ## Evaluating the Model
 
-The corpus is deterministically split by fixture/site family: 70% training,
-15% validation, and 15% test. Related variants stay in the same split to reduce
-template leakage. Train on `train`, select model weights on `validation`, and
-only use `test` for the final report.
+The development corpus is deterministically split by fixture/site family into
+`train` and `validation`. Related variants stay in the same split to reduce
+template leakage. Cases that have already influenced development live in the
+explicit `regression` set. A `holdout` contains only newly collected cases that
+have never been inspected or used for tuning.
 
-Evaluate the current model on the held-out test split:
+Evaluate the current model on the regression suite:
 
 ```bash
 uv run evaluate.py --corpus ../tests/corpus
@@ -101,7 +102,10 @@ teacher output, not an absolute judgment of article quality. Review the lowest-F
 cases manually and keep structural tests for links, tables, code, images, and video.
 
 Use `--split validation` while developing. `--split all` is diagnostic only and
-must not be reported as held-out performance.
+must not be reported as held-out performance. Evaluate `--split holdout` only
+for a release decision, then move those cases to `REGRESSION_CASES` before any
+further tuning. An empty holdout is intentional and means no unbiased performance
+claim can currently be made.
 
 ## Training the Model
 
@@ -150,7 +154,10 @@ uv run train_logreg.py --corpus ../tests/corpus --split train --hard-negative-mi
 # 5. Export to Rust
 uv run export_weights.py --input model_weights.json --output ../crates/rdbl_core/src/model.rs
 
-# 6. Rebuild, run tests, and report the held-out result once
+# 6. Rebuild and run the regression suite
 cd .. && cargo test --workspace --all-targets
-cd tools && uv run evaluate.py --corpus ../tests/corpus --split test
+cd tools && uv run evaluate.py --corpus ../tests/corpus --split regression
+
+# 7. For a release only: evaluate newly collected, untouched cases once
+uv run evaluate.py --corpus ../tests/corpus --split holdout
 ```

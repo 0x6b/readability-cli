@@ -28,7 +28,7 @@ from train_logreg import (
     generate_training_data,
     save_weights,
 )
-from corpus_splits import SPLITS
+from corpus_splits import PROTECTED_SPLITS, SPLITS
 
 
 def train_model(
@@ -203,6 +203,8 @@ def main():
     print("Loading corpus...")
     if args.train_split == args.evaluation_split:
         parser.error("training and evaluation splits must differ")
+    if args.train_split in PROTECTED_SPLITS or args.evaluation_split in PROTECTED_SPLITS:
+        parser.error("regression and holdout splits cannot be used for model fitting or selection")
 
     corpus_pairs = load_corpus(args.corpus, args.train_split)
     if not corpus_pairs:

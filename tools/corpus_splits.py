@@ -1,10 +1,42 @@
-"""Deterministic, family-aware corpus splits for training and evaluation."""
+"""Deterministic corpus partitions with explicitly protected evaluation cases."""
 
 import hashlib
 import re
 
 
-SPLITS = ("train", "validation", "test")
+SPLITS = ("train", "validation", "regression", "holdout")
+PROTECTED_SPLITS = ("regression", "holdout")
+
+# These cases were previously called the test split, but have been inspected and
+# used during development. Keep them as a stable regression suite rather than
+# presenting them as unseen performance evidence.
+REGRESSION_CASES = frozenset(
+    {
+        "antirez_com_news_158",
+        "blog_val_town_blog_codegen",
+        "breitbart",
+        "claytonwramsey_com_blog_dumpster2",
+        "ehow-1",
+        "ehow-2",
+        "embedded-videos",
+        "ftr-youtube",
+        "gmw",
+        "google-sre-book-1",
+        "links-in-tables",
+        "maximullaris_com_program-in-awk_html",
+        "mercurial",
+        "news_yahoo_co_jp_articles_40ea598367a4c9ca44b11a62_4ca4b0cd",
+        "quanta-1",
+        "replace-font-tags",
+        "seattletimes-1",
+        "simplyfound-1",
+        "www_gingerbill_org_article_2026_01_11_mitigating-t_7dcf6ed9",
+    }
+)
+
+# Add only newly collected, never-inspected cases here. Once evaluated, move a
+# case to REGRESSION_CASES so subsequent tuning cannot reuse it as a holdout.
+HOLDOUT_CASES = frozenset()
 
 # Keep variants from the same site or fixture family in one split. This avoids
 # learning a site's template in one split and measuring it in another.
@@ -31,14 +63,17 @@ def corpus_family(case_name: str) -> str:
 
 
 def corpus_split(case_name: str) -> str:
-    """Assign a stable 70/15/15 split using a hash of the fixture family."""
+    """Assign protected cases explicitly and development data by family hash."""
+    if case_name in HOLDOUT_CASES:
+        return "holdout"
+    if case_name in REGRESSION_CASES:
+        return "regression"
+
     family = corpus_family(case_name)
     bucket = int.from_bytes(hashlib.sha256(family.encode()).digest()[:8], "big") % 100
     if bucket < 70:
         return "train"
-    if bucket < 85:
-        return "validation"
-    return "test"
+    return "validation"
 
 
 def in_split(case_name: str, split: str) -> bool:

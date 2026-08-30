@@ -49,8 +49,8 @@ def main() -> int:
     parser.add_argument(
         "--split",
         choices=(*SPLITS, "all"),
-        default="test",
-        help="Corpus split to evaluate (default: test)",
+        default="regression",
+        help="Corpus split to evaluate (default: regression)",
     )
     parser.add_argument("--binary", type=Path, default=DEFAULT_BINARY)
     parser.add_argument("--no-build", action="store_true")

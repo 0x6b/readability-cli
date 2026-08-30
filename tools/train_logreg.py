@@ -24,7 +24,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 
-from corpus_splits import SPLITS, in_split
+from corpus_splits import PROTECTED_SPLITS, SPLITS, in_split
 from text_metrics import compute_metrics, extract_text_from_html
 
 # Feature names in order (must match features.rs)
@@ -534,6 +534,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.split in (*PROTECTED_SPLITS, "all"):
+        parser.error("regression, holdout, and all-corpus inputs cannot be used for model fitting")
 
     if not args.corpus.exists():
         print(f"Corpus directory not found: {args.corpus}")
