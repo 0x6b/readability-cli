@@ -45,6 +45,9 @@ pub fn select_best<'a>(
     // Step 4: Apply tie-breakers if scores are close
     let best = apply_tie_breakers(&top_k, arena, options);
 
+    // Step 4.25: Rescue a substantive semantic article from a short summary candidate
+    let best = semantic_article_fallback(best, candidates, options);
+
     // Step 4.5: Refine overly broad containers
     let best = refine_overextracted(best, candidates, arena, options);
 
@@ -180,6 +183,40 @@ fn compute_tie_break_score(candidate: &Candidate, options: &ExtractOptions) -> f
     score += features.get(FeatureIndex::PosMinusNeg) * 0.5;
 
     score
+}
+
+fn semantic_article_fallback<'a>(
+    best: &'a Candidate,
+    candidates: &'a [Candidate],
+    options: &ExtractOptions,
+) -> &'a Candidate {
+    if !options.prefer_semantic {
+        return best;
+    }
+
+    let best_text_len = best.features.get_count(FeatureIndex::LogTextLenChars);
+    let best_is_semantic = best.features.get(FeatureIndex::SemanticMainFlag) > 0.5;
+    if best_is_semantic || best_text_len >= options.min_text_chars * 5 {
+        return best;
+    }
+
+    candidates
+        .iter()
+        .filter(|candidate| {
+            let features = &candidate.features;
+            candidate.tag == TagId::Article
+                && candidate.score >= best.score - 1.0
+                && features.get_count(FeatureIndex::LogTextLenChars) >= best_text_len * 5
+                && features.get_count(FeatureIndex::LogPCount) >= 5
+                && features.get(FeatureIndex::TocLike) <= 0.5
+                && features.get(FeatureIndex::LinkDensity) <= 0.6
+        })
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or(best)
 }
 
 fn refine_overextracted<'a>(
@@ -611,6 +648,26 @@ mod tests {
 
         let best = select_best(&candidates, &arena, &options);
         assert!(best.is_some());
+        assert_eq!(best.unwrap().node_id, 2);
+    }
+
+    #[test]
+    fn test_small_candidate_falls_back_to_substantive_semantic_article() {
+        let mut summary = make_candidate(1, TagId::Div, 3.0);
+        summary.features.values[FeatureIndex::LogTextLenChars as usize] = (806.0_f32).ln();
+        summary.features.values[FeatureIndex::LogPCount as usize] = 6.0_f32.ln();
+
+        let mut article = make_candidate(2, TagId::Article, 2.4);
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = (6_001.0_f32).ln();
+        article.features.values[FeatureIndex::LogPCount as usize] = 18.0_f32.ln();
+        article.features.values[FeatureIndex::SemanticMainFlag as usize] = 1.0;
+        article.features.values[FeatureIndex::TocLike as usize] = 0.3;
+        article.features.values[FeatureIndex::LinkDensity as usize] = 0.4;
+
+        let candidates = vec![summary, article];
+        let arena = crate::dom::Arena::new();
+        let best = select_best(&candidates, &arena, &ExtractOptions::default());
+
         assert_eq!(best.unwrap().node_id, 2);
     }
 
