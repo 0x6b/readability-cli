@@ -83,6 +83,7 @@ const NEWSLETTER: &[BlockRule] = &[
 
 /// Social sharing widgets
 const SOCIAL: &[BlockRule] = &[
+    BlockRule::always("sharedaddy"),
     BlockRule::always("social-share-box"),
     BlockRule::always("social-sharing-modal"),
     BlockRule::always("social-share-link"),
@@ -129,6 +130,7 @@ const PROMO: &[BlockRule] = &[
 
 /// Related/recommended content
 const RELATED: &[BlockRule] = &[
+    BlockRule::always("jp-relatedposts"),
     BlockRule::if_medium("related-posts"),
     BlockRule::if_medium("related-articles"),
     BlockRule::if_medium("related-content"),
@@ -527,5 +529,23 @@ mod tests {
             }
         }
         panic!("Newsletter not found");
+    }
+
+    #[test]
+    fn test_wordpress_plugin_boilerplate_is_always_blocked() {
+        let html = r#"
+        <html><body><article>
+            <div class="sharedaddy">Share controls</div>
+            <div id="jp-relatedposts">A related article excerpt that may contain substantial text.</div>
+        </article></body></html>
+        "#;
+        let arena = parse_html(html);
+        let blocked = arena
+            .nodes
+            .iter()
+            .enumerate()
+            .filter(|(id, _)| should_block(&arena, *id as NodeId))
+            .count();
+        assert_eq!(blocked, 2);
     }
 }
