@@ -231,32 +231,18 @@ def load_corpus(corpus_dir: Path, split: str = "train") -> list[tuple[Path, str]
     return pairs
 
 
-def generate_training_data(
+def generate_classification_page_data(
     corpus_pairs: list[tuple[Path, str]],
     overlap_threshold: float = 0.5,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Generate training data from corpus.
-
-    Returns (X, y, weights) where:
-    - X is feature matrix [n_samples, n_features]
-    - y is labels [n_samples] (1 for positive, 0 for negative)
-    - weights is sample weights [n_samples] based on overlap quality
-
-    Labeling strategy:
-    - Compute token F1 between each candidate's text and expected text
-    - Label as positive if overlap >= threshold
-    - Weight samples by overlap quality (squared) to favor high-overlap candidates
-    """
+) -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """Generate reusable, family-balanced classification samples per page."""
     subprocess.run(
         ["cargo", "build", "-p", "rdbl_cli"],
         cwd=REPO_ROOT,
         check=True,
     )
 
-    X_list = []
-    y_list = []
-    weight_list = []
+    page_data = {}
     family_page_counts = Counter(corpus_family(path.stem) for path, _ in corpus_pairs)
 
     for html_path, teacher_text in corpus_pairs:
@@ -266,58 +252,76 @@ def generate_training_data(
             print(f"  {html_path.name}: no candidates")
             continue
 
-        # Compute overlap for each candidate
+        X_page = []
+        y_page = []
+        page_weights = []
         positive_count = 0
-        page_weight_start = len(weight_list)
         for candidate in candidates:
-            # Use the raw feature vector
             feature_vector = candidate.get("feature_vector", [])
             if len(feature_vector) != NUM_FEATURES:
                 continue
 
-            X_list.append(np.array(feature_vector))
-
-            # Label based on overlap with expected text
+            X_page.append(np.asarray(feature_vector))
             candidate_text = candidate.get("text", "")
             overlap = compute_overlap(candidate_text, teacher_text)
-
             is_positive = overlap >= overlap_threshold
-            y_list.append(1 if is_positive else 0)
-
-            weight_list.append(candidate_sample_weight(overlap, overlap_threshold))
-
+            y_page.append(1 if is_positive else 0)
+            page_weights.append(candidate_sample_weight(overlap, overlap_threshold))
             if is_positive:
                 positive_count += 1
 
-        # A page with hundreds of candidates must not outweigh a small page, and
-        # multiple snapshots of one site must not outweigh a single-site family.
-        page_weights = weight_list[page_weight_start:]
         page_weight_total = sum(page_weights)
         family_size = family_page_counts[corpus_family(html_path.stem)]
         if page_weight_total:
-            weight_list[page_weight_start:] = [
-                weight / page_weight_total / family_size for weight in page_weights
-            ]
+            normalized_weights = np.asarray(page_weights) / page_weight_total / family_size
+            page_data[html_path.stem] = (
+                np.asarray(X_page),
+                np.asarray(y_page),
+                normalized_weights,
+            )
 
         print(f"  {html_path.name}: {len(candidates)} candidates, {positive_count} positive")
 
-    return np.array(X_list), np.array(y_list), np.array(weight_list)
+    return page_data
 
 
-def generate_pairwise_training_data(
+def combine_page_data(
+    page_data: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
+    case_names: set[str] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Combine cached page samples for one model-selection partition."""
+    selected = [
+        data
+        for case_name, data in page_data.items()
+        if case_names is None or case_name in case_names
+    ]
+    if not selected:
+        return np.empty((0, NUM_FEATURES)), np.array([], dtype=int), np.array([])
+    return tuple(np.concatenate(parts) for parts in zip(*selected))
+
+
+def generate_training_data(
+    corpus_pairs: list[tuple[Path, str]],
+    overlap_threshold: float = 0.5,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Generate candidate-classification features, labels, and sample weights."""
+    return combine_page_data(
+        generate_classification_page_data(corpus_pairs, overlap_threshold)
+    )
+
+
+def generate_pairwise_page_data(
     corpus_pairs: list[tuple[Path, str]],
     min_gap: float = 0.05,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Generate family-balanced comparisons for page-level candidate ranking."""
+) -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """Generate reusable, family-balanced comparisons for each page."""
     subprocess.run(
         ["cargo", "build", "-p", "rdbl_cli"],
         cwd=REPO_ROOT,
         check=True,
     )
 
-    X_list = []
-    y_list = []
-    weight_list = []
+    page_data = {}
     family_page_counts = Counter(corpus_family(path.stem) for path, _ in corpus_pairs)
 
     for html_path, teacher_text in corpus_pairs:
@@ -338,12 +342,26 @@ def generate_pairwise_training_data(
 
         family_size = family_page_counts[corpus_family(html_path.stem)]
         page_weights = page_weights / page_weights.sum() / family_size
-        X_list.extend(X_page)
-        y_list.extend(y_page)
-        weight_list.extend(page_weights)
+        page_data[html_path.stem] = (X_page, y_page, page_weights)
         print(f"  {html_path.name}: {len(X_page) // 2} ranking pairs")
 
-    return np.asarray(X_list), np.asarray(y_list), np.asarray(weight_list)
+    return page_data
+
+
+def combine_pairwise_page_data(
+    page_data: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
+    case_names: set[str] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Combine cached page comparisons for one model-selection partition."""
+    return combine_page_data(page_data, case_names)
+
+
+def generate_pairwise_training_data(
+    corpus_pairs: list[tuple[Path, str]],
+    min_gap: float = 0.05,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Generate family-balanced comparisons for page-level candidate ranking."""
+    return combine_pairwise_page_data(generate_pairwise_page_data(corpus_pairs, min_gap))
 
 
 def train_pairwise_ranker(

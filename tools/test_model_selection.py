@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from corpus_splits import PROTECTED_SPLITS, corpus_family, corpus_split
-from model_selection import assign_group_folds
+from model_selection import assign_group_folds, summarize_fold_metrics
 
 
 CORPUS = Path(__file__).parent.parent / "tests" / "corpus"
@@ -41,6 +41,33 @@ class ModelSelectionTest(unittest.TestCase):
     def test_rejects_single_fold(self):
         with self.assertRaisesRegex(ValueError, "at least 2"):
             assign_group_folds(["case"], fold_count=1)
+
+    def test_summarizes_fold_mean_variance_and_worst_case(self):
+        summary = summarize_fold_metrics(
+            [
+                {
+                    "text_f1": 0.8,
+                    "structure_f1": 0.6,
+                    "worst_case_f1": 0.4,
+                    "worst_structure_f1": 0.2,
+                    "structural_failures": 1,
+                },
+                {
+                    "text_f1": 1.0,
+                    "structure_f1": 0.8,
+                    "worst_case_f1": 0.7,
+                    "worst_structure_f1": 0.5,
+                    "structural_failures": 0,
+                },
+            ]
+        )
+        self.assertAlmostEqual(summary["mean_text_f1"], 0.9)
+        self.assertAlmostEqual(summary["text_f1_stddev"], 0.1)
+        self.assertAlmostEqual(summary["mean_structure_f1"], 0.7)
+        self.assertAlmostEqual(summary["structure_f1_stddev"], 0.1)
+        self.assertEqual(summary["worst_case_f1"], 0.4)
+        self.assertEqual(summary["worst_structure_f1"], 0.2)
+        self.assertEqual(summary["structural_failures"], 1)
 
 
 if __name__ == "__main__":

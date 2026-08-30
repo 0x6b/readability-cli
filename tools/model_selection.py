@@ -1,6 +1,7 @@
 """Utilities for leakage-resistant model selection."""
 
 import hashlib
+import statistics
 from collections import defaultdict
 from collections.abc import Iterable
 
@@ -29,3 +30,18 @@ def assign_group_folds(case_names: Iterable[str], fold_count: int = 5) -> dict[s
         fold_sizes[fold] += len(cases)
 
     return assignments
+
+
+def summarize_fold_metrics(folds: list[dict]) -> dict[str, float]:
+    """Summarize end-to-end fold metrics without pooling site templates."""
+    text_scores = [fold["text_f1"] for fold in folds]
+    structure_scores = [fold["structure_f1"] for fold in folds]
+    return {
+        "mean_text_f1": statistics.fmean(text_scores),
+        "text_f1_stddev": statistics.pstdev(text_scores),
+        "mean_structure_f1": statistics.fmean(structure_scores),
+        "structure_f1_stddev": statistics.pstdev(structure_scores),
+        "worst_case_f1": min(fold["worst_case_f1"] for fold in folds),
+        "worst_structure_f1": min(fold["worst_structure_f1"] for fold in folds),
+        "structural_failures": sum(fold["structural_failures"] for fold in folds),
+    }

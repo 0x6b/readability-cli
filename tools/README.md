@@ -146,6 +146,15 @@ Pairwise ranking is experimental and does not replace the default classifier.
 It must improve end-to-end text, structure, and worst-case results across grouped
 folds before its weights are exported to the runtime model.
 
+```bash
+uv run cross_validate_pairwise.py --corpus ../tests/corpus --folds 5 \
+  --classification-C 10 --pairwise-C 1
+```
+
+This retrains both methods inside every fold, then restores and rebuilds the
+embedded model. Only cases with frozen expected fixtures participate. The report
+includes fold means, dispersion, and the global worst case.
+
 ## Exporting Weights to Rust
 
 ```bash
