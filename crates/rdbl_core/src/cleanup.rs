@@ -193,10 +193,17 @@ fn mark_for_removal(
                 }
             }
 
-            // Drop large gallery-style blocks even if they have lots of text
+            // Drop large gallery-style blocks unless their captions form substantive content.
             if attrs.contains_keyword(&["gallery", "slideshow", "carousel", "lightbox"]) {
                 let (img_count, li_count) = count_descendant_media(arena, node_id);
-                if img_count >= 5 || li_count >= 10 {
+                let item_count = img_count.max(li_count);
+                let text_len = arena
+                    .collect_text(node_id)
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .count();
+                let is_text_rich = text_len >= 1_000 && text_len / item_count.max(1) >= 100;
+                if (img_count >= 5 || li_count >= 10) && !is_text_rich {
                     remove_set.insert(node_id);
                     return;
                 }
@@ -699,6 +706,37 @@ mod tests {
         assert!(html.contains("<img src=\"/article.png\" alt=\"Article image\">"));
         assert!(html.contains("<iframe src=\"https://www.youtube.com/embed/video\"></iframe>"));
         assert!(!html.contains("javascript:"));
+    }
+
+    #[test]
+    fn test_cleanup_preserves_text_rich_gallery_and_removes_thumbnail_gallery() {
+        let rich_items = (0..10)
+            .map(|index| {
+                format!(
+                    "<li>Substantive caption {index}: This gallery item explains the event in \
+                     enough detail to form part of the article rather than a thumbnail picker. \
+                     It includes context, observations, and a complete account for the reader.</li>"
+                )
+            })
+            .collect::<String>();
+        let thumbnail_items = (0..10)
+            .map(|index| format!("<li><img src=\"/{index}.jpg\">Photo caption {index}</li>"))
+            .collect::<String>();
+        let html = format!(
+            "<html><body><article><ul class=\"gallery\">{rich_items}</ul>\
+             <ul class=\"thumbnail-gallery\">{thumbnail_items}</ul></article></body></html>"
+        );
+        let arena = parse_html(&html);
+        let cleaned = cleanup(
+            &arena,
+            arena.find_body().unwrap(),
+            &ExtractOptions::default(),
+        );
+        let html = to_html(&cleaned);
+
+        assert!(html.contains("Substantive caption 0"));
+        assert!(html.contains("complete account for the reader"));
+        assert!(!html.contains("Photo caption 0"));
     }
 
     #[test]
