@@ -142,6 +142,11 @@ fn mark_for_removal(
             return;
         }
 
+        if arena.get_attributes(node_id).is_some_and(is_hidden) {
+            remove_set.insert(node_id);
+            return;
+        }
+
         // Enhanced boilerplate detection using postprocess module
         if is_boilerplate_for_cleanup(arena, node_id) {
             remove_set.insert(node_id);
@@ -515,6 +520,26 @@ fn is_safe_media_url(url: &str) -> bool {
         || (!url.contains(':') && !url.is_empty())
 }
 
+fn is_hidden(attrs: &crate::dom::Attributes) -> bool {
+    if attrs.hidden
+        || attrs
+            .aria_hidden
+            .as_deref()
+            .is_some_and(|value| value.eq_ignore_ascii_case("true"))
+    {
+        return true;
+    }
+    let style = attrs
+        .style
+        .as_deref()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        .replace(char::is_whitespace, "");
+    style.contains("display:none")
+        || style.contains("visibility:hidden")
+        || style.contains("content-visibility:hidden")
+}
+
 /// Flatten a cleaned tree to remove empty containers
 pub fn flatten_cleaned_tree(node: CleanedNode) -> Option<CleanedNode> {
     match node.kind {
@@ -669,5 +694,27 @@ mod tests {
         assert!(html.contains("<img src=\"/article.png\" alt=\"Article image\">"));
         assert!(html.contains("<iframe src=\"https://www.youtube.com/embed/video\"></iframe>"));
         assert!(!html.contains("javascript:"));
+    }
+
+    #[test]
+    fn test_cleanup_removes_explicitly_hidden_nodes() {
+        let html = r#"
+        <html><body><article>
+            <p>Visible content</p>
+            <p hidden>Hidden attribute</p>
+            <p aria-hidden="true">ARIA hidden</p>
+            <p style="display: none">CSS display hidden</p>
+            <p style="visibility: hidden">CSS visibility hidden</p>
+        </article></body></html>
+        "#;
+        let arena = parse_html(html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let html = to_html(&cleaned);
+
+        assert!(html.contains("Visible content"));
+        assert!(!html.contains("Hidden attribute"));
+        assert!(!html.contains("ARIA hidden"));
+        assert!(!html.contains("CSS display hidden"));
+        assert!(!html.contains("CSS visibility hidden"));
     }
 }

@@ -137,6 +137,9 @@ fn convert_node(handle: &Handle, parent_id: NodeId, arena: &mut Arena) {
                             "name" => attributes.name = Some(attr_value),
                             "content" => attributes.content = Some(attr_value),
                             "property" => attributes.property = Some(attr_value),
+                            "hidden" => attributes.hidden = true,
+                            "style" => attributes.style = Some(attr_value),
+                            "aria-hidden" => attributes.aria_hidden = Some(attr_value),
                             _ => {}
                         }
                     }

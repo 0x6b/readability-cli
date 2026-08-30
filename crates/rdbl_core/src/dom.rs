@@ -446,6 +446,12 @@ pub struct Attributes {
     pub content: Option<String>,
     /// property attribute (for meta tags, e.g., og:title)
     pub property: Option<String>,
+    /// Whether the HTML hidden attribute is present
+    pub hidden: bool,
+    /// Inline CSS used to identify explicitly hidden nodes
+    pub style: Option<String>,
+    /// aria-hidden value
+    pub aria_hidden: Option<String>,
 }
 
 impl Attributes {
