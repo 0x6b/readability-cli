@@ -74,6 +74,114 @@
       "url": "https://docs.djangoproject.com/ko/5.2/intro/tutorial01/",
       "language": "ko",
       "category": "documentation-code"
+    },
+    {
+      "case": "developer_mozilla_org_ar_docs_Web_HTML_Element_table",
+      "url": "https://developer.mozilla.org/ar/docs/Web/HTML/Element/table",
+      "language": "ar",
+      "category": "reference-tables-code"
+    },
+    {
+      "case": "learn_microsoft_com_he-il_dotnet_csharp_tour-of-cs_eb416cf0",
+      "url": "https://learn.microsoft.com/he-il/dotnet/csharp/tour-of-csharp/overview",
+      "language": "he",
+      "category": "documentation-code"
+    },
+    {
+      "case": "web_dev_learn_html",
+      "url": "https://web.dev/learn/html?hl=hi",
+      "language": "hi",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "docs_aws_amazon_com_th_th_AmazonS3_latest_userguid_5aef3dc7",
+      "url": "https://docs.aws.amazon.com/th_th/AmazonS3/latest/userguide/Welcome.html",
+      "language": "th",
+      "category": "documentation-reference"
+    },
+    {
+      "case": "wiki_selfhtml_org_wiki_HTML_Tutorials_Grundger%C3%BCst",
+      "url": "https://wiki.selfhtml.org/wiki/HTML/Tutorials/Grundger%C3%BCst",
+      "language": "de",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "www_cnil_fr_fr_comprendre-le-rgpd",
+      "url": "https://www.cnil.fr/fr/comprendre-le-rgpd",
+      "language": "fr",
+      "category": "government-reference"
+    },
+    {
+      "case": "www_gov_pl_web_cyfryzacja_sztuczna-inteligencja",
+      "url": "https://www.gov.pl/web/cyfryzacja/sztuczna-inteligencja",
+      "language": "pl",
+      "category": "government-editorial"
+    },
+    {
+      "case": "zh-hans_react_dev_learn_describing-the-ui",
+      "url": "https://zh-hans.react.dev/learn/describing-the-ui",
+      "language": "zh",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "cn_vuejs_org_guide_introduction_html",
+      "url": "https://cn.vuejs.org/guide/introduction.html",
+      "language": "zh",
+      "category": "documentation-code"
+    },
+    {
+      "case": "dle_rae_es_casa",
+      "url": "https://dle.rae.es/casa",
+      "language": "es",
+      "category": "dictionary-reference-lists"
+    },
+    {
+      "case": "developer_android_com_guide",
+      "url": "https://developer.android.com/guide?hl=vi",
+      "language": "vi",
+      "category": "documentation-code"
+    },
+    {
+      "case": "ru_hexlet_io_blog_posts_chto-takoe-algoritmy",
+      "url": "https://ru.hexlet.io/blog/posts/chto-takoe-algoritmy",
+      "language": "ru",
+      "category": "technical-blog"
+    },
+    {
+      "case": "www_gnu_org_philosophy_free-sw_it_html",
+      "url": "https://www.gnu.org/philosophy/free-sw.it.html",
+      "language": "it",
+      "category": "long-form-essay"
+    },
+    {
+      "case": "www_rust-lang_org_pt-BR_learn",
+      "url": "https://www.rust-lang.org/pt-BR/learn",
+      "language": "pt",
+      "category": "documentation-lists"
+    },
+    {
+      "case": "docs_github_com_ja_get-started_start-your-journey__c9fa93b6",
+      "url": "https://docs.github.com/ja/get-started/start-your-journey/about-github-and-git",
+      "language": "ja",
+      "category": "documentation-tutorial"
+    },
+    {
+      "case": "science_nasa_gov_mars",
+      "url": "https://science.nasa.gov/mars/",
+      "language": "en",
+      "category": "science-reference-rich-media"
+    },
+    {
+      "case": "www_nationalgallery_org_uk_paintings_vincent-van-g_40051df8",
+      "url": "https://www.nationalgallery.org.uk/paintings/vincent-van-gogh-sunflowers",
+      "language": "en",
+      "category": "art-reference-rich-images"
+    },
+    {
+      "case": "www_sqlite_org_lang_select_html",
+      "url": "https://www.sqlite.org/lang_select.html",
+      "language": "en",
+      "category": "technical-reference-code"
     }
   ]
 }
