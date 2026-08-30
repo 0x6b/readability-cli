@@ -1,0 +1,325 @@
+{
+  "dataset": "Dragnet gold data",
+  "upstream_repository": "https://github.com/dragnet-org/dragnet_data",
+  "upstream_commit": "5d97da4c3c5cf775fa02794b84d31786b8d51d3a",
+  "license": "CC-BY-4.0",
+  "annotation": "manual main-text extraction",
+  "evaluated": false,
+  "selection": {
+    "seed": "readability-cli-dragnet-v1",
+    "count": 50,
+    "one_case_per_normalized_host": true
+  },
+  "archives": {
+    "html": {
+      "url": "https://media.githubusercontent.com/media/dragnet-org/dragnet_data/5d97da4c3c5cf775fa02794b84d31786b8d51d3a/data/html.tar.gz",
+      "sha256": "eb80881cef7cbc7ad0086d0c2ac9aacf95d27f223fa66821457bad4b39ff39b7"
+    },
+    "meta": {
+      "url": "https://media.githubusercontent.com/media/dragnet-org/dragnet_data/5d97da4c3c5cf775fa02794b84d31786b8d51d3a/data/meta.tar.gz",
+      "sha256": "5e971b3ba9616876a1a648727d40283b2768c23531a14aca9b6451aa5e6c16d2"
+    }
+  },
+  "cases": [
+    {
+      "case": "dragnet_fc084605-4053-382f-bd09-2a107887d1bb",
+      "id": "fc084605-4053-382f-bd09-2a107887d1bb",
+      "url": "https://sports.yahoo.com/fans-see-1st-nats-exho-010055503.html",
+      "host": "sports.yahoo.com"
+    },
+    {
+      "case": "dragnet_90f3f9d3-2e59-3146-bd90-9319399b1702",
+      "id": "90f3f9d3-2e59-3146-bd90-9319399b1702",
+      "url": "https://www.sbnation.com/2020/7/14/21324077/orlando-florida-aau-junior-national-volleyball-tournament-safety-coronavirus-covid-19",
+      "host": "sbnation.com"
+    },
+    {
+      "case": "dragnet_1f6bb2a7-e9d0-33b8-a8ad-605b203c6878",
+      "id": "1f6bb2a7-e9d0-33b8-a8ad-605b203c6878",
+      "url": "https://voxeurop.eu/en/2020/covid-19-and-disinformation-5124523",
+      "host": "voxeurop.eu"
+    },
+    {
+      "case": "dragnet_26be2876-c981-32a5-aec4-8848e18d9476",
+      "id": "26be2876-c981-32a5-aec4-8848e18d9476",
+      "url": "https://searchengineland.com/feedback-optimization-a-user-first-approach-to-seo-338414?utm_source=feedburner&utm_medium=feed&utm_campaign=feed-main",
+      "host": "searchengineland.com"
+    },
+    {
+      "case": "dragnet_4b202304-df88-3e0d-8cb5-f06997cde2c7",
+      "id": "4b202304-df88-3e0d-8cb5-f06997cde2c7",
+      "url": "https://food52.com/blog/25305-why-michele-humes-shishito-style-green-peppers-are-genius",
+      "host": "food52.com"
+    },
+    {
+      "case": "dragnet_2f796cf5-7353-3dd9-89b3-c566c5944ad5",
+      "id": "2f796cf5-7353-3dd9-89b3-c566c5944ad5",
+      "url": "https://www.elmundo.es/economia/2020/08/02/5f244f61fc6c8357168b45d4.html",
+      "host": "elmundo.es"
+    },
+    {
+      "case": "dragnet_f7625649-4291-3bf7-a340-a6fafa45e66f",
+      "id": "f7625649-4291-3bf7-a340-a6fafa45e66f",
+      "url": "https://moz.com/blog/short-and-long-term-results-content-marketing-digital-pr",
+      "host": "moz.com"
+    },
+    {
+      "case": "dragnet_8c1a84bb-ef25-340f-ade6-511f7e267f48",
+      "id": "8c1a84bb-ef25-340f-ade6-511f7e267f48",
+      "url": "https://www.thestar.com/politics/federal/2020/05/21/no-promises-yet-but-canada-cities-and-towns-are-confident-that-justin-trudeau-will-send-financial-help.html",
+      "host": "thestar.com"
+    },
+    {
+      "case": "dragnet_d6321dd7-0547-30df-88c9-ba4968d089ea",
+      "id": "d6321dd7-0547-30df-88c9-ba4968d089ea",
+      "url": "https://www.apple.com/newsroom/2020/07/apple-news-launches-new-audio-features-expands-local-news-offerings-for-readers/",
+      "host": "apple.com"
+    },
+    {
+      "case": "dragnet_3cf7816d-ee6d-3e91-a3a6-5137f01b3fa5",
+      "id": "3cf7816d-ee6d-3e91-a3a6-5137f01b3fa5",
+      "url": "https://www.bbc.co.uk/news/uk-england-leeds-52755493",
+      "host": "bbc.co.uk"
+    },
+    {
+      "case": "dragnet_4f54d103-3e2a-3d2b-9c99-611c77fe6b81",
+      "id": "4f54d103-3e2a-3d2b-9c99-611c77fe6b81",
+      "url": "https://www.cbc.ca/news/canada/edmonton/alberta-energy-regulator-suspends-environment-monitoring-for-oilpatch-over-covid-1.5578994",
+      "host": "cbc.ca"
+    },
+    {
+      "case": "dragnet_8e35698f-4962-3af4-a224-914aef9edc71",
+      "id": "8e35698f-4962-3af4-a224-914aef9edc71",
+      "url": "https://www.independent.co.uk/environment/trump-oil-fracking-new-mexico-navajo-nation-a9527446.html",
+      "host": "independent.co.uk"
+    },
+    {
+      "case": "dragnet_3a597d85-c135-3867-b89c-7ffff5342bad",
+      "id": "3a597d85-c135-3867-b89c-7ffff5342bad",
+      "url": "https://www.nature.com/articles/d41586-020-01499-y?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+nature%2Frss%2Fcurrent+%28Nature+-+Issue%29",
+      "host": "nature.com"
+    },
+    {
+      "case": "dragnet_0d49c768-aad1-3edc-9be3-9094a1199e94",
+      "id": "0d49c768-aad1-3edc-9be3-9094a1199e94",
+      "url": "https://www.insidehighered.com/quicktakes/2020/05/21/college-board-sued-over-ap-exams",
+      "host": "insidehighered.com"
+    },
+    {
+      "case": "dragnet_4b14cc19-4d1d-3bfa-bc26-81f9f6b0f145",
+      "id": "4b14cc19-4d1d-3bfa-bc26-81f9f6b0f145",
+      "url": "https://www.autoblog.com/2020/05/20/2020-woodward-dream-cruise-cancelled-cities/",
+      "host": "autoblog.com"
+    },
+    {
+      "case": "dragnet_9b381aa5-add4-32aa-a2f1-39552bf738b1",
+      "id": "9b381aa5-add4-32aa-a2f1-39552bf738b1",
+      "url": "https://www.foxnews.com/science/smithsonian-collecting-coronavirus-artifacts-document-historic-outbreak",
+      "host": "foxnews.com"
+    },
+    {
+      "case": "dragnet_d0cdcb46-3ece-30b4-b048-34594fc1868c",
+      "id": "d0cdcb46-3ece-30b4-b048-34594fc1868c",
+      "url": "https://www.nytimes.com/2020/07/16/smarter-living/people-pleaser-coronavirus.html",
+      "host": "nytimes.com"
+    },
+    {
+      "case": "dragnet_8ec3f71f-6408-3d8a-b9f8-18cf8a926301",
+      "id": "8ec3f71f-6408-3d8a-b9f8-18cf8a926301",
+      "url": "https://www.latimes.com/california/story/2020-05-20/l-a-county-sheriff-will-defy-subpoena-from-oversight-commission-to-testify-about-jail-conditions",
+      "host": "latimes.com"
+    },
+    {
+      "case": "dragnet_5c989978-421e-367c-bb94-b734fe73ec96",
+      "id": "5c989978-421e-367c-bb94-b734fe73ec96",
+      "url": "https://www.chicagotribune.com/weather/ct-chicago-weather-willis-tower-tv-radio-outages-20200520-wvfjbipllnemvpnowa3uoqunbi-story.html",
+      "host": "chicagotribune.com"
+    },
+    {
+      "case": "dragnet_f7e468c4-c369-3de0-a51f-8cc2bba31188",
+      "id": "f7e468c4-c369-3de0-a51f-8cc2bba31188",
+      "url": "https://urbansurvivalsite.com/bugging-out-on-foot-how-far-can-you-go/",
+      "host": "urbansurvivalsite.com"
+    },
+    {
+      "case": "dragnet_98b1718b-3175-38be-9c11-fcd81dd10aa5",
+      "id": "98b1718b-3175-38be-9c11-fcd81dd10aa5",
+      "url": "https://www.huffpost.com/entry/karen-bass-scientology-remarks_n_5f260553c5b68fbfc8840542",
+      "host": "huffpost.com"
+    },
+    {
+      "case": "dragnet_6da7d142-5796-37fe-9d11-217a04cf5cef",
+      "id": "6da7d142-5796-37fe-9d11-217a04cf5cef",
+      "url": "https://www.rollingstone.com/music/music-features/gunna-wunna-interview-1003653/",
+      "host": "rollingstone.com"
+    },
+    {
+      "case": "dragnet_d5567f70-cf40-3afd-8163-bdedaf399b27",
+      "id": "d5567f70-cf40-3afd-8163-bdedaf399b27",
+      "url": "https://www.cnet.com/personal-finance/heals-vs-cares-vs-heroes-stimulus-packages-key-differences-between-the-proposals/",
+      "host": "cnet.com"
+    },
+    {
+      "case": "dragnet_3ee4244a-5838-37aa-93f0-5b401109862c",
+      "id": "3ee4244a-5838-37aa-93f0-5b401109862c",
+      "url": "https://www.cbsnews.com/video/dominican-republic-tourist-deaths-have-americans-rethinking-their-vacations/",
+      "host": "cbsnews.com"
+    },
+    {
+      "case": "dragnet_d2bb7fca-fad0-3157-9211-212467724d0c",
+      "id": "d2bb7fca-fad0-3157-9211-212467724d0c",
+      "url": "https://www.sciencedaily.com/releases/2020/07/200730113055.htm",
+      "host": "sciencedaily.com"
+    },
+    {
+      "case": "dragnet_0bb64f09-4aa7-32fb-86af-62efff16db43",
+      "id": "0bb64f09-4aa7-32fb-86af-62efff16db43",
+      "url": "https://www.zdnet.com/article/rsa-conference-moves-2021-event-from-february-to-may/",
+      "host": "zdnet.com"
+    },
+    {
+      "case": "dragnet_2a499d23-c8fe-39c1-af23-cbe1173561ba",
+      "id": "2a499d23-c8fe-39c1-af23-cbe1173561ba",
+      "url": "https://www.theguardian.com/artanddesign/gallery/2020/may/20/eye-for-vulnerability-female-gaze-world-seen-by-women-in-pictures",
+      "host": "theguardian.com"
+    },
+    {
+      "case": "dragnet_9f60a41e-cf3e-3405-a696-da303f52ef7b",
+      "id": "9f60a41e-cf3e-3405-a696-da303f52ef7b",
+      "url": "https://www.calculatedriskblog.com/2020/05/us-births-decreased-in-2019-lowest.html?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed:+CalculatedRisk+(Calculated+Risk)",
+      "host": "calculatedriskblog.com"
+    },
+    {
+      "case": "dragnet_1d869e96-e35f-3f59-b6dc-99191c04bc4c",
+      "id": "1d869e96-e35f-3f59-b6dc-99191c04bc4c",
+      "url": "https://www.thekitchn.com/flavor-packed-dinners-grocery-list-23035603",
+      "host": "thekitchn.com"
+    },
+    {
+      "case": "dragnet_7a8376ad-bc16-3934-902a-475b8ecf0366",
+      "id": "7a8376ad-bc16-3934-902a-475b8ecf0366",
+      "url": "https://gizmodo.com/vivos-new-x50-might-have-the-best-smartphone-camera-eve-1843590824",
+      "host": "gizmodo.com"
+    },
+    {
+      "case": "dragnet_bb2302de-e81d-3b37-b3b9-2474420d05f0",
+      "id": "bb2302de-e81d-3b37-b3b9-2474420d05f0",
+      "url": "https://www.coindesk.com/fincen-issues-warning-on-coronavirus-scams-demanding-crypto",
+      "host": "coindesk.com"
+    },
+    {
+      "case": "dragnet_b69a962e-c7e3-3d75-a56a-a80db61e07fc",
+      "id": "b69a962e-c7e3-3d75-a56a-a80db61e07fc",
+      "url": "https://www.orlandosentinel.com/weather/hurricane/os-ne-tropical-storm-isaias-monday-update-20200803-gk7quxbdx5f65my7qvb3sarrr4-story.html",
+      "host": "orlandosentinel.com"
+    },
+    {
+      "case": "dragnet_1ad49586-b6d5-3c3c-8291-5631a3a5444f",
+      "id": "1ad49586-b6d5-3c3c-8291-5631a3a5444f",
+      "url": "https://www.buzzfeednews.com/article/emmanuelfelton/canada-assault-weapons-ban",
+      "host": "buzzfeednews.com"
+    },
+    {
+      "case": "dragnet_77b4964c-7e8e-3ae1-9af1-97218d08f7a0",
+      "id": "77b4964c-7e8e-3ae1-9af1-97218d08f7a0",
+      "url": "https://cointelegraph.com/news/20-000-wont-pose-any-resistance-for-bitcoin-price-says-max-keiser",
+      "host": "cointelegraph.com"
+    },
+    {
+      "case": "dragnet_1fb46245-4456-32a3-bfae-f37f425649f0",
+      "id": "1fb46245-4456-32a3-bfae-f37f425649f0",
+      "url": "https://www.medicalnewstoday.com/articles/covid-19-is-now-a-pandemic-what-next",
+      "host": "medicalnewstoday.com"
+    },
+    {
+      "case": "dragnet_2b91998e-621e-33b1-b614-b3ef561c7dae",
+      "id": "2b91998e-621e-33b1-b614-b3ef561c7dae",
+      "url": "https://www.edsurge.com/news/2020-05-11-shifting-to-a-digital-teaching-model-here-s-some-advice",
+      "host": "edsurge.com"
+    },
+    {
+      "case": "dragnet_d76d6c39-29ec-3a03-9815-fc67432239e4",
+      "id": "d76d6c39-29ec-3a03-9815-fc67432239e4",
+      "url": "https://sports.theonion.com/mike-greenberg-encouraged-to-wear-mask-to-help-prevent-1844405499",
+      "host": "sports.theonion.com"
+    },
+    {
+      "case": "dragnet_3ef8c9e5-3a18-3631-ae93-3f7bab43835e",
+      "id": "3ef8c9e5-3a18-3631-ae93-3f7bab43835e",
+      "url": "https://www.theverge.com/2020/5/21/21266671/john-krasinski-some-good-news-youtube-cbs-all-access-licensing-streaming",
+      "host": "theverge.com"
+    },
+    {
+      "case": "dragnet_3be55044-0431-3e20-b601-024347df318a",
+      "id": "3be55044-0431-3e20-b601-024347df318a",
+      "url": "https://www.eurekalert.org/pub_releases/2020-05/p-eoh051420.php",
+      "host": "eurekalert.org"
+    },
+    {
+      "case": "dragnet_0a224cdd-7906-30cb-9e9e-551f3116acd8",
+      "id": "0a224cdd-7906-30cb-9e9e-551f3116acd8",
+      "url": "https://www.tmz.com/2020/05/21/lori-loughlin-plead-guilty-mossimo-college-bribery-scandal-admissions-usc/",
+      "host": "tmz.com"
+    },
+    {
+      "case": "dragnet_626863e0-a2b2-3c75-b9ab-7b095fec18e2",
+      "id": "626863e0-a2b2-3c75-b9ab-7b095fec18e2",
+      "url": "https://www.chronicle.com/article/Plexiglass-Won-t-Save-Us/249192",
+      "host": "chronicle.com"
+    },
+    {
+      "case": "dragnet_6b08f024-ebdf-3f59-b484-3549302c8ee3",
+      "id": "6b08f024-ebdf-3f59-b484-3549302c8ee3",
+      "url": "https://womenandhollywood.com/sofia-coppola-bringing-edith-whartons-the-custom-of-the-country-to-apple/",
+      "host": "womenandhollywood.com"
+    },
+    {
+      "case": "dragnet_8f5e2f3b-2450-3d1e-8b92-d5344b69e3c8",
+      "id": "8f5e2f3b-2450-3d1e-8b92-d5344b69e3c8",
+      "url": "https://www.reuters.com/article/us-health-coronavirus-gilead-sciences-idUSKBN22X2Q3",
+      "host": "reuters.com"
+    },
+    {
+      "case": "dragnet_4be54ea9-f9dc-3605-bcd2-09f88f0057ed",
+      "id": "4be54ea9-f9dc-3605-bcd2-09f88f0057ed",
+      "url": "https://www.webmd.com/lung/news/20200517/covid-19-daily-debate-over-vitamin-d-dogs-sniff-out-covid",
+      "host": "webmd.com"
+    },
+    {
+      "case": "dragnet_82c53a19-d9ed-3e59-a145-f369e45db5a7",
+      "id": "82c53a19-d9ed-3e59-a145-f369e45db5a7",
+      "url": "https://euobserver.com/tickers/148976",
+      "host": "euobserver.com"
+    },
+    {
+      "case": "dragnet_3bc9a954-c90a-385c-b088-8a53bde57d71",
+      "id": "3bc9a954-c90a-385c-b088-8a53bde57d71",
+      "url": "https://www.lemonde.fr/societe/article/2020/05/21/marche-blanche-a-argenteuil-apres-la-mort-d-un-jeune-homme-a-moto-pres-d-une-voiture-de-police_6040363_3224.html",
+      "host": "lemonde.fr"
+    },
+    {
+      "case": "dragnet_2e237f98-eb4e-3882-a63f-847e28c7868f",
+      "id": "2e237f98-eb4e-3882-a63f-847e28c7868f",
+      "url": "https://www.backdoorsurvival.com/riots-protests-and-civil-unrest-how-to-move-and-protect-yourself-if-you-must-go-out/",
+      "host": "backdoorsurvival.com"
+    },
+    {
+      "case": "dragnet_6e1362ea-7481-3232-8d86-b9525bd39783",
+      "id": "6e1362ea-7481-3232-8d86-b9525bd39783",
+      "url": "https://www.dpreview.com/reviews/buying-guide-best-dslrs",
+      "host": "dpreview.com"
+    },
+    {
+      "case": "dragnet_4d4a3bf9-7cf0-3800-823d-7afdc12d84be",
+      "id": "4d4a3bf9-7cf0-3800-823d-7afdc12d84be",
+      "url": "https://www.theonion.com/panicked-officials-agree-to-reopen-gyms-after-disastrou-1844408128",
+      "host": "theonion.com"
+    },
+    {
+      "case": "dragnet_08afdb4b-ae71-3905-90a9-a9a3aab4f8e8",
+      "id": "08afdb4b-ae71-3905-90a9-a9a3aab4f8e8",
+      "url": "https://www.adventure-journal.com/2020/05/watch-this-surreal-night-sky-imagery-and-then-head-for-nearest-dark-sky-park/",
+      "host": "adventure-journal.com"
+    }
+  ]
+}

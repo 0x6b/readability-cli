@@ -120,6 +120,18 @@ These metrics measure agreement with the frozen Mozilla Readability/Readability.
 teacher output, not an absolute judgment of article quality. Review the lowest-F1
 cases manually and keep structural tests for links, tables, code, images, and video.
 
+An independent text-only benchmark is available from Dragnet's manually annotated
+gold data. Its third-party HTML is downloaded locally and is not committed:
+
+```bash
+uv run import_dragnet_gold.py
+uv run evaluate.py --corpus ../tests/external/dragnet --split all
+```
+
+The committed manifest fixes a deterministic sample of 50 distinct site hosts.
+Report this result separately as independent gold text agreement; Dragnet does not
+provide expected HTML structure. The upstream dataset is licensed CC-BY-4.0.
+
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
 for a release decision, then move those cases to `REGRESSION_CASES` before any
