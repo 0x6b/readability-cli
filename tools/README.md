@@ -97,6 +97,11 @@ It also compares semantic structure and resource URLs for links, media, tables,
 lists, blockquotes, and code. Expected outputs with no text (for example,
 video-only fixtures) must pass this structural comparison.
 
+Model selection uses family-macro F1, and training normalizes sample weights so
+each site/fixture family has equal total influence regardless of its number of
+pages or candidate nodes. This prevents large pages and repeated site templates
+from dominating the fitted model.
+
 These metrics measure agreement with the frozen Mozilla Readability/Readability.js
 teacher output, not an absolute judgment of article quality. Review the lowest-F1
 cases manually and keep structural tests for links, tables, code, images, and video.

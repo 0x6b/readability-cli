@@ -16,6 +16,7 @@ import argparse
 import json
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -24,7 +25,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 
-from corpus_splits import PROTECTED_SPLITS, SPLITS, in_split
+from corpus_splits import PROTECTED_SPLITS, SPLITS, corpus_family, in_split
 from text_metrics import compute_metrics, extract_text_from_html
 
 # Feature names in order (must match features.rs)
@@ -254,6 +255,7 @@ def generate_training_data(
     X_list = []
     y_list = []
     weight_list = []
+    family_page_counts = Counter(corpus_family(path.stem) for path, _ in corpus_pairs)
 
     for html_path, teacher_text in corpus_pairs:
         candidates = extract_candidates_with_features(html_path)
@@ -264,6 +266,7 @@ def generate_training_data(
 
         # Compute overlap for each candidate
         positive_count = 0
+        page_weight_start = len(weight_list)
         for candidate in candidates:
             # Use the raw feature vector
             feature_vector = candidate.get("feature_vector", [])
@@ -289,6 +292,16 @@ def generate_training_data(
 
             if is_positive:
                 positive_count += 1
+
+        # A page with hundreds of candidates must not outweigh a small page, and
+        # multiple snapshots of one site must not outweigh a single-site family.
+        page_weights = weight_list[page_weight_start:]
+        page_weight_total = sum(page_weights)
+        family_size = family_page_counts[corpus_family(html_path.stem)]
+        if page_weight_total:
+            weight_list[page_weight_start:] = [
+                weight / page_weight_total / family_size for weight in page_weights
+            ]
 
         print(f"  {html_path.name}: {len(candidates)} candidates, {positive_count} positive")
 

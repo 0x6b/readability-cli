@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from corpus_splits import SPLITS, in_split
+from corpus_splits import SPLITS, corpus_family, in_split
 from structure_metrics import compute_structure_metrics, extract_structure
 from text_metrics import compute_metrics, extract_text_from_html, tokenize
 
@@ -133,6 +133,10 @@ def main() -> int:
         "average_precision": statistics.fmean(r["precision"] for r in results) if results else 0,
         "average_recall": statistics.fmean(r["recall"] for r in results) if results else 0,
         "average_f1": statistics.fmean(r["f1"] for r in results) if results else 0,
+        "average_family_f1": statistics.fmean(
+            statistics.fmean(r["f1"] for r in results if corpus_family(r["case"]) == family)
+            for family in {corpus_family(r["case"]) for r in results}
+        ) if results else 0,
         "median_f1": statistics.median(r["f1"] for r in results) if results else 0,
         "average_jaccard": statistics.fmean(r["jaccard"] for r in results) if results else 0,
         "high": sum(r["f1"] >= 0.7 for r in results),
@@ -161,6 +165,7 @@ def main() -> int:
             f"precision={summary['average_precision']:.1%}, "
             f"recall={summary['average_recall']:.1%}"
         )
+        print(f"Family macro F1: {summary['average_family_f1']:.1%}")
         print(f"Median F1: {summary['median_f1']:.1%}")
         print(
             f"F1 buckets: ≥70% {summary['high']}, "

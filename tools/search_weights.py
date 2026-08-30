@@ -156,7 +156,7 @@ def export_and_evaluate(
         for line in result.stdout.strip().split('\n'):
             if line.startswith('{'):
                 data = json.loads(line)
-                return data.get("average_f1", 0.0)
+                return data.get("average_family_f1", 0.0)
     finally:
         Path(temp_json).unlink(missing_ok=True)
 
@@ -303,7 +303,7 @@ def main():
             metadata={
                 "training_split": args.train_split,
                 "selection_split": args.evaluation_split,
-                "selection_metric": "macro_token_f1",
+                "selection_metric": "family_macro_token_f1",
                 "selection_score": best_score,
                 "parameters": best_params,
             },

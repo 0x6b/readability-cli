@@ -28,9 +28,17 @@ class CorpusSplitsTest(unittest.TestCase):
         self.assertTrue(REGRESSION_CASES.isdisjoint(HOLDOUT_CASES))
 
     def test_families_do_not_cross_protected_partitions(self):
-        regression_families = {corpus_family(case) for case in REGRESSION_CASES}
-        holdout_families = {corpus_family(case) for case in HOLDOUT_CASES}
-        self.assertTrue(regression_families.isdisjoint(holdout_families))
+        cases = {
+            path.stem
+            for path in CORPUS.glob("*.html")
+            if not path.stem.endswith(".expected")
+        }
+        family_splits: dict[str, set[str]] = {}
+        for case in cases:
+            family_splits.setdefault(corpus_family(case), set()).add(corpus_split(case))
+        self.assertFalse(
+            {family: splits for family, splits in family_splits.items() if len(splits) > 1}
+        )
 
 
 if __name__ == "__main__":
