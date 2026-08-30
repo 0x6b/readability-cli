@@ -18,6 +18,15 @@ DEFAULT_CORPUS = REPO_ROOT / "tests" / "corpus"
 DEFAULT_BINARY = REPO_ROOT / "target" / "release" / "rdbl"
 
 
+def load_case_filter(path: Path) -> set[str]:
+    """Load exact case names, ignoring blank lines and comments."""
+    return {
+        line
+        for raw_line in path.read_text(encoding="utf-8").splitlines()
+        if (line := raw_line.strip()) and not line.startswith("#")
+    }
+
+
 def build_binary() -> None:
     subprocess.run(
         ["cargo", "build", "--release", "-p", "rdbl_cli"],
@@ -57,6 +66,11 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=30)
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
+    parser.add_argument(
+        "--cases-file",
+        type=Path,
+        help="Evaluate only exact case names listed in this file",
+    )
     args = parser.parse_args()
 
     if not args.no_build:
@@ -70,10 +84,17 @@ def main() -> int:
     missing_expected: list[str] = []
     non_text_cases: list[str] = []
     structural_failures: list[dict] = []
+    selected_cases = load_case_filter(args.cases_file) if args.cases_file else None
+    seen_cases = set()
 
     for html_file in sorted(args.corpus.glob("*.html")):
-        if html_file.stem.endswith(".expected") or not in_split(html_file.stem, args.split):
+        if (
+            html_file.stem.endswith(".expected")
+            or not in_split(html_file.stem, args.split)
+            or (selected_cases is not None and html_file.stem not in selected_cases)
+        ):
             continue
+        seen_cases.add(html_file.stem)
         expected_file = args.corpus / f"{html_file.stem}.expected.html"
         if not expected_file.exists():
             missing_expected.append(html_file.stem)
@@ -123,11 +144,13 @@ def main() -> int:
                 f"P={metrics['precision']:.1%} R={metrics['recall']:.1%}"
             )
 
+    missing_cases = sorted(selected_cases - seen_cases) if selected_cases is not None else []
     summary = {
         "split": args.split,
         "total": len(results),
         "failures": failures,
         "missing_expected": missing_expected,
+        "missing_cases": missing_cases,
         "non_text_cases": non_text_cases,
         "structural_failures": structural_failures,
         "average_precision": statistics.fmean(r["precision"] for r in results) if results else 0,
@@ -188,7 +211,7 @@ def main() -> int:
                 f"P={result['precision']:.1%} R={result['recall']:.1%}"
             )
 
-    return 1 if failures or missing_expected or structural_failures or not results else 0
+    return 1 if failures or missing_expected or missing_cases or structural_failures or not results else 0
 
 
 if __name__ == "__main__":

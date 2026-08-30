@@ -4,11 +4,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from evaluate import compute_metrics, extract_text_from_html, tokenize
+from evaluate import compute_metrics, extract_text_from_html, load_case_filter, tokenize
 from structure_metrics import compute_structure_metrics, extract_structure
 
 
 class EvaluateTest(unittest.TestCase):
+    def test_case_filter_ignores_comments_and_blank_lines(self):
+        path = Path(self.id().replace(".", "_"))
+        try:
+            path.write_text("# fold\ncase-b\n\n case-a \ncase-b\n", encoding="utf-8")
+            self.assertEqual(load_case_filter(path), {"case-a", "case-b"})
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_extract_text_ignores_non_content_and_decodes_entities(self):
         html = "<style>hidden</style><p>A &amp; B</p><script>ignored()</script>"
         self.assertEqual(extract_text_from_html(html), "A & B")
