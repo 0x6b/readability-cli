@@ -9,7 +9,7 @@ from import_scrapinghub_gold import expected_html, normalized_host, select_cases
 
 
 class ImportScrapinghubGoldTest(unittest.TestCase):
-    def test_committed_manifest_is_unconsumed_and_domain_diverse(self):
+    def test_committed_manifest_records_domain_diverse_evaluation(self):
         tools = Path(__file__).parent
         manifest = json.loads(
             (tools / "scrapinghub_manifest.json").read_text(encoding="utf-8")
@@ -20,7 +20,9 @@ class ImportScrapinghubGoldTest(unittest.TestCase):
         cases = manifest["cases"]
         dragnet_hosts = {case["host"] for case in dragnet["cases"]}
 
-        self.assertFalse(manifest["evaluated"])
+        self.assertTrue(manifest["evaluated"])
+        self.assertEqual(manifest["evaluation"]["total"], 50)
+        self.assertEqual(manifest["evaluation"]["failures"], 0)
         self.assertEqual(len(cases), 50)
         self.assertEqual(len({case["id"] for case in cases}), 50)
         self.assertEqual(len({case["host"] for case in cases}), 50)

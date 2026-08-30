@@ -132,19 +132,19 @@ The committed manifest fixes a deterministic sample of 50 distinct site hosts.
 Report this result separately as independent gold text agreement; Dragnet does not
 provide expected HTML structure. The upstream dataset is licensed CC-BY-4.0.
 
-A second blind benchmark uses Scrapinghub's human-labeled Article Extraction
-Benchmark. Its fixed 50-case manifest excludes every host in the Dragnet cohort,
-and its publisher HTML and gold text also remain local and ignored:
+A second independent benchmark uses Scrapinghub's human-labeled Article
+Extraction Benchmark. Its fixed 50-case manifest excludes every host in the
+Dragnet cohort, and its publisher HTML and gold text also remain local and ignored:
 
 ```bash
 uv run import_scrapinghub_gold.py
 uv run evaluate.py --corpus ../tests/external/scrapinghub --split all
 ```
 
-Do not evaluate this cohort during development. Record the first result before
-inspecting individual cases; after that first evaluation it is consumed and must
-be treated as regression data. The upstream repository is MIT-licensed, but
-publisher content may retain third-party rights and is therefore not committed.
+The manifest records its first blind result. This cohort is now consumed and must
+be treated as regression data rather than reported as a fresh holdout. The upstream
+repository is MIT-licensed, but publisher content may retain third-party rights and
+is therefore not committed.
 
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
