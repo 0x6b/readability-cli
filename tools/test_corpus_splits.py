@@ -52,7 +52,7 @@ class CorpusSplitsTest(unittest.TestCase):
         self.assertFalse(manifest["evaluated"])
         manifest_cases = {entry["case"] for entry in manifest["cases"]}
         self.assertEqual(manifest_cases, HOLDOUT_CASES)
-        self.assertEqual(len(manifest_cases), 30)
+        self.assertEqual(len(manifest_cases), 50)
         self.assertEqual(
             len({corpus_family(case) for case in manifest_cases}),
             len(manifest_cases),

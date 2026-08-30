@@ -182,6 +182,126 @@
       "url": "https://www.sqlite.org/lang_select.html",
       "language": "en",
       "category": "technical-reference-code"
+    },
+    {
+      "case": "bilimgenc_tubitak_gov_tr_makale_biyotaklit-biyomim_2c7c67ae",
+      "url": "https://bilimgenc.tubitak.gov.tr/makale/biyotaklit-biyomimikri-nedir-dogadan-ilham-alan-muhendislik-ve-mimari-tasarimlar",
+      "language": "tr",
+      "category": "science-explainer-figures"
+    },
+    {
+      "case": "www_ukrainer_net_thread_natsionalni-spilnoty",
+      "url": "https://www.ukrainer.net/thread/natsionalni-spilnoty/",
+      "language": "uk",
+      "category": "culture-long-form-media"
+    },
+    {
+      "case": "www_forskning_se_fatta-forskning",
+      "url": "https://www.forskning.se/fatta-forskning/",
+      "language": "sv",
+      "category": "institutional-science-lists-media"
+    },
+    {
+      "case": "www_lifo_gr_culture_vivlio_poses-odysseies-mporoym_743b8e1a",
+      "url": "https://www.lifo.gr/culture/vivlio/poses-odysseies-mporoyme-na-antexoyme",
+      "language": "el",
+      "category": "culture-book-review-long-form"
+    },
+    {
+      "case": "plus_rozhlas_cz_nas-clovek-na-manhattanu-proc-rusk_f9ccfe0a",
+      "url": "https://plus.rozhlas.cz/nas-clovek-na-manhattanu-proc-rusko-stale-vyuziva-program-ilegalnich-agentu-9639223",
+      "language": "cs",
+      "category": "history-interview-embedded-audio"
+    },
+    {
+      "case": "qubit_hu_2026_08_27_egyetert-nem-ert-egyet-vagy-cs_2186032a",
+      "url": "https://qubit.hu/2026/08/27/egyetert-nem-ert-egyet-vagy-csak-nem-erti",
+      "language": "hu",
+      "category": "science-journalism"
+    },
+    {
+      "case": "www_astroawani_com_berita-dunia_banjir-nepal-tiga-_db2f6268",
+      "url": "https://www.astroawani.com/berita-dunia/banjir-nepal-tiga-rakyat-malaysia-belum-dikesan-di-gyirong",
+      "language": "ms",
+      "category": "travel-news"
+    },
+    {
+      "case": "www_hindutamil_in_news_supplements_penn-indru_love_f9ebfba7",
+      "url": "https://www.hindutamil.in/news/supplements/penn-indru/love-or-restriction",
+      "language": "ta",
+      "category": "personal-essay-relationships"
+    },
+    {
+      "case": "www_forskning_no_hus-og-hjem-planteverden_for-250-_19460e7c",
+      "url": "https://www.forskning.no/hus-og-hjem-planteverden/for-250-ar-siden-begynte-nordmenn-med-en-pussig-ny-skikk/2687570",
+      "language": "no",
+      "category": "history-science-explainer-figures"
+    },
+    {
+      "case": "videnskab_dk_krop-sundhed_et-uloest-mysterie-blind_60f1b8f8",
+      "url": "https://videnskab.dk/krop-sundhed/et-uloest-mysterie-blinde-fra-foedslen-udvikler-tilsyneladende-aldrig-skizofreni/",
+      "language": "da",
+      "category": "health-science-journalism"
+    },
+    {
+      "case": "yle_fi_a_74-20031519",
+      "url": "https://yle.fi/a/74-20031519",
+      "language": "fi",
+      "category": "journalism-embedded-media"
+    },
+    {
+      "case": "historia_ro_sectiune_general_legea-inocentilor-pre_b8a077ef",
+      "url": "https://historia.ro/sectiune/general/legea-inocentilor-precursoarea-medievala-a-2552674.html",
+      "language": "ro",
+      "category": "history-explainer"
+    },
+    {
+      "case": "www_journal_hr_lifestyle_gastro_guzvara-sa-sirom-recept",
+      "url": "https://www.journal.hr/lifestyle/gastro/guzvara-sa-sirom-recept/",
+      "language": "hr",
+      "category": "food-recipe-ingredients"
+    },
+    {
+      "case": "tastecooking_com_a-meal-worthy-of-summers-finest-fruit",
+      "url": "https://tastecooking.com/a-meal-worthy-of-summers-finest-fruit/",
+      "language": "en",
+      "category": "food-personal-essay-recipe"
+    },
+    {
+      "case": "www_theplayerstribune_com_meredith-gaudreau-johnny_cfc6cd09",
+      "url": "https://www.theplayerstribune.com/meredith-gaudreau-johnny-hockey-nhl",
+      "language": "en",
+      "category": "sports-personal-essay-long-form"
+    },
+    {
+      "case": "aeon_co_essays_a-hungry-woman-is-easier-to-dismiss_e3aac703",
+      "url": "https://aeon.co/essays/a-hungry-woman-is-easier-to-dismiss-than-a-well-fed-woman",
+      "language": "en",
+      "category": "long-form-cultural-essay"
+    },
+    {
+      "case": "arxiv_org_html_2406_01835v1",
+      "url": "https://arxiv.org/html/2406.01835v1",
+      "language": "en",
+      "category": "academic-article-figures-tables"
+    },
+    {
+      "case": "scholarhub_ui_ac_id_wacana_vol16_iss2_1",
+      "url": "https://scholarhub.ui.ac.id/wacana/vol16/iss2/1",
+      "language": "en",
+      "category": "institutional-academic-article"
+    },
+    {
+      "case": "id_wikisource_org_wiki_Max_Havelaar",
+      "url": "https://id.wikisource.org/wiki/Max_Havelaar",
+      "language": "id",
+      "category": "literature-long-form-multipage"
+    },
+    {
+      "case": "bn_banglapedia_org_index_php_%E0%A6%AC%E0%A6%BE%E0_165ac302",
+      "url": "https://bn.banglapedia.org/index.php/%E0%A6%AC%E0%A6%BE%E0%A6%82%E0%A6%B2%E0%A6%BE_%E0%A6%B8%E0%A6%BE%E0%A6%B9%E0%A6%BF%E0%A6%A4%E0%A7%8D%E0%A6%AF",
+      "language": "bn",
+      "category": "culture-literature-reference-long-form"
     }
   ]
 }
