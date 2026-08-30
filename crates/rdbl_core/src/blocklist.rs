@@ -113,6 +113,7 @@ const SOCIAL: &[BlockRule] = &[
 
 /// Promotional content
 const PROMO: &[BlockRule] = &[
+    BlockRule::always("membership-upsell"),
     BlockRule::if_medium("promo-banner"),
     BlockRule::if_medium("promo-box"),
     BlockRule::if_medium("promotion"),
@@ -529,6 +530,25 @@ mod tests {
             }
         }
         panic!("Newsletter not found");
+    }
+
+    #[test]
+    fn test_large_membership_upsell_is_blocked() {
+        let copy = "Join today. Choose a plan and unlock every article. ".repeat(20);
+        let html = format!(
+            "<html><body><article><div class=\"membership-upsell\">{copy}</div></article></body></html>"
+        );
+        let arena = parse_html(&html);
+
+        for id in 0..arena.nodes.len() {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("membership-upsell")
+            {
+                assert!(should_block(&arena, id as NodeId));
+                return;
+            }
+        }
+        panic!("Membership upsell not found");
     }
 
     #[test]
