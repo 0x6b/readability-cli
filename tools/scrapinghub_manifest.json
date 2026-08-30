@@ -1,0 +1,320 @@
+{
+  "dataset": "Scrapinghub Article Extraction Benchmark",
+  "upstream_repository": "https://github.com/scrapinghub/article-extraction-benchmark",
+  "upstream_commit": "11b407d43934becc20873bb3dcd5e3d2591746d3",
+  "license": "MIT (publisher content may retain third-party rights)",
+  "annotation": "human-labeled articleBody text",
+  "evaluated": false,
+  "selection": {
+    "seed": "readability-cli-scrapinghub-v1",
+    "count": 50,
+    "one_case_per_normalized_host": true,
+    "excludes_dragnet_hosts": true
+  },
+  "archive": {
+    "url": "https://github.com/scrapinghub/article-extraction-benchmark/archive/11b407d43934becc20873bb3dcd5e3d2591746d3.tar.gz",
+    "sha256": "c1d8f4b058f94b7c7c39f0968794c777a47128b58709c2ff58eec42f4487c7d0"
+  },
+  "cases": [
+    {
+      "case": "scrapinghub_042bb7b5fedab6eac7db576522b89b93904c237d344bcbe14a6a5ab7f7335856",
+      "id": "042bb7b5fedab6eac7db576522b89b93904c237d344bcbe14a6a5ab7f7335856",
+      "url": "https://www.wsj.com/articles/google-stadia-microsoft-xcloud-apple-arcade-so-many-ways-to-playand-pay-11574168580",
+      "host": "wsj.com"
+    },
+    {
+      "case": "scrapinghub_f81c6c05d9cbc93316992fa23ef74ec405194e292611f2e94f6a814868903665",
+      "id": "f81c6c05d9cbc93316992fa23ef74ec405194e292611f2e94f6a814868903665",
+      "url": "https://www.businessinsider.com/how-to-retire-early-steps-for-early-retirement",
+      "host": "businessinsider.com"
+    },
+    {
+      "case": "scrapinghub_e4c6a3b482403a8f60190ba27248cd52b250b86f5d4a8a10edcf7062c64fc3f5",
+      "id": "e4c6a3b482403a8f60190ba27248cd52b250b86f5d4a8a10edcf7062c64fc3f5",
+      "url": "https://www.washingtonexaminer.com/opinion/why-beijing-will-bring-slaughter-to-hong-kong",
+      "host": "washingtonexaminer.com"
+    },
+    {
+      "case": "scrapinghub_1ace8c85aaee21b9d4505eca506d50c4721c29db62848b567a9703bfe0583892",
+      "id": "1ace8c85aaee21b9d4505eca506d50c4721c29db62848b567a9703bfe0583892",
+      "url": "https://techcrunch.com/2019/11/18/new-york-state-attorney-general-reportedly-investigating-wework/",
+      "host": "techcrunch.com"
+    },
+    {
+      "case": "scrapinghub_5a822960e9a2cb1e664d334b6c936c5cb6e41fb5331877538c2c8339cb59d57e",
+      "id": "5a822960e9a2cb1e664d334b6c936c5cb6e41fb5331877538c2c8339cb59d57e",
+      "url": "https://www.nbcnews.com/news/world/house-hitler-was-born-will-become-police-station-austria-says-n1086531",
+      "host": "nbcnews.com"
+    },
+    {
+      "case": "scrapinghub_5ae11e580afc12d3ba1a12944281e6a7a5dded5c98b4efcf24aedcb28f0d5b22",
+      "id": "5ae11e580afc12d3ba1a12944281e6a7a5dded5c98b4efcf24aedcb28f0d5b22",
+      "url": "https://www.ascom.com/news-and-events/Ascom-business-news/Ascom-announces-a-strategic-distribution-partnership-with-GE-Healthcare-in-Europe-for-intensive-care-units.html",
+      "host": "ascom.com"
+    },
+    {
+      "case": "scrapinghub_65bf3048b500bbd84928d9122f99617ca898216b91add1d8b2ac09c670484a5c",
+      "id": "65bf3048b500bbd84928d9122f99617ca898216b91add1d8b2ac09c670484a5c",
+      "url": "https://appleinsider.com/articles/19/11/18/16-inch-macbook-pro-review-the-keyboard-is-probably-enough-to-convince-those-waiting",
+      "host": "appleinsider.com"
+    },
+    {
+      "case": "scrapinghub_ec7fc408c5ce66c22692a3f696c682f3de794bacfaca405d9a0dac5957051e5a",
+      "id": "ec7fc408c5ce66c22692a3f696c682f3de794bacfaca405d9a0dac5957051e5a",
+      "url": "https://www.bigbrandsystem.com/success-mindset/",
+      "host": "bigbrandsystem.com"
+    },
+    {
+      "case": "scrapinghub_f6ac15a4d98511396da23e4428deb5605422b1c8bbc8284e771f6896bdccf57f",
+      "id": "f6ac15a4d98511396da23e4428deb5605422b1c8bbc8284e771f6896bdccf57f",
+      "url": "http://jaraguadosul.com.br/news/servi-o-de-atendimento-domiciliar-registra-arrombamento-em-dois-ve-culos",
+      "host": "jaraguadosul.com.br"
+    },
+    {
+      "case": "scrapinghub_cc4aa22b8212aec7d289667c0a965569e6f06b9e9196ff8b02219bf2bc1b90d0",
+      "id": "cc4aa22b8212aec7d289667c0a965569e6f06b9e9196ff8b02219bf2bc1b90d0",
+      "url": "https://9to5mac.com/2019/11/18/techy-gift-guide/",
+      "host": "9to5mac.com"
+    },
+    {
+      "case": "scrapinghub_358cc4a080456476b0f883c56bdce796874c286ed6efab25f5718dd95fab42a8",
+      "id": "358cc4a080456476b0f883c56bdce796874c286ed6efab25f5718dd95fab42a8",
+      "url": "https://www.linknaija.com/2018/08/breaking-news-chelsea-activate-716m.html",
+      "host": "linknaija.com"
+    },
+    {
+      "case": "scrapinghub_b37be3535e1fb61e5a238b7fa1ead1ad98b651cb09f138efadac3d54a122fb21",
+      "id": "b37be3535e1fb61e5a238b7fa1ead1ad98b651cb09f138efadac3d54a122fb21",
+      "url": "https://www.ctvnews.ca/sci-tech/snooze-cruise-study-sees-future-for-hibernating-astronauts-1.4690347",
+      "host": "ctvnews.ca"
+    },
+    {
+      "case": "scrapinghub_06e5123e4ef7cfb4533250dc45d1e03d0838fc66223f45c583c4d12f48b4da85",
+      "id": "06e5123e4ef7cfb4533250dc45d1e03d0838fc66223f45c583c4d12f48b4da85",
+      "url": "https://venturebeat.com/2019/11/18/new-york-state-attorney-general-investigating-wework-and-former-ceo/",
+      "host": "venturebeat.com"
+    },
+    {
+      "case": "scrapinghub_e372e42c0a3df7b86e1c0bacf7bc14d042144a01e88833bc5a643d61b3547090",
+      "id": "e372e42c0a3df7b86e1c0bacf7bc14d042144a01e88833bc5a643d61b3547090",
+      "url": "https://www.jpost.com/Breaking-News/Son-of-former-German-president-stabbed-to-death-in-Berlin-608399",
+      "host": "jpost.com"
+    },
+    {
+      "case": "scrapinghub_30b771a40a4e96156d398716c877deef54b05d091770d2717c98e4c6b670010c",
+      "id": "30b771a40a4e96156d398716c877deef54b05d091770d2717c98e4c6b670010c",
+      "url": "https://www.morebikes.co.uk/7908/bike-style-book-soundtrack-review/",
+      "host": "morebikes.co.uk"
+    },
+    {
+      "case": "scrapinghub_291a8bf33ee49074f33dcff37544ac40506cae450db83b6cb63f02b9920b51c2",
+      "id": "291a8bf33ee49074f33dcff37544ac40506cae450db83b6cb63f02b9920b51c2",
+      "url": "https://www.crn.com/news/cloud/tim-cook-on-apple-being-pulled-into-the-enterprise-",
+      "host": "crn.com"
+    },
+    {
+      "case": "scrapinghub_e7994d5500875202d93e736e8f0c8a0436107d10add94ce3789001b8c5c32358",
+      "id": "e7994d5500875202d93e736e8f0c8a0436107d10add94ce3789001b8c5c32358",
+      "url": "https://hosted.ap.org/citizensvoice/article/2896af5086674d4bbbbd454dec217c63/uk-tories-under-fire-twitter-name-switch-during-debate",
+      "host": "hosted.ap.org"
+    },
+    {
+      "case": "scrapinghub_287e4d9f4af31733aad6534aefb2bd00fb344ec8d6ebf1ac99dbc4d762da0ca4",
+      "id": "287e4d9f4af31733aad6534aefb2bd00fb344ec8d6ebf1ac99dbc4d762da0ca4",
+      "url": "https://www.ign.com/articles/2019/11/18/daily-deals-more-black-friday-deals-are-live-including-ps4-dualshock-controller-apple-airpods-and-watches-and-more",
+      "host": "ign.com"
+    },
+    {
+      "case": "scrapinghub_f344ca5fb36e130f4344235fa22726f3367e09c211c120f21d9ae92effe902db",
+      "id": "f344ca5fb36e130f4344235fa22726f3367e09c211c120f21d9ae92effe902db",
+      "url": "https://www.hawaiinewsnow.com/2019/11/19/scientists-use-hawaii-telescope-spot-water-vapor-one-jupiters-moon/",
+      "host": "hawaiinewsnow.com"
+    },
+    {
+      "case": "scrapinghub_6ebac05f637ece8aa57c298a2a5e3a8047f546f855d0f29cc683cea60ce85c85",
+      "id": "6ebac05f637ece8aa57c298a2a5e3a8047f546f855d0f29cc683cea60ce85c85",
+      "url": "https://thehill.com/blogs/blog-briefing-room/news/471031-new-york-man-pleads-guilty-to-threatening-to-kill-omar",
+      "host": "thehill.com"
+    },
+    {
+      "case": "scrapinghub_a6968f427cdb786531cfb326518e674bd8b48af94df7c5c6165cdf40e944357a",
+      "id": "a6968f427cdb786531cfb326518e674bd8b48af94df7c5c6165cdf40e944357a",
+      "url": "https://www.ctpost.com/news/article/Deval-Patrick-takes-nascent-2020-campaign-to-14847854.php",
+      "host": "ctpost.com"
+    },
+    {
+      "case": "scrapinghub_94fbcc26772088646cb977cecf1abc4012847a1f6927d09505cbf0c3d417ba07",
+      "id": "94fbcc26772088646cb977cecf1abc4012847a1f6927d09505cbf0c3d417ba07",
+      "url": "https://www.inexhibit.com/marker/milan-design-week-2018-michael-anastassiades-light-installation-flos/",
+      "host": "inexhibit.com"
+    },
+    {
+      "case": "scrapinghub_08f793762792bd252c75fb57544cdf506ffcc04785136cb87503f02364b82b56",
+      "id": "08f793762792bd252c75fb57544cdf506ffcc04785136cb87503f02364b82b56",
+      "url": "https://www.cbssports.com/nfl/news/browns-player-on-mason-rudolphs-role-in-fight-with-myles-garrett-he-asked-for-it/",
+      "host": "cbssports.com"
+    },
+    {
+      "case": "scrapinghub_eecd2575093b85933997521d6babddd397599419588d7096c5c19dc4ffe2ea72",
+      "id": "eecd2575093b85933997521d6babddd397599419588d7096c5c19dc4ffe2ea72",
+      "url": "https://www.mysanantonio.com/sports/article/LeBron-sets-triple-double-mark-Lakers-hold-off-14848253.php",
+      "host": "mysanantonio.com"
+    },
+    {
+      "case": "scrapinghub_b3c19dd5f0612d098788fa5173e491b3280da6226b492f8fe110f4ab1896cca8",
+      "id": "b3c19dd5f0612d098788fa5173e491b3280da6226b492f8fe110f4ab1896cca8",
+      "url": "https://www.mensagensreflexao.com.br/quem-se-ama",
+      "host": "mensagensreflexao.com.br"
+    },
+    {
+      "case": "scrapinghub_6a72de37e8f98f4eee6c0821e593b35ce536cef6c8b424c5e1dd747ebe6621ba",
+      "id": "6a72de37e8f98f4eee6c0821e593b35ce536cef6c8b424c5e1dd747ebe6621ba",
+      "url": "https://www.dawgsbynature.com/2019/11/18/20970600/browns-defensive-snap-counts-stats-and-notes-week-11",
+      "host": "dawgsbynature.com"
+    },
+    {
+      "case": "scrapinghub_87438a0dacbeb979e72522f42b9020048da13dc5a079477114190c8855701b7f",
+      "id": "87438a0dacbeb979e72522f42b9020048da13dc5a079477114190c8855701b7f",
+      "url": "https://www.oregonlive.com/advice/2019/11/dear-abby-husband-springs-for-business-class-flight-to-india-but-leaves-wife-in-economy-seat.html",
+      "host": "oregonlive.com"
+    },
+    {
+      "case": "scrapinghub_4648a420af9984d45b76a4afedf4f74965f8a2e0bf1c69bd3da2dc189020f3c9",
+      "id": "4648a420af9984d45b76a4afedf4f74965f8a2e0bf1c69bd3da2dc189020f3c9",
+      "url": "https://www.expapp.com/blog/introducing-junior-gaspard-new-ceo-experience/",
+      "host": "expapp.com"
+    },
+    {
+      "case": "scrapinghub_dc7ccccc1f34eb2928cb238739aaf18c712d59d8d34b41acfb29178aeba65356",
+      "id": "dc7ccccc1f34eb2928cb238739aaf18c712d59d8d34b41acfb29178aeba65356",
+      "url": "https://www.albawaba.com/news/sweden-drops-its-investigation-rape-allegation-against-julian-assange-1322369",
+      "host": "albawaba.com"
+    },
+    {
+      "case": "scrapinghub_3ce1c8fdf6ad2ded9e48a68be71eb069fc453ef1b75f47698428a1fdda0deb24",
+      "id": "3ce1c8fdf6ad2ded9e48a68be71eb069fc453ef1b75f47698428a1fdda0deb24",
+      "url": "https://www.catchitkansas.com/content/news/Friday-State-Swim-Results-474349633.html",
+      "host": "catchitkansas.com"
+    },
+    {
+      "case": "scrapinghub_1ee91d1fce65e09be8b8d2d29eab771546d98ca2ba5c862941e660e9fec12432",
+      "id": "1ee91d1fce65e09be8b8d2d29eab771546d98ca2ba5c862941e660e9fec12432",
+      "url": "https://www.polygraph.info/a/fact-check-russia-us-al-tanf-rukban/30279001.html",
+      "host": "polygraph.info"
+    },
+    {
+      "case": "scrapinghub_c467d507551a836efa9cfe843ba5d7bafe519750e04d0c9ff0decf44f013f829",
+      "id": "c467d507551a836efa9cfe843ba5d7bafe519750e04d0c9ff0decf44f013f829",
+      "url": "https://detroit.cbslocal.com/2019/11/19/michigan-officials-6th-fatality-linked-to-eastern-equine-encephalitis-reported/",
+      "host": "detroit.cbslocal.com"
+    },
+    {
+      "case": "scrapinghub_70cb2d5bca75ab5a8f6bb378a38a52f882f6bda508de93b12502e74936d86ff2",
+      "id": "70cb2d5bca75ab5a8f6bb378a38a52f882f6bda508de93b12502e74936d86ff2",
+      "url": "https://www.bbc.com/news/newsbeat-50470672",
+      "host": "bbc.com"
+    },
+    {
+      "case": "scrapinghub_c13b9c0e04fb28d445d22e92bff6ab7f7800a429930677c28c4dad89f3269869",
+      "id": "c13b9c0e04fb28d445d22e92bff6ab7f7800a429930677c28c4dad89f3269869",
+      "url": "https://www.spokesman.com/stories/2019/nov/19/meth-were-on-it-spokane-ad-agencies-divided-on-sou/",
+      "host": "spokesman.com"
+    },
+    {
+      "case": "scrapinghub_4219d096902dad9fd9d57e881e7928ca66bdf5334c2bc7dfddaa264887777a7a",
+      "id": "4219d096902dad9fd9d57e881e7928ca66bdf5334c2bc7dfddaa264887777a7a",
+      "url": "https://theantijunecleaver.com/2017/12/spiced-honey-pear-jam-recipe/",
+      "host": "theantijunecleaver.com"
+    },
+    {
+      "case": "scrapinghub_851498a2b9f4f0b578ac9700c245253dbc147a06c0fb3499adebf1c2d5663c29",
+      "id": "851498a2b9f4f0b578ac9700c245253dbc147a06c0fb3499adebf1c2d5663c29",
+      "url": "https://slate.com/culture/2019/11/john-ford-science-fiction-fantasy-books.html",
+      "host": "slate.com"
+    },
+    {
+      "case": "scrapinghub_f8ff621a0b9b7646cc0d57d37416feabba2bf78ef5dd0bfc5b080f9f97bbe584",
+      "id": "f8ff621a0b9b7646cc0d57d37416feabba2bf78ef5dd0bfc5b080f9f97bbe584",
+      "url": "https://www.barrons.com/articles/home-depot-stock-earnings-report-51574168486",
+      "host": "barrons.com"
+    },
+    {
+      "case": "scrapinghub_a078b3656adc0295d0e37bd4f599342f4a0894da2451e0ef3038ac045434fef3",
+      "id": "a078b3656adc0295d0e37bd4f599342f4a0894da2451e0ef3038ac045434fef3",
+      "url": "https://www.forbes.com/sites/brucelee/2019/11/18/how-this-mans-bedding-gave-him-feather-duvet-lung/",
+      "host": "forbes.com"
+    },
+    {
+      "case": "scrapinghub_57b4dafd18cfd0531b69f81e87158648227c673ef159f8d8c87d34e34bdb21f2",
+      "id": "57b4dafd18cfd0531b69f81e87158648227c673ef159f8d8c87d34e34bdb21f2",
+      "url": "https://blog.comwrap.com/die-elektronische-patientenakte-der-lange-marsch-ins-digitale-gesundheitswesen",
+      "host": "blog.comwrap.com"
+    },
+    {
+      "case": "scrapinghub_b0cf2bbf0192315eec95ede9c59bbf4ae58699275739d590edc24b012e3e8800",
+      "id": "b0cf2bbf0192315eec95ede9c59bbf4ae58699275739d590edc24b012e3e8800",
+      "url": "https://www.pv-magazine.com/2019/11/20/south-koreas-roadmap-to-drive-down-solar-costs/",
+      "host": "pv-magazine.com"
+    },
+    {
+      "case": "scrapinghub_7f93c1944a41d01960f8a16fdfda6c562e86f04ead8375ab796c4278402df9a8",
+      "id": "7f93c1944a41d01960f8a16fdfda6c562e86f04ead8375ab796c4278402df9a8",
+      "url": "https://www.newsweek.com/cannabis-use-disorder-rising-us-states-where-weed-legal-1471170",
+      "host": "newsweek.com"
+    },
+    {
+      "case": "scrapinghub_ffc109d474fdee1a59fa554df8b09643f4a7d45b23eceabad66f0712c3f7daed",
+      "id": "ffc109d474fdee1a59fa554df8b09643f4a7d45b23eceabad66f0712c3f7daed",
+      "url": "https://www.cnbc.com/2019/11/19/beauty-stock-coty-could-surge-after-kylie-jenner-makeover.html",
+      "host": "cnbc.com"
+    },
+    {
+      "case": "scrapinghub_ba4dfe2d3e817ff7b8b01172ccc307850fc5469bcdd26c3c48ca046cb88ab7cf",
+      "id": "ba4dfe2d3e817ff7b8b01172ccc307850fc5469bcdd26c3c48ca046cb88ab7cf",
+      "url": "https://www.express.co.uk/news/science/1205992/bubonic-plague-china-plague-news-the-plague-pneumonic-plague-in-china-2019-symptoms",
+      "host": "express.co.uk"
+    },
+    {
+      "case": "scrapinghub_51d066b0602c9421d8d6410bc4b931700978409a3faa2a984e8fbde519ad7241",
+      "id": "51d066b0602c9421d8d6410bc4b931700978409a3faa2a984e8fbde519ad7241",
+      "url": "https://www.nbcdfw.com/news/local/We-Got-Her-Video-Shows-Dramatic-Rescue-of-Kidnapped-Fort-Worth-Girl-565107452.html",
+      "host": "nbcdfw.com"
+    },
+    {
+      "case": "scrapinghub_ec3878db7e49b1ed354c511b132e3de5f773ff4fc8014163df58c22fffd93d2f",
+      "id": "ec3878db7e49b1ed354c511b132e3de5f773ff4fc8014163df58c22fffd93d2f",
+      "url": "https://www.beachbodyondemand.com/blog/ilana-muhlstein-game-day-snacks",
+      "host": "beachbodyondemand.com"
+    },
+    {
+      "case": "scrapinghub_20b2b64916b00b25203c9f1bf14248922f4d522f18328e9f876cce116df0083e",
+      "id": "20b2b64916b00b25203c9f1bf14248922f4d522f18328e9f876cce116df0083e",
+      "url": "http://www.remember8090.it/black-friday-per-nostalgici-le-occasioni-da-non-perdere/",
+      "host": "remember8090.it"
+    },
+    {
+      "case": "scrapinghub_360c732d1fdbfc6895d7096c0c0b8c0d581bb1af80160f4c6a0f1fd9ff85e469",
+      "id": "360c732d1fdbfc6895d7096c0c0b8c0d581bb1af80160f4c6a0f1fd9ff85e469",
+      "url": "https://www.cityam.com/alibaba-to-raise-up-to-12-9bn-in-landmark-hong-kong-listing/",
+      "host": "cityam.com"
+    },
+    {
+      "case": "scrapinghub_5f9c5ed5d64dfe682d9bde13b9b4f032a3ebdbf165c06ec49c0705bcbe106e3b",
+      "id": "5f9c5ed5d64dfe682d9bde13b9b4f032a3ebdbf165c06ec49c0705bcbe106e3b",
+      "url": "https://www.indiapost.com/with-shattered-dreams-deportees-return-home-from-us/",
+      "host": "indiapost.com"
+    },
+    {
+      "case": "scrapinghub_9e8c9f082a8d77c58c17bda03b6b4bb6a1d6883fe196c252db4ca83b9991e0d3",
+      "id": "9e8c9f082a8d77c58c17bda03b6b4bb6a1d6883fe196c252db4ca83b9991e0d3",
+      "url": "https://www.politifact.com/west-virginia/statements/2019/nov/18/david-mckinley/what-value-drugs-come-us-border/",
+      "host": "politifact.com"
+    },
+    {
+      "case": "scrapinghub_14cc2a0ca59c62a8c9f205a171e9ccf4ef4cf69b0c642f51c8c65c051b39024f",
+      "id": "14cc2a0ca59c62a8c9f205a171e9ccf4ef4cf69b0c642f51c8c65c051b39024f",
+      "url": "https://www.sciencealert.com/nasa-finds-water-plumes-above-the-surface-of-jupiter-s-icy-moon-europa",
+      "host": "sciencealert.com"
+    }
+  ]
+}
