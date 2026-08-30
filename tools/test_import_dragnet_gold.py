@@ -9,12 +9,14 @@ from import_dragnet_gold import expected_html, normalized_host, select_cases
 
 
 class ImportDragnetGoldTest(unittest.TestCase):
-    def test_committed_manifest_is_blind_and_domain_diverse(self):
+    def test_committed_manifest_records_domain_diverse_evaluation(self):
         manifest = json.loads(
             Path(__file__).with_name("dragnet_manifest.json").read_text(encoding="utf-8")
         )
         cases = manifest["cases"]
-        self.assertFalse(manifest["evaluated"])
+        self.assertTrue(manifest["evaluated"])
+        self.assertEqual(manifest["evaluation"]["total"], 50)
+        self.assertEqual(manifest["evaluation"]["failures"], 0)
         self.assertEqual(len(cases), 50)
         self.assertEqual(len({case["id"] for case in cases}), 50)
         self.assertEqual(len({case["host"] for case in cases}), 50)
