@@ -17,8 +17,14 @@ pub const SEMANTIC_MAIN: &[TagId] = &[TagId::Article, TagId::Main];
 pub const SMALL_CONTENT_TAGS: &[TagId] = &[TagId::P, TagId::Li, TagId::Td];
 
 /// Media-related tags
-pub const MEDIA_TAGS: &[TagId] =
-    &[TagId::Img, TagId::Figure, TagId::Figcaption, TagId::Video, TagId::Audio];
+pub const MEDIA_TAGS: &[TagId] = &[
+    TagId::Img,
+    TagId::Figure,
+    TagId::Figcaption,
+    TagId::Video,
+    TagId::Audio,
+    TagId::Iframe,
+];
 
 /// Self-closing (void) tags
 pub const VOID_TAGS: &[TagId] = &[TagId::Br, TagId::Img, TagId::Input, TagId::Meta, TagId::Link];

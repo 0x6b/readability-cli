@@ -32,6 +32,8 @@ pub enum CleanedNodeKind {
 #[derive(Debug, Clone, Default)]
 pub struct CleanedAttrs {
     pub href: Option<String>,
+    pub src: Option<String>,
+    pub alt: Option<String>,
 }
 
 /// Tags allowed in output
@@ -55,6 +57,10 @@ const ALLOWED_TAGS: &[TagId] = &[
     TagId::A,
     TagId::Figure,
     TagId::Figcaption,
+    TagId::Img,
+    TagId::Video,
+    TagId::Audio,
+    TagId::Iframe,
     TagId::Kbd,
     TagId::Samp,
     TagId::Var,
@@ -76,13 +82,11 @@ const REMOVE_TAGS: &[TagId] = &[
     TagId::Script,
     TagId::Style,
     TagId::Noscript,
-    TagId::Iframe,
     TagId::Form,
     TagId::Button,
     TagId::Input,
     TagId::Select,
     TagId::Textarea,
-    TagId::Img,
 ];
 
 /// Tags to remove but keep children
@@ -124,6 +128,16 @@ fn mark_for_removal(
     if let Some(tag) = node.tag() {
         // Remove certain tags completely
         if REMOVE_TAGS.contains(&tag) {
+            remove_set.insert(node_id);
+            return;
+        }
+
+        if matches!(tag, TagId::Iframe | TagId::Video | TagId::Audio)
+            && arena
+                .get_attributes(node_id)
+                .and_then(|attrs| attrs.src.as_deref())
+                .is_none_or(|src| !is_safe_media_url(src))
+        {
             remove_set.insert(node_id);
             return;
         }
@@ -478,7 +492,27 @@ fn build_cleaned_attrs(arena: &Arena, node_id: NodeId, tag: TagId) -> CleanedAtt
         }
     }
 
+    if matches!(tag, TagId::Img | TagId::Iframe | TagId::Video | TagId::Audio)
+        && let Some(src) = &attrs.src
+        && (tag == TagId::Img || is_safe_media_url(src))
+        && !src.trim_start().to_ascii_lowercase().starts_with("javascript:")
+    {
+        cleaned.src = Some(src.clone());
+    }
+    if tag == TagId::Img {
+        cleaned.alt.clone_from(&attrs.alt);
+    }
+
     cleaned
+}
+
+fn is_safe_media_url(url: &str) -> bool {
+    let url = url.trim_start().to_ascii_lowercase();
+    url.starts_with("http://")
+        || url.starts_with("https://")
+        || url.starts_with("//")
+        || url.starts_with('/')
+        || (!url.contains(':') && !url.is_empty())
 }
 
 /// Flatten a cleaned tree to remove empty containers
@@ -493,8 +527,13 @@ pub fn flatten_cleaned_tree(node: CleanedNode) -> Option<CleanedNode> {
             let children: Vec<CleanedNode> =
                 node.children.into_iter().filter_map(flatten_cleaned_tree).collect();
 
-            // Remove empty containers (except self-closing tags like Br)
-            if children.is_empty() && tag != TagId::Br {
+            // Remove empty containers, but retain void and embedded media elements.
+            if children.is_empty()
+                && !matches!(
+                    tag,
+                    TagId::Br | TagId::Img | TagId::Iframe | TagId::Video | TagId::Audio
+                )
+            {
                 return None;
             }
 
@@ -611,6 +650,24 @@ mod tests {
 
         let html = to_html(&cleaned);
         assert!(html.contains("https://example.com"));
+        assert!(!html.contains("javascript:"));
+    }
+
+    #[test]
+    fn test_cleanup_preserves_safe_media_and_filters_unsafe_iframes() {
+        let html = r#"
+        <html><body><article>
+            <img src="/article.png" alt="Article image">
+            <iframe src="https://www.youtube.com/embed/video"></iframe>
+            <iframe src="javascript:alert('xss')"></iframe>
+        </article></body></html>
+        "#;
+        let arena = parse_html(html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let html = to_html(&cleaned);
+
+        assert!(html.contains("<img src=\"/article.png\" alt=\"Article image\">"));
+        assert!(html.contains("<iframe src=\"https://www.youtube.com/embed/video\"></iframe>"));
         assert!(!html.contains("javascript:"));
     }
 }

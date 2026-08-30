@@ -42,8 +42,11 @@ fn serialize_html_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
             let tag_str = tag.as_str();
             let new_in_pre = in_pre || tag.is_code_container();
 
-            // Skip empty non-void elements
-            if node.children.is_empty() && !is_void_tag(*tag) {
+            // Embedded media elements are meaningful without child nodes.
+            if node.children.is_empty()
+                && !is_void_tag(*tag)
+                && !matches!(tag, TagId::Iframe | TagId::Video | TagId::Audio)
+            {
                 return;
             }
 
@@ -78,6 +81,20 @@ fn serialize_attrs(attrs: &CleanedAttrs, tag: TagId, output: &mut String) {
     {
         output.push_str(" href=\"");
         output.push_str(&escape_attr(href));
+        output.push('"');
+    }
+    if matches!(tag, TagId::Img | TagId::Iframe | TagId::Video | TagId::Audio)
+        && let Some(src) = &attrs.src
+    {
+        output.push_str(" src=\"");
+        output.push_str(&escape_attr(src));
+        output.push('"');
+    }
+    if tag == TagId::Img
+        && let Some(alt) = &attrs.alt
+    {
+        output.push_str(" alt=\"");
+        output.push_str(&escape_attr(alt));
         output.push('"');
     }
 }

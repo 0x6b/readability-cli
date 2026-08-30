@@ -124,6 +124,16 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     let title = extract_title(&arena);
     let byline = extract_byline(&arena);
 
+    // oEmbed responses carry their media markup as HTML-escaped text. Treat
+    // that payload as the article rather than scoring the surrounding metadata.
+    if let Some(embedded_html) = extract_oembed_html(html) {
+        let oembed_title = extract_oembed_field(html, "title");
+        let mut result = extract(&format!("<article>{embedded_html}</article>"), options);
+        result.title = title.or(oembed_title).or(result.title);
+        result.byline = byline.or(result.byline);
+        return result;
+    }
+
     // Generate candidates
     let mut candidates = generate_candidates(&arena, options.max_candidates);
 
@@ -348,4 +358,30 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         text,
         debug: debug_info,
     }
+}
+
+fn extract_oembed_html(html: &str) -> Option<String> {
+    let decoded = extract_oembed_field(html, "html")?;
+
+    if decoded.contains("<iframe") || decoded.contains("<video") || decoded.contains("<audio") {
+        Some(decoded)
+    } else {
+        None
+    }
+}
+
+fn extract_oembed_field(html: &str, field: &str) -> Option<String> {
+    let lower = html.to_ascii_lowercase();
+    if !lower.contains("<oembed") {
+        return None;
+    }
+
+    let field_start = lower.find(&format!("<{field}"))?;
+    let value_start = field_start + lower[field_start..].find('>')? + 1;
+    let value_end = value_start + lower[value_start..].find(&format!("</{field}>"))?;
+    let encoded = &html[value_start..value_end];
+    let decoded_arena = parse_html(encoded);
+    let body = decoded_arena.find_body()?;
+    let decoded = decoded_arena.collect_text(body).trim().to_string();
+    (!decoded.is_empty()).then_some(decoded)
 }

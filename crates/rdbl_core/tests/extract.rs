@@ -162,3 +162,19 @@ fn test_debug_mode() {
     let debug = result.debug.unwrap();
     assert!(!debug.candidates.is_empty());
 }
+
+#[test]
+fn test_extract_oembed_video() {
+    let html = r#"<oembed>
+        <title>Video title</title>
+        <type>video</type>
+        <html>&lt;iframe src=&quot;https://www.youtube.com/embed/video-id&quot;
+            title=&quot;Video title&quot;&gt;&lt;/iframe&gt;</html>
+    </oembed>"#;
+
+    let result = extract(html, &ExtractOptions::default());
+
+    assert_eq!(result.title.as_deref(), Some("Video title"));
+    assert!(result.content_html.contains("<iframe"));
+    assert!(result.content_html.contains("https://www.youtube.com/embed/video-id"));
+}
