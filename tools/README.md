@@ -100,7 +100,9 @@ video-only fixtures) must pass this structural comparison.
 Model selection uses family-macro F1, and training normalizes sample weights so
 each site/fixture family has equal total influence regardless of its number of
 pages or candidate nodes. This prevents large pages and repeated site templates
-from dominating the fitted model.
+from dominating the fitted model. Weight search uses a one-standard-error-style
+rule: among models within one percentage point of the best validation score, it
+selects the strongest regularization (lowest `C`) instead of the absolute peak.
 
 These metrics measure agreement with the frozen Mozilla Readability/Readability.js
 teacher output, not an absolute judgment of article quality. Review the lowest-F1

@@ -185,6 +185,12 @@ def main():
         help="Quick search with fewer combinations",
     )
     parser.add_argument(
+        "--selection-tolerance",
+        type=float,
+        default=0.01,
+        help="Prefer stronger regularization within this score of the maximum (default: 0.01)",
+    )
+    parser.add_argument(
         "--train-split",
         choices=SPLITS,
         default="train",
@@ -226,10 +232,20 @@ def main():
         hnm_iterations = [0, 2, 3, 5]
         hnm_boost = [1.5, 2.0, 3.0]
 
-    best_score = 0.0
-    best_params = {}
-    best_weights = None
-    best_bias = None
+    evaluated_models = []
+
+    if args.output.exists():
+        baseline = json.loads(args.output.read_text())
+        baseline_weights = np.asarray(baseline["weights"])
+        baseline_bias = float(baseline["bias"])
+        baseline_params = baseline.get("metadata", {}).get("parameters", {"baseline": True})
+        baseline_score = export_and_evaluate(
+            baseline_weights, baseline_bias, args.corpus, args.evaluation_split
+        )
+        evaluated_models.append(
+            (baseline_score, baseline_params, baseline_weights, baseline_bias, "baseline")
+        )
+        print(f"Baseline {baseline_params}: {baseline_score:.1%}")
 
     # Pre-generate training data for each threshold
     threshold_data = {}
@@ -269,12 +285,9 @@ def main():
                         )
                         print(f"{score:.1%}")
 
-                        if score > best_score:
-                            best_score = score
-                            best_params = params.copy()
-                            best_weights = weights.copy()
-                            best_bias = bias
-                            print(f"  *** New best: {score:.1%}")
+                        evaluated_models.append(
+                            (score, params.copy(), weights.copy(), bias, "search")
+                        )
                     continue
 
                 # Evaluate (for non-HNM)
@@ -284,16 +297,21 @@ def main():
                 )
                 print(f"{score:.1%}")
 
-                if score > best_score:
-                    best_score = score
-                    best_params = params.copy()
-                    best_weights = weights.copy()
-                    best_bias = bias
-                    print(f"  *** New best: {score:.1%}")
+                evaluated_models.append((score, params.copy(), weights.copy(), bias, "search"))
+
+    max_score = max(model[0] for model in evaluated_models)
+    eligible_models = [
+        model for model in evaluated_models if model[0] >= max_score - args.selection_tolerance
+    ]
+    best_score, best_params, best_weights, best_bias, best_source = min(
+        eligible_models,
+        key=lambda model: (model[1].get("C", float("inf")), -model[0]),
+    )
 
     print(f"\n{'='*60}")
-    print(f"Best score: {best_score:.1%}")
-    print(f"Best params: {best_params}")
+    print(f"Maximum score: {max_score:.1%}")
+    print(f"Selected score: {best_score:.1%} ({best_source})")
+    print(f"Selected params: {best_params}")
 
     if best_weights is not None:
         save_weights(
@@ -305,6 +323,8 @@ def main():
                 "selection_split": args.evaluation_split,
                 "selection_metric": "family_macro_token_f1",
                 "selection_score": best_score,
+                "maximum_selection_score": max_score,
+                "selection_tolerance": args.selection_tolerance,
                 "parameters": best_params,
             },
         )
