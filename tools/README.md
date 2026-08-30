@@ -137,9 +137,14 @@ Options:
 - `--output` - Output file for trained weights (default: `model_weights.json`)
 - `--split` - Corpus split used for fitting (default: `train`)
 - `--C` - Regularization parameter (default: 1.0)
+- `--pairwise-ranking` - Learn within-page candidate ordering instead of candidate classes
 - `--hard-negative-mining` - Enable iterative hard negative mining
 - `--hnm-iterations` - Number of hard negative mining iterations (default: 3)
 - `--gradient-boosting` - Use gradient boosting instead of logistic regression
+
+Pairwise ranking is experimental and does not replace the default classifier.
+It must improve end-to-end text, structure, and worst-case results across grouped
+folds before its weights are exported to the runtime model.
 
 ## Exporting Weights to Rust
 

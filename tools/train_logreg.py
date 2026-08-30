@@ -26,6 +26,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 
 from corpus_splits import PROTECTED_SPLITS, SPLITS, corpus_family, in_split
+from ranking import build_pairwise_examples
 from text_metrics import compute_metrics, extract_text_from_html
 from training_weights import candidate_sample_weight
 
@@ -303,6 +304,68 @@ def generate_training_data(
     return np.array(X_list), np.array(y_list), np.array(weight_list)
 
 
+def generate_pairwise_training_data(
+    corpus_pairs: list[tuple[Path, str]],
+    min_gap: float = 0.05,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Generate family-balanced comparisons for page-level candidate ranking."""
+    subprocess.run(
+        ["cargo", "build", "-p", "rdbl_cli"],
+        cwd=REPO_ROOT,
+        check=True,
+    )
+
+    X_list = []
+    y_list = []
+    weight_list = []
+    family_page_counts = Counter(corpus_family(path.stem) for path, _ in corpus_pairs)
+
+    for html_path, teacher_text in corpus_pairs:
+        candidates = extract_candidates_with_features(html_path)
+        features = []
+        overlaps = []
+        for candidate in candidates:
+            feature_vector = candidate.get("feature_vector", [])
+            if len(feature_vector) != NUM_FEATURES:
+                continue
+            features.append(np.asarray(feature_vector))
+            overlaps.append(compute_overlap(candidate.get("text", ""), teacher_text))
+
+        X_page, y_page, page_weights = build_pairwise_examples(features, overlaps, min_gap)
+        if len(X_page) == 0:
+            print(f"  {html_path.name}: no unambiguous ranking pairs")
+            continue
+
+        family_size = family_page_counts[corpus_family(html_path.stem)]
+        page_weights = page_weights / page_weights.sum() / family_size
+        X_list.extend(X_page)
+        y_list.extend(y_page)
+        weight_list.extend(page_weights)
+        print(f"  {html_path.name}: {len(X_page) // 2} ranking pairs")
+
+    return np.asarray(X_list), np.asarray(y_list), np.asarray(weight_list)
+
+
+def train_pairwise_ranker(
+    X: np.ndarray,
+    y: np.ndarray,
+    sample_weights: np.ndarray,
+    C: float = 1.0,
+) -> tuple[np.ndarray, float]:
+    """Train a linear ranker; the intercept is irrelevant to candidate order."""
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    model = LogisticRegression(
+        C=C,
+        fit_intercept=False,
+        max_iter=1000,
+        solver="lbfgs",
+        random_state=42,
+    )
+    model.fit(X_scaled, y, sample_weight=sample_weights)
+    return model.coef_[0] / scaler.scale_, 0.0
+
+
 def train_model(
     X: np.ndarray,
     y: np.ndarray,
@@ -524,6 +587,11 @@ def main():
         help="Enable hard negative mining for improved training",
     )
     parser.add_argument(
+        "--pairwise-ranking",
+        action="store_true",
+        help="Learn candidate ordering directly from within-page feature differences",
+    )
+    parser.add_argument(
         "--hnm-iterations",
         type=int,
         default=3,
@@ -545,6 +613,8 @@ def main():
 
     if args.split in (*PROTECTED_SPLITS, "all"):
         parser.error("regression, holdout, and all-corpus inputs cannot be used for model fitting")
+    if args.pairwise_ranking and (args.hard_negative_mining or args.gradient_boosting):
+        parser.error("pairwise ranking cannot be combined with classification training modes")
 
     if not args.corpus.exists():
         print(f"Corpus directory not found: {args.corpus}")
@@ -592,7 +662,10 @@ def main():
 
     # Generate training data
     print("Generating training data...")
-    X, y, sample_weights = generate_training_data(corpus_pairs)
+    if args.pairwise_ranking:
+        X, y, sample_weights = generate_pairwise_training_data(corpus_pairs)
+    else:
+        X, y, sample_weights = generate_training_data(corpus_pairs)
 
     if len(X) == 0:
         print("No training data generated.")
@@ -603,7 +676,15 @@ def main():
 
     # Train model
     print("Training model...")
-    if args.gradient_boosting:
+    if args.pairwise_ranking:
+        print("Using Pairwise Ranking...")
+        weights, bias = train_pairwise_ranker(
+            X,
+            y,
+            sample_weights=sample_weights,
+            C=args.C,
+        )
+    elif args.gradient_boosting:
         print("Using Gradient Boosting...")
         weights, bias = train_gradient_boosting(
             X, y,
