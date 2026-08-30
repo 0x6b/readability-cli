@@ -306,10 +306,6 @@ fn refine_overextracted_once<'a>(
             }
 
             let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
-            if cluster < 0.45 || cluster < best_cluster + 0.2 {
-                continue;
-            }
-
             let toc_like = candidate.features.get(FeatureIndex::TocLike);
             if toc_like > best_toc {
                 continue;
@@ -317,6 +313,13 @@ fn refine_overextracted_once<'a>(
 
             let link_density = candidate.features.get(FeatureIndex::LinkDensity);
             let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
+            let semantic_signal = candidate.features.get(FeatureIndex::SemanticMainFlag) > 0.5
+                && candidate.features.get_count(FeatureIndex::LogPosKwHits) > 0
+                && toc_like + 0.2 <= best_toc
+                && clean_ratio >= best_clean_ratio + 0.1;
+            if !semantic_signal && (cluster < 0.45 || cluster < best_cluster + 0.2) {
+                continue;
+            }
 
             let score = cluster * 1.5 + clean_ratio - toc_like - link_density + ratio;
             if score > semantic_score {
@@ -718,6 +721,39 @@ mod tests {
 
         let candidates = vec![broad, article];
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+        assert_eq!(best.node_id, article_id);
+    }
+
+    #[test]
+    fn test_refines_toc_heavy_main_to_clean_semantic_article() {
+        use crate::{dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let main_id = arena.add_node(Node::element(TagId::Main, None));
+        let article_id = arena.add_node(Node::element(TagId::Article, None));
+        arena.append_child(root, main_id);
+        arena.append_child(main_id, article_id);
+
+        let mut main = make_candidate(main_id, TagId::Main, 10.0);
+        main.features = FeatureVector::default();
+        main.features.values[FeatureIndex::LogTextLenChars as usize] = 5_001.0_f32.ln();
+        main.features.values[FeatureIndex::TocLike as usize] = 0.51;
+        main.features.values[FeatureIndex::CleanTextRatio as usize] = 0.64;
+        main.features.values[FeatureIndex::ContentClusterScore as usize] = 0.2;
+
+        let mut article = make_candidate(article_id, TagId::Article, 5.0);
+        article.features = FeatureVector::default();
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = 1_426.0_f32.ln();
+        article.features.values[FeatureIndex::TocLike as usize] = 0.26;
+        article.features.values[FeatureIndex::CleanTextRatio as usize] = 0.8;
+        article.features.values[FeatureIndex::ContentClusterScore as usize] = 0.2;
+        article.features.values[FeatureIndex::SemanticMainFlag as usize] = 1.0;
+        article.features.values[FeatureIndex::LogPosKwHits as usize] = 2.0_f32.ln();
+
+        let candidates = vec![main, article];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
         assert_eq!(best.node_id, article_id);
     }
 
