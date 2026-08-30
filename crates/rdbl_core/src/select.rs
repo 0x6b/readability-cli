@@ -219,12 +219,34 @@ fn refine_overextracted_once<'a>(
     let best_link_density = best.features.get(FeatureIndex::LinkDensity);
     let best_clean_ratio = best.features.get(FeatureIndex::CleanTextRatio);
     let best_p_count = best.features.get_count(FeatureIndex::LogPCount);
-    if best_toc < 0.2 && best_cluster > 0.4 {
-        return best;
+
+    if best.tag == TagId::Article {
+        for candidate in candidates {
+            if !matches!(candidate.tag, TagId::Div | TagId::Section)
+                || arena.get(candidate.node_id).and_then(|node| node.parent) != Some(best.node_id)
+            {
+                continue;
+            }
+            let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
+            let ratio = text_len as f32 / best_text_len.max(1) as f32;
+            let semantic = candidate.features.get(FeatureIndex::SemanticMainFlag) > 0.5;
+            let positive_hits = candidate.features.get_count(FeatureIndex::LogPosKwHits);
+            let toc_like = candidate.features.get(FeatureIndex::TocLike);
+            if (0.75..0.99).contains(&ratio)
+                && semantic
+                && positive_hits > 0
+                && toc_like <= best_toc
+            {
+                return candidate;
+            }
+        }
     }
 
     if matches!(best.tag, TagId::Main | TagId::Div)
-        && (best_toc > 0.25 || best_link_density > 0.15 || best_clean_ratio < 0.85)
+        && (best_cluster < 0.4
+            || best_toc > 0.25
+            || best_link_density > 0.15
+            || best_clean_ratio < 0.85)
     {
         let mut semantic_refined: Option<&Candidate> = None;
         let mut semantic_score = f32::NEG_INFINITY;
@@ -242,12 +264,12 @@ fn refine_overextracted_once<'a>(
 
             let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
             let ratio = text_len as f32 / best_text_len.max(1) as f32;
-            if !(0.6..=0.95).contains(&ratio) {
+            if !(0.25..=0.95).contains(&ratio) {
                 continue;
             }
 
             let cluster = candidate.features.get(FeatureIndex::ContentClusterScore);
-            if cluster < 0.8 {
+            if cluster < 0.45 || cluster < best_cluster + 0.2 {
                 continue;
             }
 
@@ -258,9 +280,6 @@ fn refine_overextracted_once<'a>(
 
             let link_density = candidate.features.get(FeatureIndex::LinkDensity);
             let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
-            if link_density > best_link_density - 0.02 && clean_ratio < best_clean_ratio + 0.02 {
-                continue;
-            }
 
             let score = cluster * 1.5 + clean_ratio - toc_like - link_density + ratio;
             if score > semantic_score {
@@ -272,6 +291,10 @@ fn refine_overextracted_once<'a>(
         if let Some(candidate) = semantic_refined {
             return candidate;
         }
+    }
+
+    if best_toc < 0.2 && best_cluster > 0.4 {
+        return best;
     }
 
     let mut refined: Option<&Candidate> = None;
@@ -609,5 +632,63 @@ mod tests {
 
         let options = ExtractOptions::default();
         assert!(passes_guardrails(&c, &options));
+    }
+
+    #[test]
+    fn test_refines_broad_container_to_focused_article() {
+        use crate::{dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let broad_id = arena.add_node(Node::element(TagId::Div, None));
+        let article_id = arena.add_node(Node::element(TagId::Article, None));
+        arena.append_child(root, broad_id);
+        arena.append_child(broad_id, article_id);
+
+        let mut broad = make_candidate(broad_id, TagId::Div, 10.0);
+        broad.features = FeatureVector::default();
+        broad.features.values[FeatureIndex::LogTextLenChars as usize] = 15_001.0_f32.ln();
+        broad.features.values[FeatureIndex::TocLike as usize] = 0.17;
+        broad.features.values[FeatureIndex::CleanTextRatio as usize] = 0.87;
+        broad.features.values[FeatureIndex::ContentClusterScore as usize] = 0.2;
+
+        let mut article = make_candidate(article_id, TagId::Article, 5.0);
+        article.features = FeatureVector::default();
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = 5_501.0_f32.ln();
+        article.features.values[FeatureIndex::TocLike as usize] = 0.1;
+        article.features.values[FeatureIndex::CleanTextRatio as usize] = 0.85;
+        article.features.values[FeatureIndex::ContentClusterScore as usize] = 0.5;
+
+        let candidates = vec![broad, article];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+        assert_eq!(best.node_id, article_id);
+    }
+
+    #[test]
+    fn test_refines_article_to_direct_content_container() {
+        use crate::{dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let article_id = arena.add_node(Node::element(TagId::Article, None));
+        let content_id = arena.add_node(Node::element(TagId::Div, None));
+        arena.append_child(root, article_id);
+        arena.append_child(article_id, content_id);
+
+        let mut article = make_candidate(article_id, TagId::Article, 10.0);
+        article.features = FeatureVector::default();
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = 5_501.0_f32.ln();
+        article.features.values[FeatureIndex::TocLike as usize] = 0.1;
+
+        let mut content = make_candidate(content_id, TagId::Div, 5.0);
+        content.features = FeatureVector::default();
+        content.features.values[FeatureIndex::LogTextLenChars as usize] = 5_301.0_f32.ln();
+        content.features.values[FeatureIndex::TocLike as usize] = 0.05;
+        content.features.values[FeatureIndex::SemanticMainFlag as usize] = 1.0;
+        content.features.values[FeatureIndex::LogPosKwHits as usize] = 2.0_f32.ln();
+
+        let candidates = vec![article, content];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+        assert_eq!(best.node_id, content_id);
     }
 }
