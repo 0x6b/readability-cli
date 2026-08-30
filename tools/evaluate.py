@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from corpus_splits import SPLITS, in_split
+from structure_metrics import compute_structure_metrics, extract_structure
 from text_metrics import compute_metrics, extract_text_from_html, tokenize
 
 
@@ -25,7 +26,7 @@ def build_binary() -> None:
     )
 
 
-def run_extractor(binary: Path, html_path: Path, timeout: int) -> str:
+def run_extractor(binary: Path, html_path: Path, timeout: int) -> tuple[str, str]:
     try:
         result = subprocess.run(
             [str(binary), "--stdin", "--format", "html"],
@@ -39,7 +40,7 @@ def run_extractor(binary: Path, html_path: Path, timeout: int) -> str:
     if result.returncode != 0:
         detail = result.stderr.strip() or f"exit status {result.returncode}"
         raise RuntimeError(detail)
-    return extract_text_from_html(result.stdout)
+    return result.stdout, extract_text_from_html(result.stdout)
 
 
 def main() -> int:
@@ -64,9 +65,11 @@ def main() -> int:
         parser.error(f"extractor binary not found: {args.binary}")
 
     results: list[dict] = []
+    structure_results: list[dict] = []
     failures: list[dict[str, str]] = []
     missing_expected: list[str] = []
     non_text_cases: list[str] = []
+    structural_failures: list[dict] = []
 
     for html_file in sorted(args.corpus.glob("*.html")):
         if html_file.stem.endswith(".expected") or not in_split(html_file.stem, args.split):
@@ -76,18 +79,34 @@ def main() -> int:
             missing_expected.append(html_file.stem)
             continue
 
-        expected_text = extract_text_from_html(
-            expected_file.read_text(encoding="utf-8", errors="replace")
-        )
-        if not tokenize(expected_text):
-            non_text_cases.append(html_file.stem)
-            continue
+        expected_html = expected_file.read_text(encoding="utf-8", errors="replace")
+        expected_text = extract_text_from_html(expected_html)
         try:
-            actual_text = run_extractor(args.binary, html_file, args.timeout)
+            actual_html, actual_text = run_extractor(args.binary, html_file, args.timeout)
         except RuntimeError as error:
             failures.append({"case": html_file.stem, "error": str(error)})
             if args.verbose:
                 print(f"ERROR {html_file.stem}: {error}", file=sys.stderr)
+            continue
+
+        if expected_structure := extract_structure(expected_html):
+            structure_metrics = compute_structure_metrics(expected_html, actual_html)
+            structure_result = {
+                "case": html_file.stem,
+                **structure_metrics,
+                "expected_tokens": sum(expected_structure.values()),
+                "actual_tokens": sum(extract_structure(actual_html).values()),
+            }
+            structure_results.append(structure_result)
+        else:
+            structure_result = None
+
+        if not tokenize(expected_text):
+            non_text_cases.append(html_file.stem)
+            if structure_result is None or structure_result["f1"] < 0.99:
+                structural_failures.append(
+                    structure_result or {"case": html_file.stem, "f1": 0.0, "reason": "no expected structure"}
+                )
             continue
 
         metrics = compute_metrics(expected_text, actual_text)
@@ -110,6 +129,7 @@ def main() -> int:
         "failures": failures,
         "missing_expected": missing_expected,
         "non_text_cases": non_text_cases,
+        "structural_failures": structural_failures,
         "average_precision": statistics.fmean(r["precision"] for r in results) if results else 0,
         "average_recall": statistics.fmean(r["recall"] for r in results) if results else 0,
         "average_f1": statistics.fmean(r["f1"] for r in results) if results else 0,
@@ -119,6 +139,17 @@ def main() -> int:
         "medium": sum(0.5 <= r["f1"] < 0.7 for r in results),
         "low": sum(r["f1"] < 0.5 for r in results),
         "worst_cases": sorted(results, key=lambda r: r["f1"])[:10],
+        "structure_total": len(structure_results),
+        "average_structure_precision": (
+            statistics.fmean(r["precision"] for r in structure_results) if structure_results else 0
+        ),
+        "average_structure_recall": (
+            statistics.fmean(r["recall"] for r in structure_results) if structure_results else 0
+        ),
+        "average_structure_f1": (
+            statistics.fmean(r["f1"] for r in structure_results) if structure_results else 0
+        ),
+        "worst_structure_cases": sorted(structure_results, key=lambda r: r["f1"])[:10],
     }
 
     if args.json:
@@ -138,7 +169,13 @@ def main() -> int:
         if missing_expected:
             print(f"Missing expected output: {', '.join(missing_expected)}")
         if non_text_cases:
-            print(f"Not scored by text metrics: {', '.join(non_text_cases)}")
+            print(f"Scored by structure only: {', '.join(non_text_cases)}")
+        print(
+            f"Structural macro average ({len(structure_results)} cases): "
+            f"F1={summary['average_structure_f1']:.1%}, "
+            f"precision={summary['average_structure_precision']:.1%}, "
+            f"recall={summary['average_structure_recall']:.1%}"
+        )
         print("\nLowest F1 cases:")
         for result in summary["worst_cases"]:
             print(
@@ -146,7 +183,7 @@ def main() -> int:
                 f"P={result['precision']:.1%} R={result['recall']:.1%}"
             )
 
-    return 1 if failures or missing_expected or not results else 0
+    return 1 if failures or missing_expected or structural_failures or not results else 0
 
 
 if __name__ == "__main__":

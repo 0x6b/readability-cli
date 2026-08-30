@@ -92,8 +92,9 @@ uv run evaluate.py --corpus ../tests/corpus
 
 The evaluator builds the release binary once and reports macro token precision,
 recall, and F1. It counts repeated tokens and tokenizes CJK text by character.
-Expected outputs with no text (for example, video-only fixtures) are listed but
-not scored; they require separate structural assertions.
+It also compares semantic structure and resource URLs for links, media, tables,
+lists, blockquotes, and code. Expected outputs with no text (for example,
+video-only fixtures) must pass this structural comparison.
 
 These metrics measure agreement with the frozen Mozilla Readability/Readability.js
 teacher output, not an absolute judgment of article quality. Review the lowest-F1
