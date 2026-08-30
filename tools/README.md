@@ -119,7 +119,8 @@ Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
 for a release decision, then move those cases to `REGRESSION_CASES` before any
 further tuning. Holdout provenance and evaluation status are recorded in
-`holdout_manifest.json` so accidental reuse fails the split integrity tests.
+`holdout_manifest.json`. Split integrity tests enforce unique site hosts, broad
+language coverage, nonempty fixture pairs, and no exact corpus duplicates.
 
 ## Training the Model
 

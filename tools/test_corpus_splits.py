@@ -1,7 +1,10 @@
+import hashlib
 import json
 import sys
 import unittest
+from collections import Counter, defaultdict
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -50,16 +53,43 @@ class CorpusSplitsTest(unittest.TestCase):
     def test_holdout_manifest_is_complete_and_blind(self):
         manifest = json.loads((Path(__file__).parent / "holdout_manifest.json").read_text())
         self.assertFalse(manifest["evaluated"])
-        manifest_cases = {entry["case"] for entry in manifest["cases"]}
+        entries = manifest["cases"]
+        manifest_cases = {entry["case"] for entry in entries}
         self.assertEqual(manifest_cases, HOLDOUT_CASES)
         self.assertEqual(len(manifest_cases), 50)
         self.assertEqual(
             len({corpus_family(case) for case in manifest_cases}),
             len(manifest_cases),
         )
+
+        urls = [entry["url"] for entry in entries]
+        hosts = [urlparse(url).hostname for url in urls]
+        self.assertEqual(len(set(urls)), len(urls))
+        self.assertEqual(len(set(hosts)), len(hosts))
+
+        language_counts = Counter(entry["language"] for entry in entries)
+        self.assertGreaterEqual(len(language_counts), 30)
+        self.assertLessEqual(max(language_counts.values()), len(entries) * 0.4)
+
+        holdout_paths = set()
         for case in manifest_cases:
-            self.assertTrue((CORPUS / f"{case}.html").is_file())
-            self.assertTrue((CORPUS / f"{case}.expected.html").is_file())
+            for suffix in (".html", ".expected.html"):
+                path = CORPUS / f"{case}{suffix}"
+                self.assertTrue(path.is_file())
+                self.assertGreater(path.stat().st_size, 0)
+                holdout_paths.add(path)
+
+        paths_by_hash = defaultdict(list)
+        for path in CORPUS.glob("*.html"):
+            paths_by_hash[hashlib.sha256(path.read_bytes()).digest()].append(path)
+        duplicate_holdouts = {
+            path.name
+            for paths in paths_by_hash.values()
+            if len(paths) > 1
+            for path in paths
+            if path in holdout_paths
+        }
+        self.assertFalse(duplicate_holdouts)
 
 
 if __name__ == "__main__":
