@@ -526,6 +526,11 @@ fn is_hidden(attrs: &crate::dom::Attributes) -> bool {
             .aria_hidden
             .as_deref()
             .is_some_and(|value| value.eq_ignore_ascii_case("true"))
+        || attrs.class.as_deref().is_some_and(|class| {
+            class
+                .split_ascii_whitespace()
+                .any(|name| name.eq_ignore_ascii_case("hidden"))
+        })
     {
         return true;
     }
@@ -705,6 +710,9 @@ mod tests {
             <p aria-hidden="true">ARIA hidden</p>
             <p style="display: none">CSS display hidden</p>
             <p style="visibility: hidden">CSS visibility hidden</p>
+            <div class="panel hidden"><p>This hidden panel contains enough article-like text that
+                length-limited boilerplate rules must not preserve it. It represents an inactive tab
+                whose content is unavailable to the reader until the page state changes.</p></div>
         </article></body></html>
         "#;
         let arena = parse_html(html);
@@ -716,5 +724,6 @@ mod tests {
         assert!(!html.contains("ARIA hidden"));
         assert!(!html.contains("CSS display hidden"));
         assert!(!html.contains("CSS visibility hidden"));
+        assert!(!html.contains("This hidden panel"));
     }
 }
