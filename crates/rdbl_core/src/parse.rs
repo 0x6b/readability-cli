@@ -137,6 +137,7 @@ fn convert_node(handle: &Handle, parent_id: NodeId, arena: &mut Arena) {
                             "name" => attributes.name = Some(attr_value),
                             "content" => attributes.content = Some(attr_value),
                             "property" => attributes.property = Some(attr_value),
+                            "itemprop" => attributes.itemprop = Some(attr_value),
                             "hidden" => attributes.hidden = true,
                             "style" => attributes.style = Some(attr_value),
                             "aria-hidden" => attributes.aria_hidden = Some(attr_value),
@@ -228,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_parse_with_attributes() {
-        let html = r#"<div id="main" class="content article" role="main">Content</div>"#;
+        let html = r#"<div id="main" class="content article" role="main" itemprop="articleBody">Content</div>"#;
         let arena = parse_html(html);
 
         // Find the div
@@ -240,6 +241,7 @@ mod tests {
                 assert_eq!(attrs.id.as_deref(), Some("main"));
                 assert_eq!(attrs.class.as_deref(), Some("content article"));
                 assert_eq!(attrs.role.as_deref(), Some("main"));
+                assert_eq!(attrs.itemprop.as_deref(), Some("articleBody"));
                 break;
             }
         }

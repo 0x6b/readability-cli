@@ -341,11 +341,19 @@ fn refine_overextracted_once<'a>(
         {
             continue;
         }
-        let class_id = arena
-            .get_attributes(candidate.node_id)
+        let attrs = arena.get_attributes(candidate.node_id);
+        let class_id = attrs
             .map(|attrs| attrs.normalized_class_id())
             .unwrap_or_default();
-        if !class_id.contains("articlebody")
+        let schema_article_body = attrs
+            .and_then(|attrs| attrs.itemprop.as_deref())
+            .is_some_and(|itemprop| {
+                itemprop
+                    .split_ascii_whitespace()
+                    .any(|value| value.eq_ignore_ascii_case("articleBody"))
+            });
+        if !schema_article_body
+            && !class_id.contains("articlebody")
             && !class_id.contains("article-body")
             && !class_id.contains("article_body")
         {
@@ -356,11 +364,12 @@ fn refine_overextracted_once<'a>(
         let ratio = text_len as f32 / best_text_len.max(1) as f32;
         let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
         let toc_like = candidate.features.get(FeatureIndex::TocLike);
+        let min_clean_gain = if schema_article_body { 0.05 } else { 0.1 };
         if text_len < options.min_text_chars * 2
             || !(0.1..=0.8).contains(&ratio)
             || candidate.features.get(FeatureIndex::HasMinParagraphs) < 0.5
             || clean_ratio < 0.9
-            || clean_ratio < best_clean_ratio + 0.1
+            || clean_ratio < best_clean_ratio + min_clean_gain
             || toc_like > 0.1
         {
             continue;
@@ -814,6 +823,7 @@ mod tests {
             content_id,
             Attributes {
                 class: Some("articleBody".to_string()),
+                itemprop: Some("articleBody".to_string()),
                 ..Default::default()
             },
         );
@@ -822,14 +832,14 @@ mod tests {
         section.features = FeatureVector::default();
         section.features.values[FeatureIndex::LogTextLenChars as usize] = 4_501.0_f32.ln();
         section.features.values[FeatureIndex::TocLike as usize] = 0.15;
-        section.features.values[FeatureIndex::CleanTextRatio as usize] = 0.8;
+        section.features.values[FeatureIndex::CleanTextRatio as usize] = 0.86;
         section.features.values[FeatureIndex::ContentClusterScore as usize] = 1.0;
 
         let mut content = make_candidate(content_id, TagId::Div, 5.0);
         content.features = FeatureVector::default();
         content.features.values[FeatureIndex::LogTextLenChars as usize] = 851.0_f32.ln();
         content.features.values[FeatureIndex::TocLike as usize] = 0.01;
-        content.features.values[FeatureIndex::CleanTextRatio as usize] = 0.96;
+        content.features.values[FeatureIndex::CleanTextRatio as usize] = 0.92;
         content.features.values[FeatureIndex::HasMinParagraphs as usize] = 1.0;
 
         let candidates = vec![section, content];

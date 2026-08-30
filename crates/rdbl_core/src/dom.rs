@@ -446,6 +446,8 @@ pub struct Attributes {
     pub content: Option<String>,
     /// property attribute (for meta tags, e.g., og:title)
     pub property: Option<String>,
+    /// itemprop attribute (for schema.org semantics)
+    pub itemprop: Option<String>,
     /// Whether the HTML hidden attribute is present
     pub hidden: bool,
     /// Inline CSS used to identify explicitly hidden nodes
