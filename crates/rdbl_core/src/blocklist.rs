@@ -215,6 +215,7 @@ const OVERLAYS: &[BlockRule] = &[
     BlockRule::always("modal-content"),
     BlockRule::always("modal-header"),
     BlockRule::always("modal-body"),
+    BlockRule::always("rollover-block"),
     BlockRule::if_small("modal-overlay"),
     BlockRule::if_small("popup-overlay"),
     BlockRule::if_small("lightbox-overlay"),
@@ -496,6 +497,32 @@ mod tests {
             }
         }
         panic!("Social share not found");
+    }
+
+    #[test]
+    fn test_rollover_block_is_blocked() {
+        let html = r#"
+        <html><body>
+            <p>
+                Main text
+                <span class="rollover-block">
+                    <a href="/related">A long related article title inside a hover card</a>
+                </span>
+            </p>
+        </body></html>
+        "#;
+
+        let arena = parse_html(html);
+
+        for id in 0..arena.nodes.len() {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("rollover-block")
+            {
+                assert!(should_block(&arena, id as NodeId));
+                return;
+            }
+        }
+        panic!("Rollover block not found");
     }
 
     #[test]
