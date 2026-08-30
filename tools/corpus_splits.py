@@ -36,9 +36,15 @@ REGRESSION_CASES = frozenset(
     }
 )
 
-# The manifest records provenance without requiring anyone to inspect extractor
-# output. Once evaluated, move its cases to REGRESSION_CASES and replace it with
-# a newly collected manifest.
+REGRESSION_MANIFEST = json.loads(
+    (Path(__file__).parent / "regression_manifest_2026-08-30.json").read_text(
+        encoding="utf-8"
+    )
+)
+REGRESSION_CASES |= frozenset(entry["case"] for entry in REGRESSION_MANIFEST["cases"])
+
+# The active manifest contains only never-evaluated cases. Consumed cohorts are
+# archived above and become regression fixtures before model development resumes.
 HOLDOUT_MANIFEST = json.loads(
     (Path(__file__).parent / "holdout_manifest.json").read_text(encoding="utf-8")
 )

@@ -22,9 +22,10 @@ class CorpusSplitsTest(unittest.TestCase):
             if not path.stem.endswith(".expected")
         }
         assigned = {case: corpus_split(case) for case in cases}
-        self.assertEqual(
-            set(assigned.values()), {"train", "validation", "regression", "holdout"}
-        )
+        expected_splits = {"train", "validation", "regression"}
+        if HOLDOUT_CASES:
+            expected_splits.add("holdout")
+        self.assertEqual(set(assigned.values()), expected_splits)
         self.assertEqual(
             {case for case, split in assigned.items() if split == "regression"},
             REGRESSION_CASES,
@@ -50,12 +51,21 @@ class CorpusSplitsTest(unittest.TestCase):
             {family: splits for family, splits in family_splits.items() if len(splits) > 1}
         )
 
-    def test_holdout_manifest_is_complete_and_blind(self):
+    def test_active_holdout_manifest_is_empty_and_blind(self):
         manifest = json.loads((Path(__file__).parent / "holdout_manifest.json").read_text())
         self.assertFalse(manifest["evaluated"])
+        self.assertEqual(manifest["cases"], [])
+        self.assertEqual(HOLDOUT_CASES, frozenset())
+
+    def test_consumed_holdout_is_a_diverse_regression_cohort(self):
+        manifest = json.loads(
+            (Path(__file__).parent / "regression_manifest_2026-08-30.json").read_text()
+        )
+        self.assertTrue(manifest["evaluated"])
+        self.assertEqual(manifest["evaluation"]["decision"], "candidate-rejected")
         entries = manifest["cases"]
         manifest_cases = {entry["case"] for entry in entries}
-        self.assertEqual(manifest_cases, HOLDOUT_CASES)
+        self.assertTrue(manifest_cases.issubset(REGRESSION_CASES))
         self.assertEqual(len(manifest_cases), 50)
         self.assertEqual(
             len({corpus_family(case) for case in manifest_cases}),
@@ -71,25 +81,25 @@ class CorpusSplitsTest(unittest.TestCase):
         self.assertGreaterEqual(len(language_counts), 30)
         self.assertLessEqual(max(language_counts.values()), len(entries) * 0.4)
 
-        holdout_paths = set()
+        cohort_paths = set()
         for case in manifest_cases:
             for suffix in (".html", ".expected.html"):
                 path = CORPUS / f"{case}{suffix}"
                 self.assertTrue(path.is_file())
                 self.assertGreater(path.stat().st_size, 0)
-                holdout_paths.add(path)
+                cohort_paths.add(path)
 
         paths_by_hash = defaultdict(list)
         for path in CORPUS.glob("*.html"):
             paths_by_hash[hashlib.sha256(path.read_bytes()).digest()].append(path)
-        duplicate_holdouts = {
+        duplicate_cohort_files = {
             path.name
             for paths in paths_by_hash.values()
             if len(paths) > 1
             for path in paths
-            if path in holdout_paths
+            if path in cohort_paths
         }
-        self.assertFalse(duplicate_holdouts)
+        self.assertFalse(duplicate_cohort_files)
 
 
 if __name__ == "__main__":

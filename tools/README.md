@@ -122,9 +122,10 @@ cases manually and keep structural tests for links, tables, code, images, and vi
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
 for a release decision, then move those cases to `REGRESSION_CASES` before any
-further tuning. Holdout provenance and evaluation status are recorded in
-`holdout_manifest.json`. Split integrity tests enforce unique site hosts, broad
-language coverage, nonempty fixture pairs, and no exact corpus duplicates.
+further tuning. Consumed cohorts and their results are archived in dated
+regression manifests; `holdout_manifest.json` contains only the active blind
+cohort. Split integrity tests enforce unique site hosts, broad language coverage,
+nonempty fixture pairs, and no exact corpus duplicates.
 
 ## Training the Model
 
