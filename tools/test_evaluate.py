@@ -21,8 +21,17 @@ class EvaluateTest(unittest.TestCase):
         html = "<style>hidden</style><p>A &amp; B</p><script>ignored()</script>"
         self.assertEqual(extract_text_from_html(html), "A & B")
 
-    def test_tokenize_handles_cjk_without_spaces(self):
-        self.assertEqual(tokenize("Hello, 世界。"), ["hello", "世", "界"])
+    def test_tokenize_handles_unsegmented_scripts_as_characters(self):
+        self.assertEqual(
+            tokenize("Hello, 世界 ภาษา"),
+            ["hello", "世", "界", "ภ", "า", "ษ", "า"],
+        )
+
+    def test_tokenize_handles_non_latin_words(self):
+        self.assertEqual(
+            tokenize("Γειά σου, мир! مرحبًا"),
+            ["γειά", "σου", "мир", "مرحبًا"],
+        )
 
     def test_metrics_penalize_missing_and_duplicate_content(self):
         metrics = compute_metrics("one two two three", "one two two two")

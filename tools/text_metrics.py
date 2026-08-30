@@ -1,14 +1,26 @@
 """Language-aware text normalization and overlap metrics."""
 
-import re
+import unicodedata
 from collections import Counter
 from html.parser import HTMLParser
 
 
-TOKEN_RE = re.compile(
-    r"[a-zA-Z0-9]+(?:['’][a-zA-Z0-9]+)*|"
-    r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]"
-)
+def is_character_token(character: str) -> bool:
+    codepoint = ord(character)
+    return (
+        0x3040 <= codepoint <= 0x30FF
+        or 0x3400 <= codepoint <= 0x4DBF
+        or 0x4E00 <= codepoint <= 0x9FFF
+        or 0xF900 <= codepoint <= 0xFAFF
+        or 0xAC00 <= codepoint <= 0xD7AF
+        or 0x0E00 <= codepoint <= 0x0EFF  # Thai and Lao
+        or 0x1000 <= codepoint <= 0x109F  # Myanmar
+        or 0x1780 <= codepoint <= 0x17FF  # Khmer
+    )
+
+
+def is_word_character(character: str) -> bool:
+    return unicodedata.category(character)[0] in {"L", "M", "N"}
 
 
 class TextExtractor(HTMLParser):
@@ -37,8 +49,35 @@ def extract_text_from_html(html: str) -> str:
 
 
 def tokenize(text: str) -> list[str]:
-    """Tokenize Latin text as words and CJK text as characters."""
-    return TOKEN_RE.findall(text.casefold())
+    """Tokenize Unicode text as words and unsegmented scripts as characters."""
+    text = text.casefold()
+    tokens: list[str] = []
+    word: list[str] = []
+
+    def finish_word() -> None:
+        if word:
+            tokens.append("".join(word))
+            word.clear()
+
+    for index, character in enumerate(text):
+        if is_character_token(character):
+            finish_word()
+            tokens.append(character)
+        elif is_word_character(character):
+            word.append(character)
+        elif (
+            character in {"'", "’"}
+            and word
+            and index + 1 < len(text)
+            and is_word_character(text[index + 1])
+            and not is_character_token(text[index + 1])
+        ):
+            word.append(character)
+        else:
+            finish_word()
+
+    finish_word()
+    return tokens
 
 
 def compute_metrics(expected: str, actual: str) -> dict[str, float]:
