@@ -24,6 +24,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 
+from corpus_splits import SPLITS, in_split
+from text_metrics import compute_metrics, extract_text_from_html
+
 # Feature names in order (must match features.rs)
 FEATURE_NAMES = [
     # Text quantity (0-7)
@@ -119,6 +122,8 @@ FEATURE_NAMES = [
 ]
 
 NUM_FEATURES = 80
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEBUG_BINARY = REPO_ROOT / "target" / "debug" / "rdbl"
 
 
 def run_readability_js(html_path: Path) -> Optional[str]:
@@ -156,17 +161,8 @@ def run_readability_js(html_path: Path) -> Optional[str]:
 
 
 def compute_overlap(text1: str, text2: str) -> float:
-    """Compute Jaccard similarity between two texts based on word sets."""
-    words1 = set(text1.lower().split())
-    words2 = set(text2.lower().split())
-
-    if not words1 or not words2:
-        return 0.0
-
-    intersection = len(words1 & words2)
-    union = len(words1 | words2)
-
-    return intersection / union if union > 0 else 0.0
+    """Compute language-aware token F1 between two texts."""
+    return compute_metrics(text1, text2)["f1"]
 
 
 def extract_candidates_with_features(html_path: Path) -> list[dict]:
@@ -178,37 +174,27 @@ def extract_candidates_with_features(html_path: Path) -> list[dict]:
     """
     try:
         result = subprocess.run(
-            ["cargo", "run", "--", "--stdin", "--format", "json", "--debug"],
+            [str(DEBUG_BINARY), "--stdin", "--format", "json", "--debug"],
             input=html_path.read_text(),
             capture_output=True,
             text=True,
             timeout=60,
-            cwd=html_path.parent.parent.parent,  # repo root
         )
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
-            if data.get("debug") and data["debug"].get("candidates"):
-                return data["debug"]["candidates"]
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
-        pass
+    except (subprocess.TimeoutExpired, FileNotFoundError) as error:
+        raise RuntimeError(f"candidate extraction failed for {html_path.name}: {error}") from error
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit status {result.returncode}"
+        raise RuntimeError(f"candidate extraction failed for {html_path.name}: {detail}")
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"invalid extractor JSON for {html_path.name}: {error}") from error
+    if data.get("debug") and data["debug"].get("candidates"):
+        return data["debug"]["candidates"]
     return []
 
 
-def extract_text_from_html(html: str) -> str:
-    """Extract plain text from HTML content."""
-    # Simple text extraction - strip tags
-    import re
-
-    # Remove script/style content
-    html = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
-    # Remove tags
-    text = re.sub(r"<[^>]+>", " ", html)
-    # Normalize whitespace
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
-def load_corpus(corpus_dir: Path) -> list[tuple[Path, str]]:
+def load_corpus(corpus_dir: Path, split: str = "train") -> list[tuple[Path, str]]:
     """
     Load HTML files and their expected teacher outputs.
 
@@ -218,9 +204,9 @@ def load_corpus(corpus_dir: Path) -> list[tuple[Path, str]]:
     """
     pairs = []
 
-    for html_file in corpus_dir.glob("*.html"):
+    for html_file in sorted(corpus_dir.glob("*.html")):
         # Skip expected files
-        if html_file.stem.endswith(".expected"):
+        if html_file.stem.endswith(".expected") or not in_split(html_file.stem, split):
             continue
 
         # Look for expected.html file first
@@ -255,10 +241,16 @@ def generate_training_data(
     - weights is sample weights [n_samples] based on overlap quality
 
     Labeling strategy:
-    - Compute Jaccard overlap between each candidate's text and expected text
+    - Compute token F1 between each candidate's text and expected text
     - Label as positive if overlap >= threshold
     - Weight samples by overlap quality (squared) to favor high-overlap candidates
     """
+    subprocess.run(
+        ["cargo", "build", "-p", "rdbl_cli"],
+        cwd=REPO_ROOT,
+        check=True,
+    )
+
     X_list = []
     y_list = []
     weight_list = []
@@ -273,7 +265,7 @@ def generate_training_data(
         # Compute overlap for each candidate
         positive_count = 0
         for candidate in candidates:
-            # Use the raw 64-element feature vector
+            # Use the raw feature vector
             feature_vector = candidate.get("feature_vector", [])
             if len(feature_vector) != NUM_FEATURES:
                 continue
@@ -473,6 +465,7 @@ def save_weights(
     weights: np.ndarray,
     bias: float,
     output_path: Path,
+    metadata: dict | None = None,
 ):
     """Save weights to JSON file."""
     data = {
@@ -480,6 +473,8 @@ def save_weights(
         "bias": float(bias),
         "feature_names": FEATURE_NAMES,
     }
+    if metadata is not None:
+        data["metadata"] = metadata
 
     with open(output_path, "w") as f:
         json.dump(data, f, indent=2)
@@ -502,6 +497,12 @@ def main():
         type=Path,
         default=Path("model_weights.json"),
         help="Output file for trained weights",
+    )
+    parser.add_argument(
+        "--split",
+        choices=(*SPLITS, "all"),
+        default="train",
+        help="Corpus split used for training (default: train)",
     )
     parser.add_argument(
         "--C",
@@ -543,7 +544,7 @@ def main():
 
     # Load corpus
     print("Loading corpus...")
-    corpus_pairs = load_corpus(args.corpus)
+    corpus_pairs = load_corpus(args.corpus, args.split)
 
     if not corpus_pairs:
         print("No valid training pairs found.")

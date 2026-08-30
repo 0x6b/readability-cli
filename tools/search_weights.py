@@ -28,6 +28,7 @@ from train_logreg import (
     generate_training_data,
     save_weights,
 )
+from corpus_splits import SPLITS
 
 
 def train_model(
@@ -97,6 +98,7 @@ def export_and_evaluate(
     weights: np.ndarray,
     bias: float,
     corpus_dir: Path,
+    evaluation_split: str,
 ) -> float:
     """Export weights to Rust, rebuild, and evaluate."""
     tools_dir = Path(__file__).parent
@@ -113,7 +115,7 @@ def export_and_evaluate(
     try:
         # Export to Rust
         result = subprocess.run(
-            ["uv", "run", "export_weights.py", "--input", temp_json,
+            [sys.executable, "export_weights.py", "--input", temp_json,
              "--output", "../crates/rdbl_core/src/model.rs"],
             cwd=tools_dir,
             capture_output=True,
@@ -136,7 +138,12 @@ def export_and_evaluate(
 
         # Evaluate
         result = subprocess.run(
-            ["uv", "run", "evaluate.py", "--corpus", str(corpus_dir), "--json"],
+            [
+                sys.executable, "evaluate.py",
+                "--corpus", str(corpus_dir),
+                "--split", evaluation_split,
+                "--json",
+            ],
             cwd=tools_dir,
             capture_output=True,
             text=True,
@@ -149,7 +156,7 @@ def export_and_evaluate(
         for line in result.stdout.strip().split('\n'):
             if line.startswith('{'):
                 data = json.loads(line)
-                return data.get("average_jaccard", 0.0)
+                return data.get("average_f1", 0.0)
     finally:
         Path(temp_json).unlink(missing_ok=True)
 
@@ -177,12 +184,27 @@ def main():
         action="store_true",
         help="Quick search with fewer combinations",
     )
+    parser.add_argument(
+        "--train-split",
+        choices=SPLITS,
+        default="train",
+        help="Corpus split used to fit weights (default: train)",
+    )
+    parser.add_argument(
+        "--evaluation-split",
+        choices=SPLITS,
+        default="validation",
+        help="Corpus split used to select weights (default: validation)",
+    )
 
     args = parser.parse_args()
 
     # Load corpus
     print("Loading corpus...")
-    corpus_pairs = load_corpus(args.corpus)
+    if args.train_split == args.evaluation_split:
+        parser.error("training and evaluation splits must differ")
+
+    corpus_pairs = load_corpus(args.corpus, args.train_split)
     if not corpus_pairs:
         print("No corpus found")
         sys.exit(1)
@@ -240,7 +262,9 @@ def main():
 
                         # Evaluate
                         print(f"[{tried}/{total_combinations}] {params}...", end=" ", flush=True)
-                        score = export_and_evaluate(weights, bias, args.corpus)
+                        score = export_and_evaluate(
+                            weights, bias, args.corpus, args.evaluation_split
+                        )
                         print(f"{score:.1%}")
 
                         if score > best_score:
@@ -253,7 +277,9 @@ def main():
 
                 # Evaluate (for non-HNM)
                 print(f"[{tried}/{total_combinations}] {params}...", end=" ", flush=True)
-                score = export_and_evaluate(weights, bias, args.corpus)
+                score = export_and_evaluate(
+                    weights, bias, args.corpus, args.evaluation_split
+                )
                 print(f"{score:.1%}")
 
                 if score > best_score:
@@ -268,12 +294,23 @@ def main():
     print(f"Best params: {best_params}")
 
     if best_weights is not None:
-        save_weights(best_weights, best_bias, args.output)
+        save_weights(
+            best_weights,
+            best_bias,
+            args.output,
+            metadata={
+                "training_split": args.train_split,
+                "selection_split": args.evaluation_split,
+                "selection_metric": "macro_token_f1",
+                "selection_score": best_score,
+                "parameters": best_params,
+            },
+        )
 
         # Also export to Rust
         print("\nExporting best weights to Rust...")
         subprocess.run(
-            ["uv", "run", "export_weights.py",
+            [sys.executable, "export_weights.py",
              "--input", str(args.output),
              "--output", "../crates/rdbl_core/src/model.rs"],
             cwd=Path(__file__).parent,

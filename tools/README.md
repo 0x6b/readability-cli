@@ -79,23 +79,39 @@ If `.expected.html` exists, it's used as the teacher output. Otherwise, Readabil
 
 ## Evaluating the Model
 
-Test the current model against the corpus:
+The corpus is deterministically split by fixture/site family: 70% training,
+15% validation, and 15% test. Related variants stay in the same split to reduce
+template leakage. Train on `train`, select model weights on `validation`, and
+only use `test` for the final report.
+
+Evaluate the current model on the held-out test split:
 
 ```bash
 uv run evaluate.py --corpus ../tests/corpus
 ```
 
-This shows Jaccard similarity scores for each test case and overall statistics.
+The evaluator builds the release binary once and reports macro token precision,
+recall, and F1. It counts repeated tokens and tokenizes CJK text by character.
+Expected outputs with no text (for example, video-only fixtures) are listed but
+not scored; they require separate structural assertions.
+
+These metrics measure agreement with the frozen Mozilla Readability/Readability.js
+teacher output, not an absolute judgment of article quality. Review the lowest-F1
+cases manually and keep structural tests for links, tables, code, images, and video.
+
+Use `--split validation` while developing. `--split all` is diagnostic only and
+must not be reported as held-out performance.
 
 ## Training the Model
 
 ```bash
-uv run train_logreg.py --corpus ../tests/corpus --output weights.json
+uv run train_logreg.py --corpus ../tests/corpus --split train --output weights.json
 ```
 
 Options:
 - `--corpus` - Directory containing HTML training files (default: `tests/corpus`)
 - `--output` - Output file for trained weights (default: `model_weights.json`)
+- `--split` - Corpus split used for fitting (default: `train`)
 - `--C` - Regularization parameter (default: 1.0)
 - `--hard-negative-mining` - Enable iterative hard negative mining
 - `--hnm-iterations` - Number of hard negative mining iterations (default: 3)
@@ -124,15 +140,16 @@ EOF
 # 2. Batch fetch and generate expected output
 uv run batch_corpus.py my_urls.txt --delay 2
 
-# 3. Evaluate current model
-uv run evaluate.py --corpus ../tests/corpus
+# 3. Evaluate current model without touching the test split
+uv run evaluate.py --corpus ../tests/corpus --split validation
 
 # 4. Retrain if needed
-uv run train_logreg.py --corpus ../tests/corpus --hard-negative-mining
+uv run train_logreg.py --corpus ../tests/corpus --split train --hard-negative-mining
 
 # 5. Export to Rust
 uv run export_weights.py --input model_weights.json --output ../crates/rdbl_core/src/model.rs
 
-# 6. Rebuild and test
-cd .. && cargo test
+# 6. Rebuild, run tests, and report the held-out result once
+cd .. && cargo test --workspace --all-targets
+cd tools && uv run evaluate.py --corpus ../tests/corpus --split test
 ```
