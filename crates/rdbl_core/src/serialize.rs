@@ -125,11 +125,9 @@ fn serialize_text_node(node: &CleanedNode, output: &mut String, in_pre: bool) {
                         output.push_str("- ");
                     }
                 }
-                TagId::Pre | TagId::Code if !in_pre => {
+                TagId::Pre | TagId::Code if !in_pre && !output.ends_with('\n') => {
                     // Add code fence for code blocks
-                    if !output.ends_with('\n') {
-                        output.push('\n');
-                    }
+                    output.push('\n');
                 }
                 _ => {}
             }
