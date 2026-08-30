@@ -85,6 +85,10 @@ template leakage. Cases that have already influenced development live in the
 explicit `regression` set. A `holdout` contains only newly collected cases that
 have never been inspected or used for tuning.
 
+Model-selection experiments can additionally assign the combined development
+corpus to deterministic, size-balanced folds. Complete site families remain in
+one fold so cross-validation cannot learn and evaluate the same template.
+
 Evaluate the current model on the regression suite:
 
 ```bash
