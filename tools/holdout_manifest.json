@@ -1,0 +1,79 @@
+{
+  "created": "2026-08-30",
+  "teacher": "Mozilla Readability.js",
+  "evaluated": false,
+  "cases": [
+    {
+      "case": "journal_stuffwithstuff_com_2015_09_08_the-hardest-_f71e30e5",
+      "url": "https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/",
+      "language": "en",
+      "category": "technical-blog"
+    },
+    {
+      "case": "docs_python_org_3_tutorial_classes_html",
+      "url": "https://docs.python.org/3/tutorial/classes.html",
+      "language": "en",
+      "category": "documentation-code"
+    },
+    {
+      "case": "ciechanow_ski_gears",
+      "url": "https://ciechanow.ski/gears/",
+      "language": "en",
+      "category": "technical-explainer-images"
+    },
+    {
+      "case": "www_propublica_org_article_false-rape-accusations-_56778360",
+      "url": "https://www.propublica.org/article/false-rape-accusations-an-unbelievable-story",
+      "language": "en",
+      "category": "investigative-news"
+    },
+    {
+      "case": "www_publickey1_jp_blog_17_angular_ng-japan_2017_1_html",
+      "url": "https://www.publickey1.jp/blog/17/angular_ng-japan_2017_1.html",
+      "language": "ja",
+      "category": "technical-editorial"
+    },
+    {
+      "case": "www_tohoho-web_com_python_class_html",
+      "url": "https://www.tohoho-web.com/python/class.html",
+      "language": "ja",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "www_nippon_com_ja_japan-topics_g02623",
+      "url": "https://www.nippon.com/ja/japan-topics/g02623/",
+      "language": "ja",
+      "category": "news-editorial"
+    },
+    {
+      "case": "techis_jp_guide_html_default",
+      "url": "https://techis.jp/guide/html/default",
+      "language": "ja",
+      "category": "tutorial-code-media"
+    },
+    {
+      "case": "es_javascript_info_async-await",
+      "url": "https://es.javascript.info/async-await",
+      "language": "es",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "www_freecodecamp_org_portuguese_news_escrevi-uma-l_72e2df28",
+      "url": "https://www.freecodecamp.org/portuguese/news/escrevi-uma-linguagem-de-programacao-e-voce-tambem-pode/",
+      "language": "pt",
+      "category": "tutorial-code"
+    },
+    {
+      "case": "www_ruanyifeng_com_blog_2015_09_web-page-performan_c718cb91",
+      "url": "https://www.ruanyifeng.com/blog/2015/09/web-page-performance-in-depth.html",
+      "language": "zh",
+      "category": "technical-blog"
+    },
+    {
+      "case": "docs_djangoproject_com_ko_5_2_intro_tutorial01",
+      "url": "https://docs.djangoproject.com/ko/5.2/intro/tutorial01/",
+      "language": "ko",
+      "category": "documentation-code"
+    }
+  ]
+}

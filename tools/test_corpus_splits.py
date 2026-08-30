@@ -1,3 +1,4 @@
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -18,10 +19,16 @@ class CorpusSplitsTest(unittest.TestCase):
             if not path.stem.endswith(".expected")
         }
         assigned = {case: corpus_split(case) for case in cases}
-        self.assertEqual(set(assigned.values()), {"train", "validation", "regression"})
+        self.assertEqual(
+            set(assigned.values()), {"train", "validation", "regression", "holdout"}
+        )
         self.assertEqual(
             {case for case, split in assigned.items() if split == "regression"},
             REGRESSION_CASES,
+        )
+        self.assertEqual(
+            {case for case, split in assigned.items() if split == "holdout"},
+            HOLDOUT_CASES,
         )
 
     def test_protected_sets_do_not_overlap(self):
@@ -39,6 +46,20 @@ class CorpusSplitsTest(unittest.TestCase):
         self.assertFalse(
             {family: splits for family, splits in family_splits.items() if len(splits) > 1}
         )
+
+    def test_holdout_manifest_is_complete_and_blind(self):
+        manifest = json.loads((Path(__file__).parent / "holdout_manifest.json").read_text())
+        self.assertFalse(manifest["evaluated"])
+        manifest_cases = {entry["case"] for entry in manifest["cases"]}
+        self.assertEqual(manifest_cases, HOLDOUT_CASES)
+        self.assertEqual(len(manifest_cases), 12)
+        self.assertEqual(
+            len({corpus_family(case) for case in manifest_cases}),
+            len(manifest_cases),
+        )
+        for case in manifest_cases:
+            self.assertTrue((CORPUS / f"{case}.html").is_file())
+            self.assertTrue((CORPUS / f"{case}.expected.html").is_file())
 
 
 if __name__ == "__main__":

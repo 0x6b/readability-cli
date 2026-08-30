@@ -1,7 +1,9 @@
 """Deterministic corpus partitions with explicitly protected evaluation cases."""
 
 import hashlib
+import json
 import re
+from pathlib import Path
 
 
 SPLITS = ("train", "validation", "regression", "holdout")
@@ -34,9 +36,13 @@ REGRESSION_CASES = frozenset(
     }
 )
 
-# Add only newly collected, never-inspected cases here. Once evaluated, move a
-# case to REGRESSION_CASES so subsequent tuning cannot reuse it as a holdout.
-HOLDOUT_CASES = frozenset()
+# The manifest records provenance without requiring anyone to inspect extractor
+# output. Once evaluated, move its cases to REGRESSION_CASES and replace it with
+# a newly collected manifest.
+HOLDOUT_MANIFEST = json.loads(
+    (Path(__file__).parent / "holdout_manifest.json").read_text(encoding="utf-8")
+)
+HOLDOUT_CASES = frozenset(entry["case"] for entry in HOLDOUT_MANIFEST["cases"])
 
 # Keep variants from the same site or fixture family in one split. This avoids
 # learning a site's template in one split and measuring it in another.
