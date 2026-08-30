@@ -161,6 +161,11 @@ fn mark_for_removal(
 
         // Check for negative keywords in class/id
         if let Some(attrs) = arena.get_attributes(node_id) {
+            if tag == TagId::Aside && attrs.contains_keyword(&["feedback"]) {
+                remove_set.insert(node_id);
+                return;
+            }
+
             if attrs.contains_keyword(&["mwe-math", "mathml"]) {
                 remove_set.insert(node_id);
                 return;
@@ -638,6 +643,22 @@ mod tests {
         let html = to_html(&cleaned);
         assert!(!html.contains("Navigation"));
         assert!(html.contains("Article content"));
+    }
+
+    #[test]
+    fn test_cleanup_removes_feedback_aside() {
+        let html = r#"
+        <html><body><article>
+            <p>Article content</p>
+            <aside class="v-space feedback"><p>Your feedback helps improve our stories.</p></aside>
+        </article></body></html>
+        "#;
+        let arena = parse_html(html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let html = to_html(&cleaned);
+
+        assert!(html.contains("Article content"));
+        assert!(!html.contains("Your feedback"));
     }
 
     #[test]
