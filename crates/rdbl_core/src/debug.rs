@@ -26,7 +26,7 @@ pub struct CandidateDebug {
     pub logit: f32,
     /// Key feature summary
     pub features: FeatureSummary,
-    /// Raw 64-element feature vector for training
+    /// Raw feature vector for training
     pub feature_vector: Vec<f32>,
     /// Extracted text content (for training label comparison)
     pub text: String,
@@ -63,10 +63,16 @@ pub struct FeatureSummary {
 pub fn build_debug_info(candidates: &[Candidate], arena: &Arena) -> DebugInfo {
     // Sort by score descending
     let mut sorted: Vec<&Candidate> = candidates.iter().collect();
-    sorted.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
-    let all: Vec<CandidateDebug> =
-        sorted.into_iter().map(|c| build_candidate_debug(c, arena)).collect();
+    let all: Vec<CandidateDebug> = sorted
+        .into_iter()
+        .map(|c| build_candidate_debug(c, arena))
+        .collect();
 
     DebugInfo { candidates: all }
 }
@@ -102,25 +108,14 @@ fn build_node_path(arena: &Arena, node_id: NodeId) -> String {
                 if let Some(attrs) = arena.get_attributes(id) {
                     if let Some(ref id_attr) = attrs.id {
                         part.push('#');
-                        // Truncate long ids
-                        if id_attr.len() > 20 {
-                            part.push_str(&id_attr[..20]);
-                            part.push_str("...");
-                        } else {
-                            part.push_str(id_attr);
-                        }
+                        push_snippet(&mut part, id_attr);
                     }
 
                     if let Some(ref class) = attrs.class {
                         // Take first class only
                         if let Some(first_class) = class.split_whitespace().next() {
                             part.push('.');
-                            if first_class.len() > 20 {
-                                part.push_str(&first_class[..20]);
-                                part.push_str("...");
-                            } else {
-                                part.push_str(first_class);
-                            }
+                            push_snippet(&mut part, first_class);
                         }
                     }
                 }
@@ -143,6 +138,14 @@ fn build_node_path(arena: &Arena, node_id: NodeId) -> String {
         format!("{} > ... > {}", start.join(" > "), end.join(" > "))
     } else {
         parts.join(" > ")
+    }
+}
+
+fn push_snippet(output: &mut String, value: &str) {
+    let mut chars = value.chars();
+    output.extend(chars.by_ref().take(20));
+    if chars.next().is_some() {
+        output.push_str("...");
     }
 }
 
@@ -213,5 +216,24 @@ mod tests {
         assert!(path.contains("article"));
         assert!(path.contains("div#main.content"));
         assert!(path.contains("body"));
+    }
+
+    #[test]
+    fn test_build_node_path_truncates_unicode_at_character_boundary() {
+        use crate::dom::{Arena, Node};
+
+        let mut arena = Arena::new();
+        let div = arena.add_node(Node::element(TagId::Div, None));
+        arena.set_attributes(
+            div,
+            crate::dom::Attributes {
+                id: Some("これは二十文字を超える日本語の識別子です".to_string()),
+                class: Some("これは二十文字を超える日本語のクラス名です".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let path = build_node_path(&arena, div);
+        assert!(path.contains("..."));
     }
 }
