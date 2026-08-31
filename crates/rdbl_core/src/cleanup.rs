@@ -454,6 +454,8 @@ fn build_cleaned_node(
                 children.push(cleaned);
             }
 
+            deduplicate_adjacent_text_blocks(&mut children);
+
             // Check if this tag is allowed
             if allowed.contains(tag) {
                 let attrs = build_cleaned_attrs(arena, node_id, *tag);
@@ -487,6 +489,7 @@ fn build_cleaned_node(
                     children.push(cleaned);
                 }
             }
+            deduplicate_adjacent_text_blocks(&mut children);
             CleanedNode {
                 kind: CleanedNodeKind::Element { tag: TagId::Div, attrs: CleanedAttrs::default() },
                 children,
@@ -497,6 +500,61 @@ fn build_cleaned_node(
             kind: CleanedNodeKind::Text(String::new()),
             children: Vec::new(),
         },
+    }
+}
+
+fn deduplicate_adjacent_text_blocks(children: &mut Vec<CleanedNode>) {
+    let mut deduplicated = Vec::with_capacity(children.len());
+    for child in children.drain(..) {
+        let duplicate = deduplicated
+            .last()
+            .is_some_and(|previous| same_substantive_text_block(previous, &child));
+        if !duplicate {
+            deduplicated.push(child);
+        }
+    }
+    *children = deduplicated;
+}
+
+fn same_substantive_text_block(left: &CleanedNode, right: &CleanedNode) -> bool {
+    const TEXT_BLOCKS: &[TagId] = &[
+        TagId::P,
+        TagId::H1,
+        TagId::H2,
+        TagId::H3,
+        TagId::H4,
+        TagId::H5,
+        TagId::H6,
+        TagId::Blockquote,
+    ];
+
+    let CleanedNodeKind::Element { tag: left_tag, .. } = left.kind else {
+        return false;
+    };
+    let CleanedNodeKind::Element { tag: right_tag, .. } = right.kind else {
+        return false;
+    };
+    if !TEXT_BLOCKS.contains(&left_tag) || !TEXT_BLOCKS.contains(&right_tag) {
+        return false;
+    }
+
+    let left_text = cleaned_text(left);
+    left_text.chars().count() >= 120 && left_text == cleaned_text(right)
+}
+
+fn cleaned_text(node: &CleanedNode) -> String {
+    let mut text = String::new();
+    collect_cleaned_text(node, &mut text);
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn collect_cleaned_text(node: &CleanedNode, output: &mut String) {
+    if let CleanedNodeKind::Text(text) = &node.kind {
+        output.push_str(text);
+        output.push(' ');
+    }
+    for child in &node.children {
+        collect_cleaned_text(child, output);
     }
 }
 
@@ -710,6 +768,30 @@ mod tests {
         assert!(html.contains("<pre>"));
         assert!(html.contains("<code>"));
         assert!(html.contains("fn main()"));
+    }
+
+    #[test]
+    fn test_cleanup_removes_adjacent_duplicate_responsive_text() {
+        let repeated = "A long acknowledgement paragraph that is rendered once for desktop and once for mobile. It contains enough substantive text to avoid treating short repeated labels as duplicates.";
+        let html = format!(
+            "<html><body><article><h6>{repeated}</h6><p>{repeated}</p><p>Next paragraph.</p></article></body></html>"
+        );
+        let arena = parse_html(&html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let text = crate::serialize::to_text(&cleaned);
+
+        assert_eq!(text.matches("A long acknowledgement").count(), 1);
+        assert!(text.contains("Next paragraph."));
+    }
+
+    #[test]
+    fn test_cleanup_preserves_adjacent_short_refrain() {
+        let html = "<html><body><article><p>Never again.</p><p>Never again.</p></article></body></html>";
+        let arena = parse_html(html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let text = crate::serialize::to_text(&cleaned);
+
+        assert_eq!(text.matches("Never again.").count(), 2);
     }
 
     #[test]
