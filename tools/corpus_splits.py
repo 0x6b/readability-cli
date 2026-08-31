@@ -42,6 +42,14 @@ REGRESSION_MANIFEST = json.loads(
     )
 )
 REGRESSION_CASES |= frozenset(entry["case"] for entry in REGRESSION_MANIFEST["cases"])
+EXTERNAL_REGRESSION_MANIFEST = json.loads(
+    (Path(__file__).parent / "external_regression_manifest_2026-08-31.json").read_text(
+        encoding="utf-8"
+    )
+)
+REGRESSION_CASES |= frozenset(
+    entry["case"] for entry in EXTERNAL_REGRESSION_MANIFEST["cases"]
+)
 
 # The active manifest contains only never-evaluated cases. Consumed cohorts are
 # archived above and become regression fixtures before model development resumes.

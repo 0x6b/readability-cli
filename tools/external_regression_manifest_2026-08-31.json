@@ -1,0 +1,396 @@
+{
+  "created": "2026-08-31",
+  "teacher": "human-annotated main article text",
+  "evaluated": true,
+  "evaluation": {
+    "date": "2026-08-31",
+    "cohort_commit": "fd5a682",
+    "extractor_commit": "fd5a682",
+    "total": 50,
+    "family_text_f1": 0.8857441200284252,
+    "macro_text_f1": 0.8857441200284252,
+    "macro_precision": 0.8515959009989814,
+    "macro_recall": 0.9481300952742966,
+    "median_text_f1": 0.9449275530286623,
+    "high": 46,
+    "medium": 2,
+    "low": 2,
+    "failures": 0,
+    "missing_expected": 0,
+    "decision": "consumed-as-regression"
+  },
+  "selection": {
+    "seed": "readability-cli-blind-holdout-v1",
+    "cases_per_dataset": 25,
+    "one_case_per_normalized_host": true,
+    "excludes_consumed_case_ids_and_hosts": true,
+    "consumed_manifests": [
+      "dragnet_manifest.json",
+      "scrapinghub_manifest.json"
+    ]
+  },
+  "sources": {
+    "dragnet": {
+      "repository": "https://github.com/dragnet-org/dragnet_data",
+      "commit": "5d97da4c3c5cf775fa02794b84d31786b8d51d3a",
+      "license": "CC-BY-4.0"
+    },
+    "scrapinghub": {
+      "repository": "https://github.com/scrapinghub/article-extraction-benchmark",
+      "commit": "11b407d43934becc20873bb3dcd5e3d2591746d3",
+      "license": "MIT (publisher content may retain third-party rights)"
+    }
+  },
+  "cases": [
+    {
+      "case": "dragnet_9e8c0002-b78c-3c8b-aff3-216c05f85c9c",
+      "dataset": "dragnet",
+      "id": "9e8c0002-b78c-3c8b-aff3-216c05f85c9c",
+      "url": "https://seekingalpha.com/article/4349458-raise-your-bets-on-xiaomi",
+      "host": "seekingalpha.com"
+    },
+    {
+      "case": "dragnet_5e373fef-1e3e-373b-9b5b-a24c4c52f40d",
+      "dataset": "dragnet",
+      "id": "5e373fef-1e3e-373b-9b5b-a24c4c52f40d",
+      "url": "https://designyoutrust.com/2020/07/drag-queen-from-manchester-is-so-good-at-makeup-he-can-turn-into-literally-any-person/",
+      "host": "designyoutrust.com"
+    },
+    {
+      "case": "dragnet_89ea2f31-16f9-3bb2-8147-2057e3afa3e8",
+      "dataset": "dragnet",
+      "id": "89ea2f31-16f9-3bb2-8147-2057e3afa3e8",
+      "url": "https://www.dw.com/en/belarus-lukashenko-accuses-russian-mercenaries-critics-of-plotting-attack/a-54398681",
+      "host": "dw.com"
+    },
+    {
+      "case": "dragnet_7b9ebf60-94bc-3995-a880-326bd8589cd9",
+      "dataset": "dragnet",
+      "id": "7b9ebf60-94bc-3995-a880-326bd8589cd9",
+      "url": "https://www.mensjournal.com/food-drink/3-breakfast-recipes-on-the-road/",
+      "host": "mensjournal.com"
+    },
+    {
+      "case": "dragnet_8e9a1023-0434-38a2-8c10-dc982363843f",
+      "dataset": "dragnet",
+      "id": "8e9a1023-0434-38a2-8c10-dc982363843f",
+      "url": "https://en.trend.az/azerbaijan/politics/3243531.html",
+      "host": "en.trend.az"
+    },
+    {
+      "case": "dragnet_7dd56e93-a181-3ebd-81a0-46c65ffbec3f",
+      "dataset": "dragnet",
+      "id": "7dd56e93-a181-3ebd-81a0-46c65ffbec3f",
+      "url": "https://www.refinery29.com/en-us/2020/05/9832503/gigi-hadid-pregnancy-cheek-fillers-rumor-instagram",
+      "host": "refinery29.com"
+    },
+    {
+      "case": "dragnet_4eb459ee-b136-3d83-8a18-5610cb5c32dc",
+      "dataset": "dragnet",
+      "id": "4eb459ee-b136-3d83-8a18-5610cb5c32dc",
+      "url": "https://www.thisiscolossal.com/2020/05/hydroponic-terraplanter/",
+      "host": "thisiscolossal.com"
+    },
+    {
+      "case": "dragnet_17aa1d63-af34-337a-8d4c-d8a279b537be",
+      "dataset": "dragnet",
+      "id": "17aa1d63-af34-337a-8d4c-d8a279b537be",
+      "url": "https://www.washingtonpost.com/politics/courts_law/ruth-bader-ginsburg-liver-cancer/2020/07/17/9742a598-c847-11ea-8ffe-372be8d82298_story.html",
+      "host": "washingtonpost.com"
+    },
+    {
+      "case": "dragnet_8a0af675-25d1-3a98-947f-41b4c30438f1",
+      "dataset": "dragnet",
+      "id": "8a0af675-25d1-3a98-947f-41b4c30438f1",
+      "url": "https://www.buzzfeed.com/albertonardelli/coronavirus-deaths-sweden-denmark",
+      "host": "buzzfeed.com"
+    },
+    {
+      "case": "dragnet_8f784a18-ca36-3b81-ba75-84bca1740355",
+      "dataset": "dragnet",
+      "id": "8f784a18-ca36-3b81-ba75-84bca1740355",
+      "url": "https://www.businessoffashion.com/articles/professional/boflive-taking-stock-of-the-ma-market-2",
+      "host": "businessoffashion.com"
+    },
+    {
+      "case": "dragnet_06b7f020-fd9e-3ef1-9c46-0c66949d7d56",
+      "dataset": "dragnet",
+      "id": "06b7f020-fd9e-3ef1-9c46-0c66949d7d56",
+      "url": "https://smallbiztrends.com/2020/05/biz2credit-lending-index-april-2020.html",
+      "host": "smallbiztrends.com"
+    },
+    {
+      "case": "dragnet_3f3de5a0-24e2-3049-b862-68e672ee4107",
+      "dataset": "dragnet",
+      "id": "3f3de5a0-24e2-3049-b862-68e672ee4107",
+      "url": "https://www.eldiario.es/politica/Bildu-satisfecho-matizaciones-Gobierno-acuerdo_0_1029597098.html",
+      "host": "eldiario.es"
+    },
+    {
+      "case": "dragnet_5de0ae98-78da-3898-93d3-744d9089a7a1",
+      "dataset": "dragnet",
+      "id": "5de0ae98-78da-3898-93d3-744d9089a7a1",
+      "url": "https://www.health.harvard.edu/blog/platelet-rich-plasma-does-the-cure-for-hair-loss-lie-within-our-blood-2020051119748",
+      "host": "health.harvard.edu"
+    },
+    {
+      "case": "dragnet_5c040f20-9265-36ee-8eb7-e8969cacd614",
+      "dataset": "dragnet",
+      "id": "5c040f20-9265-36ee-8eb7-e8969cacd614",
+      "url": "https://www.cnn.com/2020/05/21/tech/facebook-work-from-home-mark-zuckerberg/index.html",
+      "host": "cnn.com"
+    },
+    {
+      "case": "dragnet_3ea00381-a191-3f50-b9a1-61fecea52810",
+      "dataset": "dragnet",
+      "id": "3ea00381-a191-3f50-b9a1-61fecea52810",
+      "url": "https://www.telegraph.co.uk/news/2020/05/21/superdrug-coronavirus-antibody-test",
+      "host": "telegraph.co.uk"
+    },
+    {
+      "case": "dragnet_0c2dd1d2-9681-3c60-b94f-4a7e4e8b4c93",
+      "dataset": "dragnet",
+      "id": "0c2dd1d2-9681-3c60-b94f-4a7e4e8b4c93",
+      "url": "https://www.scientificamerican.com/podcast/episode/no-no-nobel-how-to-lose-the-prize/",
+      "host": "scientificamerican.com"
+    },
+    {
+      "case": "dragnet_7f756ebf-239f-3b91-b4c4-942899da2740",
+      "dataset": "dragnet",
+      "id": "7f756ebf-239f-3b91-b4c4-942899da2740",
+      "url": "https://sulonorth.com/finland-rinne-government-trouble/",
+      "host": "sulonorth.com"
+    },
+    {
+      "case": "dragnet_8de61560-50a4-3e02-964c-bcd66121719b",
+      "dataset": "dragnet",
+      "id": "8de61560-50a4-3e02-964c-bcd66121719b",
+      "url": "https://www.entrepreneur.com/article/350887",
+      "host": "entrepreneur.com"
+    },
+    {
+      "case": "dragnet_e3d31ce4-6ae0-3334-89e8-36e9a4699bd9",
+      "dataset": "dragnet",
+      "id": "e3d31ce4-6ae0-3334-89e8-36e9a4699bd9",
+      "url": "https://abcnews.go.com/US/wireStory/dead-19-wounded-weekend-chicago-shootings-72133468",
+      "host": "abcnews.go.com"
+    },
+    {
+      "case": "dragnet_1ff016b5-183b-3d36-b9ce-140e1be7899d",
+      "dataset": "dragnet",
+      "id": "1ff016b5-183b-3d36-b9ce-140e1be7899d",
+      "url": "https://www.dailymail.co.uk/home/you/article-7011257/TV-CHEF-PHIL-VICKERYS-FAMILY-FEASTS-Banana-pine-nut-flapjacks.html",
+      "host": "dailymail.co.uk"
+    },
+    {
+      "case": "dragnet_7f6e07a9-be79-36e3-a6d8-460d47c1af80",
+      "dataset": "dragnet",
+      "id": "7f6e07a9-be79-36e3-a6d8-460d47c1af80",
+      "url": "https://goodmenproject.com/featured-content/nurturing-optimism-in-a-time-of-crisis-kpkn",
+      "host": "goodmenproject.com"
+    },
+    {
+      "case": "dragnet_d8ff6b77-5e6b-3b7e-92df-3d15c4da56e7",
+      "dataset": "dragnet",
+      "id": "d8ff6b77-5e6b-3b7e-92df-3d15c4da56e7",
+      "url": "https://wattsupwiththat.com/2020/07/31/surprise-aussie-bushfire-climate-change-outrage-pivots-into-an-activist-demand-for-cash/",
+      "host": "wattsupwiththat.com"
+    },
+    {
+      "case": "dragnet_cc26d738-84f0-311d-8642-c6162ed76a78",
+      "dataset": "dragnet",
+      "id": "cc26d738-84f0-311d-8642-c6162ed76a78",
+      "url": "https://blogs.microsoft.com/blog/2020/07/21/microsoft-inspire-2020-empowering-partners-to-make-more-possible/",
+      "host": "blogs.microsoft.com"
+    },
+    {
+      "case": "dragnet_30d5e051-baad-37fc-bb8e-d4469779d09e",
+      "dataset": "dragnet",
+      "id": "30d5e051-baad-37fc-bb8e-d4469779d09e",
+      "url": "http://thepointsguy.com/news/grubhub-rewards/",
+      "host": "thepointsguy.com"
+    },
+    {
+      "case": "dragnet_e66ac1c3-f2cc-3504-a85a-b2d4be5eb69e",
+      "dataset": "dragnet",
+      "id": "e66ac1c3-f2cc-3504-a85a-b2d4be5eb69e",
+      "url": "https://www.npr.org/sections/coronavirus-live-updates/2020/07/19/892817304/global-coronavirus-deaths-surpass-600-000-with-u-s-accounting-for-nearly-a-quart",
+      "host": "npr.org"
+    },
+    {
+      "case": "scrapinghub_c90731f051d033e49e4cfcc920895051bbc3b54ef1a11519abcf22a115c3aa79",
+      "dataset": "scrapinghub",
+      "id": "c90731f051d033e49e4cfcc920895051bbc3b54ef1a11519abcf22a115c3aa79",
+      "url": "https://www.deccanherald.com/international/impeachment-sham-completely-debunked-white-house-777897.html",
+      "host": "deccanherald.com"
+    },
+    {
+      "case": "scrapinghub_cc03ddb5ef7d5f1fdb8a87f5e6dfd058a2a70acedf2551655a898dc5c18eb79e",
+      "dataset": "scrapinghub",
+      "id": "cc03ddb5ef7d5f1fdb8a87f5e6dfd058a2a70acedf2551655a898dc5c18eb79e",
+      "url": "http://www.autoracing.com.br/calendario-stock-car-2018/",
+      "host": "autoracing.com.br"
+    },
+    {
+      "case": "scrapinghub_e7d77f1869803e24667fa0b985cff27fb4139951a5ffa494bc9ba810df48fb30",
+      "dataset": "scrapinghub",
+      "id": "e7d77f1869803e24667fa0b985cff27fb4139951a5ffa494bc9ba810df48fb30",
+      "url": "https://bgr.com/2019/11/19/apple-black-friday-2019-deals-best-available-now/",
+      "host": "bgr.com"
+    },
+    {
+      "case": "scrapinghub_e1c7023ee2148901b086256fdd30a0893d10b0720b510d5ff07a021109347266",
+      "dataset": "scrapinghub",
+      "id": "e1c7023ee2148901b086256fdd30a0893d10b0720b510d5ff07a021109347266",
+      "url": "https://phys.org/news/2019-11-hibernating-astronauts-smaller-spacecraft.html",
+      "host": "phys.org"
+    },
+    {
+      "case": "scrapinghub_ac3c035520461017a7c5b248d8e39ef063cad4c0c7d7b7ecd68aff8f15099485",
+      "dataset": "scrapinghub",
+      "id": "ac3c035520461017a7c5b248d8e39ef063cad4c0c7d7b7ecd68aff8f15099485",
+      "url": "https://blog.givewell.org/2018/09/10/september-2018-open-thread/#comment-949890",
+      "host": "blog.givewell.org"
+    },
+    {
+      "case": "scrapinghub_2f42ef1d3ea0c96e56355d3db93d0e06b47e760b74f6f4261278b8cd1c246dd6",
+      "dataset": "scrapinghub",
+      "id": "2f42ef1d3ea0c96e56355d3db93d0e06b47e760b74f6f4261278b8cd1c246dd6",
+      "url": "https://www.wired.com/story/the-future-of-banking-is-youre-broke/",
+      "host": "wired.com"
+    },
+    {
+      "case": "scrapinghub_35b158918c676ff2c74445517db76c83db70a805cc50b64e1369b354a027fcbd",
+      "dataset": "scrapinghub",
+      "id": "35b158918c676ff2c74445517db76c83db70a805cc50b64e1369b354a027fcbd",
+      "url": "https://www.cleveland.com/entertainment/2019/11/doobie-brothers-to-reunite-with-michael-mcdonald-for-blossom-show.html",
+      "host": "cleveland.com"
+    },
+    {
+      "case": "scrapinghub_f5c90a6d5253c3a21ff3168c64bea4b5ffade7a1ba5bed952a59ebee0d648d98",
+      "dataset": "scrapinghub",
+      "id": "f5c90a6d5253c3a21ff3168c64bea4b5ffade7a1ba5bed952a59ebee0d648d98",
+      "url": "https://www.nationalreview.com/2019/11/trump-impeachment-inquiry-adam-schiff-working-against-the-clock/",
+      "host": "nationalreview.com"
+    },
+    {
+      "case": "scrapinghub_3c6d3381ef52ca26be2fbde19c1b0fe17d85682b726dfecf5e300c1ca34546b1",
+      "dataset": "scrapinghub",
+      "id": "3c6d3381ef52ca26be2fbde19c1b0fe17d85682b726dfecf5e300c1ca34546b1",
+      "url": "http://www.wday.ru/articles/mastera-vkusa-i-krasotyi-23-samyih-krutyih-fudblogera-po-versii-wday-ru-id119898",
+      "host": "wday.ru"
+    },
+    {
+      "case": "scrapinghub_961bd85ca85aaf791b278cc4a60058e92d57c4f32a3411cf8e7d802af183c926",
+      "dataset": "scrapinghub",
+      "id": "961bd85ca85aaf791b278cc4a60058e92d57c4f32a3411cf8e7d802af183c926",
+      "url": "http://www.therepublic.com/2019/11/20/cpd_arrests_six_in_drug_investigation/",
+      "host": "therepublic.com"
+    },
+    {
+      "case": "scrapinghub_aec5deeaada8b2fb81b55349da0229d5c77a4dc9605c1aaa31e5ce8b71358bc9",
+      "dataset": "scrapinghub",
+      "id": "aec5deeaada8b2fb81b55349da0229d5c77a4dc9605c1aaa31e5ce8b71358bc9",
+      "url": "https://www.sfgate.com/news/article/7-key-questions-heading-into-Wednesday-s-14848176.php",
+      "host": "sfgate.com"
+    },
+    {
+      "case": "scrapinghub_8b194530308204139d9c8f7d495a26b117c78756ac1802cfc3c0a8bfdf2c0d50",
+      "dataset": "scrapinghub",
+      "id": "8b194530308204139d9c8f7d495a26b117c78756ac1802cfc3c0a8bfdf2c0d50",
+      "url": "https://www.thesun.co.uk/news/10371941/hunter-diagnosed-bubonic-plague-eating-rabbit-third-beijing-local-contract-medieval-disease/",
+      "host": "thesun.co.uk"
+    },
+    {
+      "case": "scrapinghub_3cb22bfabed8de715c0813a7bb5052363c96bd71ccce3bb2dfb3ab9d1d7a9bbc",
+      "dataset": "scrapinghub",
+      "id": "3cb22bfabed8de715c0813a7bb5052363c96bd71ccce3bb2dfb3ab9d1d7a9bbc",
+      "url": "https://www.slashgear.com/2020-audi-e-tron-sportback-revealed-as-electric-4-door-coupe-19600369/",
+      "host": "slashgear.com"
+    },
+    {
+      "case": "scrapinghub_3cb5e2f46626d5bb0345759453036f7eabc0b0c7796b796513606bf693060ced",
+      "dataset": "scrapinghub",
+      "id": "3cb5e2f46626d5bb0345759453036f7eabc0b0c7796b796513606bf693060ced",
+      "url": "https://www.autoindustriya.com/auto-industry-news/all-new-2020-sentra-is-what-we-really-want-from-nissan-ph.html",
+      "host": "autoindustriya.com"
+    },
+    {
+      "case": "scrapinghub_0d46122928b6f468cc4bbc694051d0dbae5702bc75a16dab82a99b58daf150a0",
+      "dataset": "scrapinghub",
+      "id": "0d46122928b6f468cc4bbc694051d0dbae5702bc75a16dab82a99b58daf150a0",
+      "url": "https://www.sportsnet.ca/tennis/argentina-comfortably-wins-davis-cup-opener-chile/",
+      "host": "sportsnet.ca"
+    },
+    {
+      "case": "scrapinghub_63db31a161b3c5b64e88c2978635cbc38d342ba82fd2c5335321203dcc55c76f",
+      "dataset": "scrapinghub",
+      "id": "63db31a161b3c5b64e88c2978635cbc38d342ba82fd2c5335321203dcc55c76f",
+      "url": "https://www.vg247.com/2019/11/20/star-wars-jedi-fallen-order-pc-review/",
+      "host": "vg247.com"
+    },
+    {
+      "case": "scrapinghub_076f4f33bf75059db581bedf36e76fb65e89a8f7752db3339aa3ea11c5122f32",
+      "dataset": "scrapinghub",
+      "id": "076f4f33bf75059db581bedf36e76fb65e89a8f7752db3339aa3ea11c5122f32",
+      "url": "https://www.newsnation.in/fact-check/news/fact-check-is-an-oxygen-bar-in-delhi-offering-fresh-air-for-rs-300-244592.html",
+      "host": "newsnation.in"
+    },
+    {
+      "case": "scrapinghub_3d8f3404cf975af824d7866b7679bc45189c3eea6adb32f0a125a0904b1abbb2",
+      "dataset": "scrapinghub",
+      "id": "3d8f3404cf975af824d7866b7679bc45189c3eea6adb32f0a125a0904b1abbb2",
+      "url": "https://www.indiewire.com/2019/11/mary-steenburgen-jessie-buckley-wild-rose-glasgow-best-original-song-1202189233/",
+      "host": "indiewire.com"
+    },
+    {
+      "case": "scrapinghub_7837c9d66c815b9a21dd669a3dc21677c3f084b1b7dd603d56e87867d8970dd3",
+      "dataset": "scrapinghub",
+      "id": "7837c9d66c815b9a21dd669a3dc21677c3f084b1b7dd603d56e87867d8970dd3",
+      "url": "https://kabarislamia.com/2015/10/27/sejarah-pecahnya-islam-jadi-sunni-dan-syiah/",
+      "host": "kabarislamia.com"
+    },
+    {
+      "case": "scrapinghub_51374560f40088e227f0053ff1bb0b8525d10a8d7bfbff1cd6033f42347fd85b",
+      "dataset": "scrapinghub",
+      "id": "51374560f40088e227f0053ff1bb0b8525d10a8d7bfbff1cd6033f42347fd85b",
+      "url": "https://www.foxbusiness.com/markets/home-depot-sales-earnings-retail",
+      "host": "foxbusiness.com"
+    },
+    {
+      "case": "scrapinghub_ff0f958ade714ebfaf5c0b42b1c0152a62063f4e6f72141406ccefc4a2677f21",
+      "dataset": "scrapinghub",
+      "id": "ff0f958ade714ebfaf5c0b42b1c0152a62063f4e6f72141406ccefc4a2677f21",
+      "url": "http://vse-diety.com/dieta-atkinsa.html",
+      "host": "vse-diety.com"
+    },
+    {
+      "case": "scrapinghub_e7301133baab43596f19076beab32096f6405b868e0a69bcfc3349e595d62475",
+      "dataset": "scrapinghub",
+      "id": "e7301133baab43596f19076beab32096f6405b868e0a69bcfc3349e595d62475",
+      "url": "http://www.theparadigmng.com/2018/10/09/saraki-melaye-ben-bruce-drag-igp-idris-court-demand-n500m/",
+      "host": "theparadigmng.com"
+    },
+    {
+      "case": "scrapinghub_d0382c0d9573a0a7beb1e649012d04ec7275ac23513ca6ca59e51477b028283c",
+      "dataset": "scrapinghub",
+      "id": "d0382c0d9573a0a7beb1e649012d04ec7275ac23513ca6ca59e51477b028283c",
+      "url": "https://www.timesunion.com/news/us/article/PG-E-begins-new-mass-power-shutoff-over-fire-14848251.php",
+      "host": "timesunion.com"
+    },
+    {
+      "case": "scrapinghub_264dc3ae31249cb1f50c50986e0952a4708c2e705d18a2d8bf0e525da6e2b485",
+      "dataset": "scrapinghub",
+      "id": "264dc3ae31249cb1f50c50986e0952a4708c2e705d18a2d8bf0e525da6e2b485",
+      "url": "https://www.twincities.com/2019/11/19/parise-scores-2-goals-wild-beat-sabres-4-1/",
+      "host": "twincities.com"
+    },
+    {
+      "case": "scrapinghub_9cb8224b660f36c932823ab613fb76a07928fcbc41956c4c1f96f4ecab9202aa",
+      "dataset": "scrapinghub",
+      "id": "9cb8224b660f36c932823ab613fb76a07928fcbc41956c4c1f96f4ecab9202aa",
+      "url": "https://www.billboard.com/articles/news/8544119/doobie-brothers-reunite-50th-anniversary-tour-north-america-2020",
+      "host": "billboard.com"
+    }
+  ]
+}

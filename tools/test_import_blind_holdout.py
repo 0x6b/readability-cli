@@ -9,10 +9,12 @@ from import_blind_holdout import select_cases
 
 
 class ImportBlindHoldoutTest(unittest.TestCase):
-    def test_active_manifest_is_frozen_and_unconsumed(self):
+    def test_consumed_manifest_is_frozen_and_domain_diverse(self):
         tools = Path(__file__).parent
         manifest = json.loads(
-            (tools / "holdout_manifest.json").read_text(encoding="utf-8")
+            (tools / "external_regression_manifest_2026-08-31.json").read_text(
+                encoding="utf-8"
+            )
         )
         consumed = [
             json.loads((tools / name).read_text(encoding="utf-8"))
@@ -26,7 +28,9 @@ class ImportBlindHoldoutTest(unittest.TestCase):
             case["host"] for source in consumed for case in source["cases"]
         }
 
-        self.assertFalse(manifest["evaluated"])
+        self.assertTrue(manifest["evaluated"])
+        self.assertEqual(manifest["evaluation"]["decision"], "consumed-as-regression")
+        self.assertEqual(manifest["evaluation"]["total"], 50)
         self.assertEqual(len(cases), 50)
         self.assertEqual(
             {case["dataset"] for case in cases}, {"dragnet", "scrapinghub"}
@@ -35,6 +39,13 @@ class ImportBlindHoldoutTest(unittest.TestCase):
         self.assertEqual(len({case["host"] for case in cases}), len(cases))
         self.assertTrue({case["id"] for case in cases}.isdisjoint(consumed_ids))
         self.assertTrue({case["host"] for case in cases}.isdisjoint(consumed_hosts))
+
+    def test_active_manifest_is_empty_and_blind(self):
+        manifest = json.loads(
+            Path(__file__).with_name("holdout_manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertFalse(manifest["evaluated"])
+        self.assertEqual(manifest["cases"], [])
 
     def test_selection_is_deterministic_and_excludes_consumed_cases(self):
         records = {

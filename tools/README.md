@@ -159,7 +159,14 @@ uv run evaluate.py --corpus ../tests/external/holdout --split holdout
 
 After the single blind evaluation, record the extractor commit and metrics,
 archive the manifest as consumed regression data, and restore an empty active
-`holdout_manifest.json` before making extraction changes.
+`holdout_manifest.json` before making extraction changes. Re-import and evaluate
+an archived external cohort as regression data by naming its manifest explicitly:
+
+```bash
+uv run import_blind_holdout.py \
+  --manifest external_regression_manifest_2026-08-31.json
+uv run evaluate.py --corpus ../tests/external/holdout --split regression
+```
 
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
