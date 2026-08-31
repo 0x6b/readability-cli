@@ -189,9 +189,11 @@ fn mark_for_removal(
             if attrs.contains_keyword(negative_keywords()) {
                 // Don't remove if also has positive keywords
                 if !attrs.contains_keyword(positive_keywords()) {
+                    let is_titled_gallery_caption = attrs.contains_keyword(&["gallery"])
+                        && (tag.is_heading() || has_heading_descendant(arena, node_id));
                     // Check if this is a significant container - if so, be more careful
                     let text = arena.collect_text(node_id);
-                    if text.chars().count() < 200 {
+                    if text.chars().count() < 200 && !is_titled_gallery_caption {
                         remove_set.insert(node_id);
                         return;
                     }
@@ -758,6 +760,33 @@ mod tests {
         assert!(html.contains("Substantive caption 0"));
         assert!(html.contains("complete account for the reader"));
         assert!(!html.contains("Photo caption 0"));
+    }
+
+    #[test]
+    fn test_cleanup_preserves_short_titled_gallery_captions() {
+        let html = r#"
+        <html><body><article><ul class="gallery">
+            <li><figure>
+                <div class="gallery__caption">
+                    <h2 class="gallery__caption__title">At home</h2>
+                    <p>A short but substantive description of this photograph.</p>
+                </div>
+                <div class="block-share block-share--gallery">Facebook Twitter Pinterest</div>
+            </figure></li>
+        </ul></article></body></html>
+        "#;
+        let arena = parse_html(html);
+        let body_id = arena.find_body().unwrap();
+        let article_id = arena
+            .descendants(body_id)
+            .find(|&id| arena.get(id).and_then(|node| node.tag()) == Some(TagId::Article))
+            .unwrap();
+        let cleaned = cleanup(&arena, article_id, &ExtractOptions::default());
+        let output = to_html(&cleaned);
+
+        assert!(output.contains("<h2>At home</h2>"));
+        assert!(output.contains("A short but substantive description"));
+        assert!(!output.contains("Facebook Twitter Pinterest"));
     }
 
     #[test]
