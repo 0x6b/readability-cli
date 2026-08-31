@@ -4,5 +4,6 @@ tools/node_modules/
 tools/__pycache__/
 tools/.venv/
 tools/pnpm-lock.yaml
+tools/*.log
 /tests/corpus/*.html
 tests/external/
