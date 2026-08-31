@@ -9,7 +9,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Internal crates
-rdbl_core = { path = "crates/rdbl_core" }
+rdbl_core = { version = "0.1.0", path = "crates/rdbl_core" }
 
 # HTML parsing
 html5ever = "0.27"
