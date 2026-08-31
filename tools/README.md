@@ -146,6 +146,21 @@ be treated as regression data rather than reported as a fresh holdout. The upstr
 repository is MIT-licensed, but publisher content may retain third-party rights and
 is therefore not committed.
 
+A fresh release holdout can be frozen from unused cases in both human-labeled
+datasets. The deterministic selection excludes every case ID and normalized host
+in the consumed Dragnet and Scrapinghub manifests. Commit the generated active
+manifest before running the extractor, and do not inspect its HTML or gold text:
+
+```bash
+rm tools/holdout_manifest.json
+uv run import_blind_holdout.py --write-manifest
+uv run evaluate.py --corpus ../tests/external/holdout --split holdout
+```
+
+After the single blind evaluation, record the extractor commit and metrics,
+archive the manifest as consumed regression data, and restore an empty active
+`holdout_manifest.json` before making extraction changes.
+
 Use `--split validation` while developing. `--split all` is diagnostic only and
 must not be reported as held-out performance. Evaluate `--split holdout` only
 for a release decision, then move those cases to `REGRESSION_CASES` before any

@@ -23,16 +23,16 @@ class CorpusSplitsTest(unittest.TestCase):
         }
         assigned = {case: corpus_split(case) for case in cases}
         expected_splits = {"train", "validation", "regression"}
-        if HOLDOUT_CASES:
+        if HOLDOUT_CASES & cases:
             expected_splits.add("holdout")
         self.assertEqual(set(assigned.values()), expected_splits)
         self.assertEqual(
             {case for case, split in assigned.items() if split == "regression"},
-            REGRESSION_CASES,
+            REGRESSION_CASES & cases,
         )
         self.assertEqual(
             {case for case, split in assigned.items() if split == "holdout"},
-            HOLDOUT_CASES,
+            HOLDOUT_CASES & cases,
         )
 
     def test_protected_sets_do_not_overlap(self):
@@ -51,11 +51,12 @@ class CorpusSplitsTest(unittest.TestCase):
             {family: splits for family, splits in family_splits.items() if len(splits) > 1}
         )
 
-    def test_active_holdout_manifest_is_empty_and_blind(self):
+    def test_active_holdout_manifest_is_blind(self):
         manifest = json.loads((Path(__file__).parent / "holdout_manifest.json").read_text())
         self.assertFalse(manifest["evaluated"])
-        self.assertEqual(manifest["cases"], [])
-        self.assertEqual(HOLDOUT_CASES, frozenset())
+        self.assertEqual(
+            HOLDOUT_CASES, frozenset(entry["case"] for entry in manifest["cases"])
+        )
 
     def test_consumed_holdout_is_a_diverse_regression_cohort(self):
         manifest = json.loads(
