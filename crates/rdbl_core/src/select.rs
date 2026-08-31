@@ -243,7 +243,7 @@ fn refine_overextracted_once<'a>(
         return best;
     }
 
-    if !is_content_container(best.tag) {
+    if best.tag != TagId::Body && !is_content_container(best.tag) {
         return best;
     }
 
@@ -316,7 +316,7 @@ fn refine_overextracted_once<'a>(
         }
     }
 
-    if matches!(best.tag, TagId::Main | TagId::Div)
+    if matches!(best.tag, TagId::Body | TagId::Main | TagId::Div)
         && (best_cluster < 0.4
             || best_toc > 0.25
             || best_link_density > 0.15
@@ -381,6 +381,7 @@ fn refine_overextracted_once<'a>(
         }
         let attrs = arena.get_attributes(candidate.node_id);
         let class_id = attrs.map(|attrs| attrs.normalized_class_id()).unwrap_or_default();
+        let candidate_tag = arena.get(candidate.node_id).and_then(|node| node.tag());
         let schema_article_body =
             attrs
                 .and_then(|attrs| attrs.itemprop.as_deref())
@@ -389,8 +390,17 @@ fn refine_overextracted_once<'a>(
                         .split_ascii_whitespace()
                         .any(|value| value.eq_ignore_ascii_case("articleBody"))
                 });
+        let schema_text_article = candidate_tag == Some(TagId::Article)
+            && attrs
+                .and_then(|attrs| attrs.itemprop.as_deref())
+                .is_some_and(|itemprop| {
+                    itemprop
+                        .split_ascii_whitespace()
+                        .any(|value| value.eq_ignore_ascii_case("text"))
+                });
         let bem_article_body = class_id.contains("article__body");
         if !schema_article_body
+            && !schema_text_article
             && !class_id.contains("articlebody")
             && !class_id.contains("article-body")
             && !class_id.contains("article_body")
@@ -419,7 +429,7 @@ fn refine_overextracted_once<'a>(
             continue;
         }
 
-        let min_clean_gain = if schema_article_body { 0.05 } else { 0.1 };
+        let min_clean_gain = if schema_article_body || schema_text_article { 0.05 } else { 0.1 };
         let direct_substantive_body = arena
             .get(candidate.node_id)
             .is_some_and(|node| node.parent == Some(best.node_id))
@@ -427,7 +437,12 @@ fn refine_overextracted_once<'a>(
             && candidate.features.get_count(FeatureIndex::LogPCount) >= 10
             && clean_ratio >= 0.85
             && clean_ratio >= best_clean_ratio + 0.03;
-        if !direct_substantive_body
+        let schema_text_boundary = schema_text_article
+            && clean_ratio >= 0.85
+            && toc_like <= 0.1
+            && candidate.features.get(FeatureIndex::LinkDensity) <= 0.2;
+        if !schema_text_boundary
+            && !direct_substantive_body
             && (clean_ratio < 0.9 || clean_ratio < best_clean_ratio + min_clean_gain)
         {
             continue;
@@ -840,12 +855,12 @@ mod tests {
 
         let mut arena = Arena::new();
         let root = arena.add_node(Node::document());
-        let broad_id = arena.add_node(Node::element(TagId::Div, None));
+        let broad_id = arena.add_node(Node::element(TagId::Body, None));
         let article_id = arena.add_node(Node::element(TagId::Article, None));
         arena.append_child(root, broad_id);
         arena.append_child(broad_id, article_id);
 
-        let mut broad = make_candidate(broad_id, TagId::Div, 10.0);
+        let mut broad = make_candidate(broad_id, TagId::Body, 10.0);
         broad.features = FeatureVector::default();
         broad.features.values[FeatureIndex::LogTextLenChars as usize] = 15_001.0_f32.ln();
         broad.features.values[FeatureIndex::TocLike as usize] = 0.17;
@@ -997,6 +1012,46 @@ mod tests {
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
 
         assert_eq!(best.node_id, content_id);
+    }
+
+    #[test]
+    fn test_refines_to_schema_text_article() {
+        use crate::{
+            dom::{Attributes, Node},
+            features::FeatureVector,
+        };
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let broad_id = arena.add_node(Node::element(TagId::Div, None));
+        let article_id = arena.add_node(Node::element(TagId::Article, None));
+        arena.append_child(root, broad_id);
+        arena.append_child(broad_id, article_id);
+        arena.set_attributes(
+            article_id,
+            Attributes {
+                itemprop: Some("text".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let mut broad = make_candidate(broad_id, TagId::Div, 10.0);
+        broad.features = FeatureVector::default();
+        broad.features.values[FeatureIndex::LogTextLenChars as usize] = 17_001.0_f32.ln();
+        broad.features.values[FeatureIndex::TocLike as usize] = 0.75;
+        broad.features.values[FeatureIndex::CleanTextRatio as usize] = 0.78;
+
+        let mut article = make_candidate(article_id, TagId::Article, 5.0);
+        article.features = FeatureVector::default();
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = 12_001.0_f32.ln();
+        article.features.values[FeatureIndex::TocLike as usize] = 0.02;
+        article.features.values[FeatureIndex::CleanTextRatio as usize] = 0.97;
+        article.features.values[FeatureIndex::HasMinParagraphs as usize] = 1.0;
+
+        let candidates = vec![broad, article];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
+        assert_eq!(best.node_id, article_id);
     }
 
     #[test]
