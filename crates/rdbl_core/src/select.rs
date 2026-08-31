@@ -374,6 +374,7 @@ fn refine_overextracted_once<'a>(
         }
     }
 
+    let mut explicit_bodies = Vec::new();
     let mut explicit_body: Option<&Candidate> = None;
     let mut explicit_body_score = f32::NEG_INFINITY;
     for candidate in candidates {
@@ -393,10 +394,12 @@ fn refine_overextracted_once<'a>(
                     .split_ascii_whitespace()
                     .any(|value| value.eq_ignore_ascii_case("articleBody"))
             });
+        let bem_article_body = class_id.contains("article__body");
         if !schema_article_body
             && !class_id.contains("articlebody")
             && !class_id.contains("article-body")
             && !class_id.contains("article_body")
+            && !bem_article_body
         {
             continue;
         }
@@ -405,6 +408,22 @@ fn refine_overextracted_once<'a>(
         let ratio = text_len as f32 / best_text_len.max(1) as f32;
         let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
         let toc_like = candidate.features.get(FeatureIndex::TocLike);
+        if text_len < options.min_text_chars * 2
+            || !(0.1..=0.8).contains(&ratio)
+            || candidate.features.get(FeatureIndex::HasMinParagraphs) < 0.5
+            || toc_like > 0.1
+        {
+            continue;
+        }
+        explicit_bodies.push(candidate);
+
+        // BEM article-body classes commonly repeat for chunks split by ads.
+        // Use them to rejoin fragments, but not as a sole hard boundary: a
+        // single chunk can legitimately be followed by references or notes.
+        if bem_article_body {
+            continue;
+        }
+
         let min_clean_gain = if schema_article_body { 0.05 } else { 0.1 };
         let direct_substantive_body = arena
             .get(candidate.node_id)
@@ -413,12 +432,8 @@ fn refine_overextracted_once<'a>(
             && candidate.features.get_count(FeatureIndex::LogPCount) >= 10
             && clean_ratio >= 0.85
             && clean_ratio >= best_clean_ratio + 0.03;
-        if text_len < options.min_text_chars * 2
-            || !(0.1..=0.8).contains(&ratio)
-            || candidate.features.get(FeatureIndex::HasMinParagraphs) < 0.5
-            || toc_like > 0.1
-            || (!direct_substantive_body
-                && (clean_ratio < 0.9 || clean_ratio < best_clean_ratio + min_clean_gain))
+        if !direct_substantive_body
+            && (clean_ratio < 0.9 || clean_ratio < best_clean_ratio + min_clean_gain)
         {
             continue;
         }
@@ -427,6 +442,36 @@ fn refine_overextracted_once<'a>(
         if score > explicit_body_score {
             explicit_body = Some(candidate);
             explicit_body_score = score;
+        }
+    }
+    if explicit_bodies.len() > 1 {
+        let combined_text_len: usize = explicit_bodies
+            .iter()
+            .map(|candidate| candidate.features.get_count(FeatureIndex::LogTextLenChars))
+            .sum();
+        if best_text_len >= combined_text_len
+            && best_text_len <= combined_text_len * 6 / 5
+            && best_toc <= 0.1
+            && best_link_density <= 0.15
+        {
+            return best;
+        }
+        let fragmented_body_parent = candidates
+            .iter()
+            .filter(|candidate| {
+                let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
+                candidate.node_id != best.node_id
+                    && explicit_bodies
+                        .iter()
+                        .all(|body| is_descendant(arena, body.node_id, candidate.node_id))
+                    && text_len >= combined_text_len
+                    && text_len <= combined_text_len * 6 / 5
+                    && candidate.features.get(FeatureIndex::TocLike) <= 0.1
+                    && candidate.features.get(FeatureIndex::LinkDensity) <= 0.15
+            })
+            .max_by_key(|candidate| arena.ancestors(candidate.node_id).count());
+        if let Some(candidate) = fragmented_body_parent {
+            return candidate;
         }
     }
     if let Some(candidate) = explicit_body {
@@ -991,6 +1036,57 @@ mod tests {
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
 
         assert_eq!(best.node_id, content_id);
+    }
+
+    #[test]
+    fn test_keeps_fragmented_explicit_article_bodies_together() {
+        use crate::{dom::Attributes, dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let broad_id = arena.add_node(Node::element(TagId::Div, None));
+        let chunks_id = arena.add_node(Node::element(TagId::Div, None));
+        let first_id = arena.add_node(Node::element(TagId::Div, None));
+        let second_id = arena.add_node(Node::element(TagId::Div, None));
+        arena.append_child(root, broad_id);
+        arena.append_child(broad_id, chunks_id);
+        arena.append_child(chunks_id, first_id);
+        arena.append_child(chunks_id, second_id);
+        for body_id in [first_id, second_id] {
+            arena.set_attributes(
+                body_id,
+                Attributes {
+                    class: Some("article__body".to_string()),
+                    ..Default::default()
+                },
+            );
+        }
+
+        let mut broad = make_candidate(broad_id, TagId::Div, 10.0);
+        broad.features = FeatureVector::default();
+        broad.features.values[FeatureIndex::LogTextLenChars as usize] = 10_001.0_f32.ln();
+        broad.features.values[FeatureIndex::TocLike as usize] = 0.2;
+        broad.features.values[FeatureIndex::CleanTextRatio as usize] = 0.7;
+
+        let mut chunks = make_candidate(chunks_id, TagId::Div, 4.0);
+        chunks.features = FeatureVector::default();
+        chunks.features.values[FeatureIndex::LogTextLenChars as usize] = 7_001.0_f32.ln();
+        chunks.features.values[FeatureIndex::TocLike as usize] = 0.02;
+        chunks.features.values[FeatureIndex::LinkDensity as usize] = 0.05;
+
+        let mut first = make_candidate(first_id, TagId::Div, 5.0);
+        first.features = FeatureVector::default();
+        first.features.values[FeatureIndex::LogTextLenChars as usize] = 3_501.0_f32.ln();
+        first.features.values[FeatureIndex::CleanTextRatio as usize] = 0.95;
+        first.features.values[FeatureIndex::HasMinParagraphs as usize] = 1.0;
+
+        let mut second = make_candidate(second_id, TagId::Div, 5.0);
+        second.features = first.features.clone();
+
+        let candidates = vec![broad, chunks, first, second];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
+        assert_eq!(best.node_id, chunks_id);
     }
 
     #[test]
