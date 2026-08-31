@@ -156,9 +156,24 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     // Build debug info if requested
     let debug_info = if options.debug { Some(build_debug_info(&candidates, &arena)) } else { None };
 
-    // Get the selected subtree root and find sibling expansions
-    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
-    {
+    let (content_html, text) = render_selected(&arena, selected, options, html_has_body);
+
+    ExtractResult {
+        title,
+        byline,
+        content_html,
+        text,
+        debug: debug_info,
+    }
+}
+
+fn render_selected(
+    arena: &dom::Arena,
+    selected: Option<&candidates::Candidate>,
+    options: &ExtractOptions,
+    html_has_body: bool,
+) -> (String, String) {
+    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected {
         let selected_id = selected_candidate.node_id;
         let selected_text_len = selected_candidate
             .features
@@ -169,7 +184,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         let mut selected_tag = Some(selected_candidate.tag);
 
         if html_has_body && let Some(body_id) = arena.find_body() {
-            let body_features = extract_features(&arena, body_id);
+            let body_features = extract_features(arena, body_id);
             let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
             let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
             let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
@@ -198,7 +213,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         (selected_id, selected_text_len, selected_tag)
     } else if html_has_body {
         if let Some(body_id) = arena.find_body() {
-            let body_features = extract_features(&arena, body_id);
+            let body_features = extract_features(arena, body_id);
             let body_text_len = body_features.get_count(features::FeatureIndex::LogTextLenChars);
             let body_link_density = body_features.get(features::FeatureIndex::LinkDensity);
             let body_toc_like = body_features.get(features::FeatureIndex::TocLike);
@@ -240,10 +255,10 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
             if section_siblings > 1 {
                 Vec::new()
             } else {
-                find_expansion_siblings(&arena, selected_id, selected_text_len)
+                find_expansion_siblings(arena, selected_id, selected_text_len)
             }
         } else {
-            find_expansion_siblings(&arena, selected_id, selected_text_len)
+            find_expansion_siblings(arena, selected_id, selected_text_len)
         };
 
         if siblings.is_empty() {
@@ -272,12 +287,12 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
     };
 
     let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
-        if let Some(highlight_id) = find_highlight_ancestor(&arena, selected_id) {
-            let highlight_features = extract_features(&arena, highlight_id);
+        if let Some(highlight_id) = find_highlight_ancestor(arena, selected_id) {
+            let highlight_features = extract_features(arena, highlight_id);
             let highlight_text_len =
                 highlight_features.get_count(features::FeatureIndex::LogTextLenChars);
             let highlight_siblings =
-                find_expansion_siblings(&arena, highlight_id, highlight_text_len);
+                find_expansion_siblings(arena, highlight_id, highlight_text_len);
 
             let mut all_roots = content_roots;
             let mut expanded = use_sibling_expansion;
@@ -286,7 +301,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
                 if all_roots.contains(&sibling_id) {
                     continue;
                 }
-                if should_include_highlight_sibling(&arena, sibling_id, options.min_text_chars) {
+                if should_include_highlight_sibling(arena, sibling_id, options.min_text_chars) {
                     all_roots.push(sibling_id);
                     expanded = true;
                 }
@@ -305,10 +320,10 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
                     if all_roots.contains(&child_id) {
                         continue;
                     }
-                    if !has_heading_descendant(&arena, child_id) {
+                    if !has_heading_descendant(arena, child_id) {
                         continue;
                     }
-                    if should_include_highlight_sibling(&arena, child_id, options.min_text_chars) {
+                    if should_include_highlight_sibling(arena, child_id, options.min_text_chars) {
                         all_roots.push(child_id);
                         expanded = true;
                     }
@@ -319,7 +334,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
                 all_roots.sort_unstable();
             }
             (all_roots, expanded)
-        } else if let Some(step_modules) = find_step_modules(&arena, selected_id) {
+        } else if let Some(step_modules) = find_step_modules(arena, selected_id) {
             (step_modules, true)
         } else {
             (content_roots, use_sibling_expansion)
@@ -328,13 +343,12 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         (content_roots, use_sibling_expansion)
     };
 
-    // Cleanup and serialize
-    let (content_html, text) = if content_roots.is_empty() {
+    if content_roots.is_empty() {
         (String::new(), String::new())
     } else if content_roots.len() == 1 && !use_sibling_expansion {
         // Single root - standard path
         let root_id = content_roots[0];
-        let cleaned = cleanup::cleanup(&arena, root_id, options);
+        let cleaned = cleanup::cleanup(arena, root_id, options);
         let html = to_html(&cleaned);
         let text = to_text(&cleaned);
         (html, text)
@@ -344,7 +358,7 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         let mut combined_text = String::new();
 
         for root_id in &content_roots {
-            let cleaned = cleanup::cleanup(&arena, *root_id, options);
+            let cleaned = cleanup::cleanup(arena, *root_id, options);
             combined_html.push_str(&to_html(&cleaned));
             combined_html.push('\n');
             combined_text.push_str(&to_text(&cleaned));
@@ -352,14 +366,6 @@ pub fn extract(html: &str, options: &ExtractOptions) -> ExtractResult {
         }
 
         (combined_html, combined_text)
-    };
-
-    ExtractResult {
-        title,
-        byline,
-        content_html,
-        text,
-        debug: debug_info,
     }
 }
 
