@@ -21,6 +21,8 @@ class CorpusSplitsTest(unittest.TestCase):
             for path in CORPUS.glob("*.html")
             if not path.stem.endswith(".expected")
         }
+        if not cases:
+            self.skipTest("local corpus has not been imported")
         assigned = {case: corpus_split(case) for case in cases}
         expected_splits = {"train", "validation", "regression"}
         if HOLDOUT_CASES & cases:
@@ -82,6 +84,10 @@ class CorpusSplitsTest(unittest.TestCase):
         self.assertGreaterEqual(len(language_counts), 30)
         self.assertLessEqual(max(language_counts.values()), len(entries) * 0.4)
 
+        corpus_paths = list(CORPUS.glob("*.html"))
+        if not corpus_paths:
+            return
+
         cohort_paths = set()
         for case in manifest_cases:
             for suffix in (".html", ".expected.html"):
@@ -91,7 +97,7 @@ class CorpusSplitsTest(unittest.TestCase):
                 cohort_paths.add(path)
 
         paths_by_hash = defaultdict(list)
-        for path in CORPUS.glob("*.html"):
+        for path in corpus_paths:
             paths_by_hash[hashlib.sha256(path.read_bytes()).digest()].append(path)
         duplicate_cohort_files = {
             path.name

@@ -26,6 +26,8 @@ class ModelSelectionTest(unittest.TestCase):
             if not path.stem.endswith(".expected")
             and corpus_split(path.stem) not in PROTECTED_SPLITS
         ]
+        if not cases:
+            self.skipTest("local corpus has not been imported")
         assignments = assign_group_folds(cases)
         fold_sizes = Counter(assignments.values())
         largest_family = max(Counter(corpus_family(case) for case in cases).values())

@@ -12,6 +12,11 @@ uv sync       # Install Python dependencies
 
 ## Building a Corpus
 
+Corpus HTML contains third-party publisher content and is intentionally kept
+local rather than committed. The repository tracks import tools and manifests;
+`tests/corpus/*.html` and `tests/external/` are ignored. Import or generate the
+fixtures needed for an evaluation before running it.
+
 ### From a single URL
 
 Save a single web page to the corpus directory:
@@ -69,6 +74,9 @@ uv run import_mozilla_tests.py /path/to/readability/test/test-pages
 ```
 
 This imports both `source.html` and `expected.html` files, using the expected output as ground truth labels.
+
+The imported files remain untracked. Re-run the importer when setting up a new
+checkout instead of adding the publisher HTML to Git.
 
 ### Corpus format
 
