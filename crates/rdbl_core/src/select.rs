@@ -365,12 +365,19 @@ fn refine_overextracted_once<'a>(
         let clean_ratio = candidate.features.get(FeatureIndex::CleanTextRatio);
         let toc_like = candidate.features.get(FeatureIndex::TocLike);
         let min_clean_gain = if schema_article_body { 0.05 } else { 0.1 };
+        let direct_substantive_body = arena
+            .get(candidate.node_id)
+            .is_some_and(|node| node.parent == Some(best.node_id))
+            && text_len >= options.min_text_chars * 5
+            && candidate.features.get_count(FeatureIndex::LogPCount) >= 10
+            && clean_ratio >= 0.85
+            && clean_ratio >= best_clean_ratio + 0.03;
         if text_len < options.min_text_chars * 2
             || !(0.1..=0.8).contains(&ratio)
             || candidate.features.get(FeatureIndex::HasMinParagraphs) < 0.5
-            || clean_ratio < 0.9
-            || clean_ratio < best_clean_ratio + min_clean_gain
             || toc_like > 0.1
+            || (!direct_substantive_body
+                && (clean_ratio < 0.9 || clean_ratio < best_clean_ratio + min_clean_gain))
         {
             continue;
         }
@@ -843,6 +850,43 @@ mod tests {
         content.features.values[FeatureIndex::HasMinParagraphs as usize] = 1.0;
 
         let candidates = vec![section, content];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
+        assert_eq!(best.node_id, content_id);
+    }
+
+    #[test]
+    fn test_refines_to_substantive_direct_article_body() {
+        use crate::{dom::Attributes, dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let broad_id = arena.add_node(Node::element(TagId::Div, None));
+        let content_id = arena.add_node(Node::element(TagId::Div, None));
+        arena.append_child(root, broad_id);
+        arena.append_child(broad_id, content_id);
+        arena.set_attributes(
+            content_id,
+            Attributes {
+                class: Some("articleBody".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let mut broad = make_candidate(broad_id, TagId::Div, 10.0);
+        broad.features = FeatureVector::default();
+        broad.features.values[FeatureIndex::LogTextLenChars as usize] = 15_090.0_f32.ln();
+        broad.features.values[FeatureIndex::CleanTextRatio as usize] = 0.84;
+
+        let mut content = make_candidate(content_id, TagId::Div, 5.0);
+        content.features = FeatureVector::default();
+        content.features.values[FeatureIndex::LogTextLenChars as usize] = 5_283.0_f32.ln();
+        content.features.values[FeatureIndex::LogPCount as usize] = 28.0_f32.ln();
+        content.features.values[FeatureIndex::CleanTextRatio as usize] = 0.887;
+        content.features.values[FeatureIndex::HasMinParagraphs as usize] = 1.0;
+        content.features.values[FeatureIndex::TocLike as usize] = 0.08;
+
+        let candidates = vec![broad, content];
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
 
         assert_eq!(best.node_id, content_id);
