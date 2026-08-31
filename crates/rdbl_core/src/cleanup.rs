@@ -132,6 +132,13 @@ fn mark_for_removal(
             return;
         }
 
+        // Navigation and page/article footers are chrome even when they are
+        // large enough to evade text-length and link-density heuristics.
+        if matches!(tag, TagId::Nav | TagId::Footer) {
+            remove_set.insert(node_id);
+            return;
+        }
+
         if matches!(tag, TagId::Iframe | TagId::Video | TagId::Audio)
             && arena
                 .get_attributes(node_id)
@@ -645,6 +652,22 @@ mod tests {
         let html = to_html(&cleaned);
         assert!(!html.contains("Navigation"));
         assert!(html.contains("Article content"));
+    }
+
+    #[test]
+    fn test_cleanup_removes_large_nav_and_footer() {
+        let repeated_links = "<a href='/elsewhere'>Repository control</a>".repeat(20);
+        let html = format!(
+            "<html><body><article><nav>{repeated_links}</nav><p>Article content that must remain.</p><footer>{}</footer></article></body></html>",
+            "Footer metadata ".repeat(50)
+        );
+        let arena = parse_html(&html);
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
+        let html = to_html(&cleaned);
+
+        assert!(html.contains("Article content that must remain."));
+        assert!(!html.contains("Repository control"));
+        assert!(!html.contains("Footer metadata"));
     }
 
     #[test]
