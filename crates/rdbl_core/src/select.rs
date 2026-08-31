@@ -257,6 +257,27 @@ fn refine_overextracted_once<'a>(
     let best_clean_ratio = best.features.get(FeatureIndex::CleanTextRatio);
     let best_p_count = best.features.get_count(FeatureIndex::LogPCount);
 
+    if best.tag == TagId::Main {
+        let focused_children: Vec<&Candidate> = candidates
+            .iter()
+            .filter(|candidate| {
+                let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
+                let ratio = text_len as f32 / best_text_len.max(1) as f32;
+                matches!(candidate.tag, TagId::Article | TagId::Section)
+                    && arena.get(candidate.node_id).and_then(|node| node.parent)
+                        == Some(best.node_id)
+                    && (0.6..=0.9).contains(&ratio)
+                    && candidate.features.get(FeatureIndex::SemanticMainFlag) > 0.5
+                    && candidate.features.get_count(FeatureIndex::LogPosKwHits) > 0
+                    && candidate.features.get(FeatureIndex::TocLike) <= best_toc + 0.05
+                    && candidate.features.get(FeatureIndex::LinkDensity) <= best_link_density + 0.1
+            })
+            .collect();
+        if let [child] = focused_children.as_slice() {
+            return child;
+        }
+    }
+
     if matches!(best.tag, TagId::Main | TagId::Div) {
         let direct_articles: Vec<&Candidate> = candidates
             .iter()
@@ -863,6 +884,37 @@ mod tests {
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
 
         assert_eq!(best.node_id, article_id);
+    }
+
+    #[test]
+    fn test_refines_main_to_sole_focused_semantic_section() {
+        use crate::{dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let main_id = arena.add_node(Node::element(TagId::Main, None));
+        let section_id = arena.add_node(Node::element(TagId::Section, None));
+        arena.append_child(root, main_id);
+        arena.append_child(main_id, section_id);
+
+        let mut main = make_candidate(main_id, TagId::Main, 10.0);
+        main.features = FeatureVector::default();
+        main.features.values[FeatureIndex::LogTextLenChars as usize] = 4_501.0_f32.ln();
+        main.features.values[FeatureIndex::TocLike as usize] = 0.05;
+        main.features.values[FeatureIndex::LinkDensity as usize] = 0.03;
+
+        let mut section = make_candidate(section_id, TagId::Section, 5.0);
+        section.features = FeatureVector::default();
+        section.features.values[FeatureIndex::LogTextLenChars as usize] = 3_501.0_f32.ln();
+        section.features.values[FeatureIndex::SemanticMainFlag as usize] = 1.0;
+        section.features.values[FeatureIndex::LogPosKwHits as usize] = 2.0_f32.ln();
+        section.features.values[FeatureIndex::TocLike as usize] = 0.06;
+        section.features.values[FeatureIndex::LinkDensity as usize] = 0.04;
+
+        let candidates = vec![main, section];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
+        assert_eq!(best.node_id, section_id);
     }
 
     #[test]
