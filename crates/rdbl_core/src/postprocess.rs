@@ -187,8 +187,26 @@ fn has_media_descendant(arena: &Arena, node_id: NodeId) -> bool {
     false
 }
 
+fn is_text_media_module_pair(arena: &Arena, text_id: NodeId, media_id: NodeId) -> bool {
+    let class = |node_id| arena.get_attributes(node_id).and_then(|attrs| attrs.class.as_deref());
+    let (Some(text_class), Some(media_class)) = (class(text_id), class(media_id)) else {
+        return false;
+    };
+    let shared_module = match (
+        text_class.split_ascii_whitespace().next(),
+        media_class.split_ascii_whitespace().next(),
+    ) {
+        (Some(first), Some(second)) => first.len() >= 5 && first == second,
+        _ => false,
+    };
+    shared_module
+        && text_class.contains("text")
+        && (media_class.contains("image") || media_class.contains("media"))
+}
+
 fn pass_through_sibling(
     arena: &Arena,
+    selected_id: NodeId,
     sibling_id: NodeId,
     best_text_len: usize,
 ) -> Option<PassThrough> {
@@ -201,8 +219,21 @@ fn pass_through_sibling(
         return Some(PassThrough::Include);
     }
 
-    if sibling_text_len < best_text_len / 6 && has_media_descendant(arena, sibling_id) {
-        return Some(PassThrough::Include);
+    let expanded_media_limit = is_text_media_module_pair(arena, selected_id, sibling_id);
+    let media_text_limit = if expanded_media_limit {
+        best_text_len / 4
+    } else {
+        best_text_len / 6
+    };
+    if sibling_text_len < media_text_limit && has_media_descendant(arena, sibling_id) {
+        if !expanded_media_limit {
+            return Some(PassThrough::Include);
+        }
+        let link_text_len = compute_link_text_len(arena, sibling_id);
+        let link_density = link_text_len as f32 / sibling_text_len.max(1) as f32;
+        if link_density <= 0.2 {
+            return Some(PassThrough::Include);
+        }
     }
 
     if sibling_text_len == 0 && matches!(tag, TagId::Div | TagId::Span) {
@@ -326,7 +357,9 @@ pub fn find_expansion_siblings(
         if should_include_sibling(arena, prev_id, selected_text_len, &selected_metrics) {
             siblings.push(prev_id);
             skipped = 0;
-        } else if let Some(pass_through) = pass_through_sibling(arena, prev_id, selected_text_len) {
+        } else if let Some(pass_through) =
+            pass_through_sibling(arena, selected_id, prev_id, selected_text_len)
+        {
             if matches!(pass_through, PassThrough::Include) {
                 siblings.push(prev_id);
             }
@@ -352,7 +385,9 @@ pub fn find_expansion_siblings(
         if should_include_sibling(arena, next_id, selected_text_len, &selected_metrics) {
             siblings.push(next_id);
             skipped = 0;
-        } else if let Some(pass_through) = pass_through_sibling(arena, next_id, selected_text_len) {
+        } else if let Some(pass_through) =
+            pass_through_sibling(arena, selected_id, next_id, selected_text_len)
+        {
             if matches!(pass_through, PassThrough::Include) {
                 siblings.push(next_id);
             }
@@ -681,6 +716,42 @@ mod tests {
         assert_eq!(
             find_expansion_siblings(&arena, selected_id, selected_text_len),
             vec![continuation_id]
+        );
+    }
+
+    #[test]
+    fn test_sibling_expansion_crosses_captioned_media() {
+        let html = format!(
+            r#"
+            <html><body><div>
+                <div id="content" class="story-module story-text"><p>{}</p></div>
+                <div id="media" class="story-module story-image"><img src="photo.jpg"><p>{}</p></div>
+                <div id="continuation" class="story-module story-text"><p>{}</p></div>
+            </div></body></html>
+            "#,
+            "Selected article text. ".repeat(50),
+            "A descriptive image caption. ".repeat(8),
+            "The article continues after the photograph. ".repeat(10),
+        );
+        let arena = parse_html(&html);
+        let find_id = |expected| {
+            (0..arena.nodes.len() as NodeId)
+                .find(|&id| {
+                    arena
+                        .get_attributes(id)
+                        .and_then(|attrs| attrs.id.as_deref())
+                        == Some(expected)
+                })
+                .unwrap()
+        };
+        let selected_id = find_id("content");
+        let media_id = find_id("media");
+        let continuation_id = find_id("continuation");
+        let selected_text_len = arena.collect_text(selected_id).chars().count();
+
+        assert_eq!(
+            find_expansion_siblings(&arena, selected_id, selected_text_len),
+            vec![media_id, continuation_id]
         );
     }
 }
