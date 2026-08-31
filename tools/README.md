@@ -176,13 +176,14 @@ folds before its weights are exported to the runtime model.
 
 ```bash
 uv run cross_validate_pairwise.py --corpus ../tests/corpus --folds 5 \
-  --classification-C 0.1 1 10 --pairwise-C 1
+  --classification-C 0.1 1 10 --pairwise-C 0.1 1 10
 ```
 
 This retrains both methods inside every fold, then restores and rebuilds the
 embedded model. Only cases with frozen expected fixtures participate. The report
 includes fold means, dispersion, and the global worst case. Use `--skip-pairwise`
-when comparing only classification regularization values.
+when comparing only classification regularization values. Both methods accept a
+grid of regularization values so they can be compared under identical folds.
 
 ## Exporting Weights to Rust
 

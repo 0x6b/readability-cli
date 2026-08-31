@@ -96,7 +96,7 @@ def main() -> int:
     parser.add_argument("--corpus", type=Path, default=REPO_ROOT / "tests" / "corpus")
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--classification-C", type=float, nargs="+", default=[10.0])
-    parser.add_argument("--pairwise-C", type=float, default=1.0)
+    parser.add_argument("--pairwise-C", type=float, nargs="+", default=[1.0])
     parser.add_argument("--skip-pairwise", action="store_true")
     parser.add_argument("--overlap-threshold", type=float, default=0.5)
     args = parser.parse_args()
@@ -113,7 +113,7 @@ def main() -> int:
     original_model = MODEL_PATH.read_bytes()
 
     classification_folds = {C: [] for C in args.classification_C}
-    pairwise_folds = []
+    pairwise_folds = {C: [] for C in args.pairwise_C}
     try:
         with tempfile.TemporaryDirectory(prefix="rdbl-cross-validation-") as raw_directory:
             directory = Path(raw_directory)
@@ -142,16 +142,19 @@ def main() -> int:
 
                 if page_data is not None:
                     X, y, sample_weights = combine_pairwise_page_data(page_data, training_cases)
-                    weights, bias = train_pairwise_ranker(
-                        X, y, sample_weights, C=args.pairwise_C
-                    )
-                    weights_file = directory / f"fold-{fold}-pairwise.json"
-                    save_weights(weights, bias, weights_file)
-                    export_and_build(weights_file)
-                    metrics = evaluate_cases(corpus, evaluation_cases, directory)
-                    pairwise_folds.append(
-                        fold_result(fold, len(training_cases), evaluation_cases, metrics)
-                    )
+                    for C in args.pairwise_C:
+                        weights, bias = train_pairwise_ranker(
+                            X, y, sample_weights, C=C
+                        )
+                        weights_file = directory / f"fold-{fold}-pairwise-{C:g}.json"
+                        save_weights(weights, bias, weights_file)
+                        export_and_build(weights_file)
+                        metrics = evaluate_cases(corpus, evaluation_cases, directory)
+                        pairwise_folds[C].append(
+                            fold_result(
+                                fold, len(training_cases), evaluation_cases, metrics
+                            )
+                        )
     finally:
         MODEL_PATH.write_bytes(original_model)
         run(["cargo", "build", "--release", "-p", "rdbl_cli"])
@@ -160,7 +163,6 @@ def main() -> int:
         json.dumps(
             {
                 "fold_count": args.folds,
-                "pairwise_C": args.pairwise_C,
                 "overlap_threshold": args.overlap_threshold,
                 "classifications": {
                     f"{C:g}": {
@@ -171,10 +173,13 @@ def main() -> int:
                 },
                 "pairwise": (
                     {
-                        "summary": summarize_fold_metrics(pairwise_folds),
-                        "folds": pairwise_folds,
+                        f"{C:g}": {
+                            "summary": summarize_fold_metrics(folds),
+                            "folds": folds,
+                        }
+                        for C, folds in pairwise_folds.items()
                     }
-                    if pairwise_folds
+                    if not args.skip_pairwise
                     else None
                 ),
             },
