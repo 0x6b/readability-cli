@@ -346,6 +346,20 @@ pub fn should_block(arena: &Arena, node_id: NodeId) -> bool {
         return false;
     }
 
+    if combined.contains("premium") {
+        let text_len = arena.collect_text(node_id).chars().count();
+        let button_count = arena
+            .descendants(node_id)
+            .filter(|&desc_id| {
+                arena.get(desc_id).and_then(|node| node.tag()) == Some(TagId::Button)
+            })
+            .take(2)
+            .count();
+        if text_len <= 500 && button_count >= 2 {
+            return true;
+        }
+    }
+
     // Check all rules
     for category in ALL_RULES {
         for rule in *category {
@@ -612,6 +626,30 @@ mod tests {
             }
         }
         panic!("Membership upsell not found");
+    }
+
+    #[test]
+    fn test_compact_premium_pricing_offer_is_blocked() {
+        let html = r#"
+        <html><body><article>
+            <p>Main content.</p>
+            <div class="article__premium">
+                <section><p>Monthly plan</p><button>Choose monthly</button></section>
+                <section><p>Annual plan</p><button>Choose annual</button></section>
+            </div>
+        </article></body></html>
+        "#;
+        let arena = parse_html(html);
+
+        for id in 0..arena.nodes.len() {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("article__premium")
+            {
+                assert!(should_block(&arena, id as NodeId));
+                return;
+            }
+        }
+        panic!("Premium offer not found");
     }
 
     #[test]
