@@ -12,8 +12,8 @@ license = "MIT"
 rdbl_core = { version = "0.1.0", path = "crates/rdbl_core" }
 
 # HTML parsing
-html5ever = "0.27"
-markup5ever_rcdom = "0.3"
+html5ever = "0.39"
+markup5ever_rcdom = "0.39"
 
 # Encoding detection and conversion
 encoding_rs = "0.8"
@@ -31,9 +31,9 @@ serde-wasm-bindgen = "0.6"
 js-sys = "0.3"
 
 # CLI
-clap = { version = "4.5", features = ["derive", "wrap_help", "env"] }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
-tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+clap = { version = "4.6", features = ["derive", "wrap_help", "env"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 html2md = "0.2"
 
