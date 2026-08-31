@@ -323,6 +323,21 @@ pub fn should_block(arena: &Arena, node_id: NodeId) -> bool {
         None => return false,
     };
 
+    // A dedicated comments root remains boilerplate even when a long discussion
+    // exceeds the normal size limit for negative class-name matches.
+    if attrs
+        .id
+        .as_deref()
+        .is_some_and(|id| id.eq_ignore_ascii_case("comments"))
+        || attrs.class.as_deref().is_some_and(|class| {
+            class
+                .split_ascii_whitespace()
+                .any(|token| token.eq_ignore_ascii_case("comments"))
+        })
+    {
+        return true;
+    }
+
     // Combine and lowercase for matching
     let combined = attrs.normalized_class_id();
 
@@ -523,6 +538,26 @@ mod tests {
             }
         }
         panic!("Rollover block not found");
+    }
+
+    #[test]
+    fn test_large_dedicated_comments_root_is_blocked() {
+        let discussion =
+            "A substantive reader response that is not part of the article. ".repeat(20);
+        let html = format!(
+            "<html><body><article><p>Main content.</p></article><section class=\"comments\">{discussion}</section></body></html>"
+        );
+        let arena = parse_html(&html);
+
+        for id in 0..arena.nodes.len() {
+            if let Some(attrs) = arena.get_attributes(id as NodeId)
+                && attrs.class.as_deref() == Some("comments")
+            {
+                assert!(should_block(&arena, id as NodeId));
+                return;
+            }
+        }
+        panic!("Comments root not found");
     }
 
     #[test]
