@@ -3,41 +3,54 @@
 //! Extracts title and author information from HTML documents.
 
 use crate::dom::{Arena, NodeId, TagId};
+use serde_json::Value;
 
 /// Extract the title from the document
 pub fn extract_title(arena: &Arena) -> Option<String> {
-    // Try in order: og:title, twitter:title, <title>, first h1
+    let body_heading = arena
+        .find_body()
+        .and_then(|body_id| find_first_heading(arena, body_id, TagId::H1))
+        .map(|title| clean_title(&title));
 
-    // 1. Check meta tags in head
-    if let Some(head_id) = arena.find_head() {
-        // Look for og:title
-        if let Some(title) = find_meta_content(arena, head_id, "og:title", true) {
-            return Some(clean_title(&title));
-        }
-
-        // Look for twitter:title
-        if let Some(title) = find_meta_content(arena, head_id, "twitter:title", false) {
-            return Some(clean_title(&title));
-        }
-
-        // Look for <title> tag
-        if let Some(title) = find_title_tag(arena, head_id) {
-            return Some(clean_title(&title));
-        }
-    }
-
-    // 2. Look for first h1 in body
-    if let Some(body_id) = arena.find_body()
-        && let Some(h1_text) = find_first_heading(arena, body_id, TagId::H1)
+    if let Some(metadata) = find_json_ld_metadata(arena)
+        && let Some(headline) = metadata.headline
     {
-        return Some(clean_title(&h1_text));
+        return Some(clean_title(&headline));
     }
 
-    None
+    if let Some(head_id) = arena.find_head() {
+        let head_titles = [
+            find_meta_content(arena, head_id, "og:title", true),
+            find_meta_content(arena, head_id, "twitter:title", false),
+            find_title_tag(arena, head_id),
+        ];
+        let first = head_titles.iter().flatten().next().map(|title| clean_title(title));
+
+        if let (Some(head_title), Some(heading)) = (&first, &body_heading)
+            && heading.chars().count() >= head_title.chars().count() + 8
+            && heading.chars().count() <= 200
+            && head_titles
+                .iter()
+                .flatten()
+                .all(|title| clean_title(title).eq_ignore_ascii_case(head_title))
+        {
+            return Some(heading.clone());
+        }
+
+        if first.is_some() {
+            return first;
+        }
+    }
+
+    body_heading
 }
 
 /// Extract byline/author from the document
 pub fn extract_byline(arena: &Arena) -> Option<String> {
+    if let Some(author) = find_json_ld_metadata(arena).and_then(|metadata| metadata.author) {
+        return Some(author);
+    }
+
     // Check meta tags
     if let Some(head_id) = arena.find_head() {
         // Look for author meta tag
@@ -54,6 +67,68 @@ pub fn extract_byline(arena: &Arena) -> Option<String> {
     // TODO: Look for common byline patterns in body (future enhancement)
 
     None
+}
+
+#[derive(Default)]
+struct StructuredMetadata {
+    headline: Option<String>,
+    author: Option<String>,
+}
+
+fn find_json_ld_metadata(arena: &Arena) -> Option<StructuredMetadata> {
+    for node_id in arena.descendants(0) {
+        if arena.get(node_id).and_then(|node| node.tag()) != Some(TagId::Script)
+            || !arena.get_attributes(node_id).is_some_and(|attrs| {
+                attrs
+                    .type_attr
+                    .as_deref()
+                    .is_some_and(|value| value.eq_ignore_ascii_case("application/ld+json"))
+            })
+        {
+            continue;
+        }
+
+        let text = arena.collect_text(node_id);
+        if let Ok(value) = serde_json::from_str::<Value>(text.trim())
+            && let Some(metadata) = metadata_from_json(&value)
+        {
+            return Some(metadata);
+        }
+    }
+    None
+}
+
+fn metadata_from_json(value: &Value) -> Option<StructuredMetadata> {
+    match value {
+        Value::Array(values) => values.iter().find_map(metadata_from_json),
+        Value::Object(object) => {
+            if let Some(headline) = object.get("headline").and_then(Value::as_str) {
+                return Some(StructuredMetadata {
+                    headline: Some(headline.to_string()),
+                    author: object.get("author").and_then(author_from_json),
+                });
+            }
+            object.values().find_map(metadata_from_json)
+        }
+        _ => None,
+    }
+}
+
+fn author_from_json(value: &Value) -> Option<String> {
+    match value {
+        Value::String(author) => nonempty(author),
+        Value::Object(object) => object.get("name").and_then(Value::as_str).and_then(nonempty),
+        Value::Array(authors) => {
+            let names: Vec<_> = authors.iter().filter_map(author_from_json).collect();
+            (!names.is_empty()).then(|| names.join(", "))
+        }
+        _ => None,
+    }
+}
+
+fn nonempty(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 /// Find meta content by property attribute
@@ -196,6 +271,45 @@ mod tests {
         let arena = parse_html(html);
         let title = extract_title(&arena);
         assert_eq!(title, Some("Great Article About Rust".to_string()));
+    }
+
+    #[test]
+    fn test_extract_title_prefers_substantive_h1_over_generic_head_metadata() {
+        let html = r#"
+        <html><head>
+            <meta property="og:title" content="Jane Doe">
+            <meta name="twitter:title" content="Jane Doe">
+            <title>Jane Doe</title>
+        </head><body>
+            <h1>Training a Small Model to Paint with Code</h1>
+        </body></html>
+        "#;
+
+        let arena = parse_html(html);
+        assert_eq!(
+            extract_title(&arena),
+            Some("Training a Small Model to Paint with Code".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extracts_json_ld_metadata() {
+        let html = r#"
+        <html><head>
+            <script type="application/ld+json">
+            {
+                "@type": "Article",
+                "headline": "Structured Article Title",
+                "author": [{"@type": "Person", "name": "Jane Doe"}, "John Roe"]
+            }
+            </script>
+            <meta property="og:title" content="Fallback title">
+        </head><body><h1>Visible title</h1></body></html>
+        "#;
+
+        let arena = parse_html(html);
+        assert_eq!(extract_title(&arena), Some("Structured Article Title".to_string()));
+        assert_eq!(extract_byline(&arena), Some("Jane Doe, John Roe".to_string()));
     }
 
     #[test]

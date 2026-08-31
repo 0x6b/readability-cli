@@ -448,6 +448,8 @@ pub struct Attributes {
     pub property: Option<String>,
     /// itemprop attribute (for schema.org semantics)
     pub itemprop: Option<String>,
+    /// type attribute (used for structured-data script elements)
+    pub type_attr: Option<String>,
     /// Whether the HTML hidden attribute is present
     pub hidden: bool,
     /// Inline CSS used to identify explicitly hidden nodes
