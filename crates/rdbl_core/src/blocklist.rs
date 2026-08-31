@@ -158,6 +158,7 @@ const RELATED: &[BlockRule] = &[
 const COMMENTS: &[BlockRule] = &[
     BlockRule::always("comment-wrapper"),
     BlockRule::always("comments-wrapper"),
+    BlockRule::always("comments-top"),
     BlockRule::always("comments-header"),
     BlockRule::always("comments-title"),
     BlockRule::always("comments-tou"),
