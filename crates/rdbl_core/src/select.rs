@@ -257,6 +257,26 @@ fn refine_overextracted_once<'a>(
     let best_clean_ratio = best.features.get(FeatureIndex::CleanTextRatio);
     let best_p_count = best.features.get_count(FeatureIndex::LogPCount);
 
+    if matches!(best.tag, TagId::Main | TagId::Div) {
+        let direct_articles: Vec<&Candidate> = candidates
+            .iter()
+            .filter(|candidate| {
+                let text_len = candidate.features.get_count(FeatureIndex::LogTextLenChars);
+                candidate.tag == TagId::Article
+                    && arena.get(candidate.node_id).and_then(|node| node.parent)
+                        == Some(best.node_id)
+                    && text_len >= options.min_text_chars * 5
+                    && best_text_len >= text_len * 20
+                    && candidate.features.get_count(FeatureIndex::LogPCount) >= 5
+                    && candidate.features.get(FeatureIndex::TocLike) <= 0.1
+                    && candidate.features.get(FeatureIndex::LinkDensity) <= 0.2
+            })
+            .collect();
+        if let [article] = direct_articles.as_slice() {
+            return article;
+        }
+    }
+
     if best.tag == TagId::Article {
         for candidate in candidates {
             if !matches!(candidate.tag, TagId::Div | TagId::Section)
@@ -809,6 +829,35 @@ mod tests {
         article.features.values[FeatureIndex::ContentClusterScore as usize] = 0.2;
         article.features.values[FeatureIndex::SemanticMainFlag as usize] = 1.0;
         article.features.values[FeatureIndex::LogPosKwHits as usize] = 2.0_f32.ln();
+
+        let candidates = vec![main, article];
+        let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
+
+        assert_eq!(best.node_id, article_id);
+    }
+
+    #[test]
+    fn test_refines_bloated_main_to_its_only_direct_article() {
+        use crate::{dom::Node, features::FeatureVector};
+
+        let mut arena = Arena::new();
+        let root = arena.add_node(Node::document());
+        let main_id = arena.add_node(Node::element(TagId::Main, None));
+        let article_id = arena.add_node(Node::element(TagId::Article, None));
+        arena.append_child(root, main_id);
+        arena.append_child(main_id, article_id);
+
+        let mut main = make_candidate(main_id, TagId::Main, 10.0);
+        main.features = FeatureVector::default();
+        main.features.values[FeatureIndex::LogTextLenChars as usize] = 100_001.0_f32.ln();
+        main.features.values[FeatureIndex::CleanTextRatio as usize] = 0.2;
+
+        let mut article = make_candidate(article_id, TagId::Article, 5.0);
+        article.features = FeatureVector::default();
+        article.features.values[FeatureIndex::LogTextLenChars as usize] = 4_001.0_f32.ln();
+        article.features.values[FeatureIndex::LogPCount as usize] = 8.0_f32.ln();
+        article.features.values[FeatureIndex::TocLike as usize] = 0.05;
+        article.features.values[FeatureIndex::LinkDensity as usize] = 0.1;
 
         let candidates = vec![main, article];
         let best = select_best(&candidates, &arena, &ExtractOptions::default()).unwrap();
