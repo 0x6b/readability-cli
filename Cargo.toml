@@ -36,6 +36,7 @@ reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 tokio = { version = "1.53", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 html2md = "0.2"
+sha2 = "0.10"
 
 # Dev dependencies
 pretty_assertions = "1.4"
