@@ -220,11 +220,7 @@ fn pass_through_sibling(
     }
 
     let expanded_media_limit = is_text_media_module_pair(arena, selected_id, sibling_id);
-    let media_text_limit = if expanded_media_limit {
-        best_text_len / 4
-    } else {
-        best_text_len / 6
-    };
+    let media_text_limit = if expanded_media_limit { best_text_len / 4 } else { best_text_len / 6 };
     if sibling_text_len < media_text_limit && has_media_descendant(arena, sibling_id) {
         if !expanded_media_limit {
             return Some(PassThrough::Include);
@@ -273,10 +269,7 @@ fn starts_with_horizontal_rule(arena: &Arena, node_id: NodeId) -> bool {
         };
         match &child.kind {
             crate::dom::NodeKind::Text => {
-                if arena
-                    .get_text(child_id)
-                    .is_some_and(|text| !text.trim().is_empty())
-                {
+                if arena.get_text(child_id).is_some_and(|text| !text.trim().is_empty()) {
                     return false;
                 }
             }
@@ -666,10 +659,7 @@ mod tests {
         let arena = parse_html(html);
         let selected_id = (0..arena.nodes.len() as NodeId)
             .find(|&id| {
-                arena
-                    .get_attributes(id)
-                    .and_then(|attrs| attrs.id.as_deref())
-                    == Some("content")
+                arena.get_attributes(id).and_then(|attrs| attrs.id.as_deref()) == Some("content")
             })
             .unwrap();
         let selected_text_len = arena.collect_text(selected_id).chars().count();
@@ -697,17 +687,12 @@ mod tests {
         let arena = parse_html(html);
         let selected_id = (0..arena.nodes.len() as NodeId)
             .find(|&id| {
-                arena
-                    .get_attributes(id)
-                    .and_then(|attrs| attrs.id.as_deref())
-                    == Some("content")
+                arena.get_attributes(id).and_then(|attrs| attrs.id.as_deref()) == Some("content")
             })
             .unwrap();
         let continuation_id = (0..arena.nodes.len() as NodeId)
             .find(|&id| {
-                arena
-                    .get_attributes(id)
-                    .and_then(|attrs| attrs.id.as_deref())
+                arena.get_attributes(id).and_then(|attrs| attrs.id.as_deref())
                     == Some("continuation")
             })
             .unwrap();
@@ -737,10 +722,7 @@ mod tests {
         let find_id = |expected| {
             (0..arena.nodes.len() as NodeId)
                 .find(|&id| {
-                    arena
-                        .get_attributes(id)
-                        .and_then(|attrs| attrs.id.as_deref())
-                        == Some(expected)
+                    arena.get_attributes(id).and_then(|attrs| attrs.id.as_deref()) == Some(expected)
                 })
                 .unwrap()
         };

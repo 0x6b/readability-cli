@@ -7,7 +7,7 @@ use anyhow::{Result, bail};
 use clap::Parser;
 use html2md::parse_html;
 use rdbl_core::{ExtractOptions, extract};
-use reqwest::Url;
+use reqwest::{Client, Url};
 use serde_json::to_string_pretty;
 
 #[derive(Parser)]
@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
 }
 
 async fn fetch_url(url: &Url, user_agent: &str) -> Result<String> {
-    let client = reqwest::Client::builder().user_agent(user_agent).build()?;
+    let client = Client::builder().user_agent(user_agent).build()?;
 
     let response = client.get(url.as_str()).send().await?;
 

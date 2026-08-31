@@ -173,7 +173,8 @@ fn render_selected(
     options: &ExtractOptions,
     html_has_body: bool,
 ) -> (String, String) {
-    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected {
+    let (selected_id, selected_text_len, selected_tag) = if let Some(selected_candidate) = selected
+    {
         let selected_id = selected_candidate.node_id;
         let selected_text_len = selected_candidate
             .features
@@ -232,10 +233,7 @@ fn render_selected(
 
     let (content_roots, use_sibling_expansion) = if let Some(selected_id) = selected_id {
         // Find siblings that should be included
-        let siblings = if matches!(
-            selected_tag,
-            Some(dom::TagId::Article | dom::TagId::Main)
-        ) {
+        let siblings = if matches!(selected_tag, Some(dom::TagId::Article | dom::TagId::Main)) {
             Vec::new()
         } else if matches!(selected_tag, Some(dom::TagId::Section)) {
             let mut section_siblings = 0usize;

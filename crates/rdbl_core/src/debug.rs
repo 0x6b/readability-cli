@@ -63,16 +63,10 @@ pub struct FeatureSummary {
 pub fn build_debug_info(candidates: &[Candidate], arena: &Arena) -> DebugInfo {
     // Sort by score descending
     let mut sorted: Vec<&Candidate> = candidates.iter().collect();
-    sorted.sort_by(|a, b| {
-        b.score
-            .partial_cmp(&a.score)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    sorted.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
 
-    let all: Vec<CandidateDebug> = sorted
-        .into_iter()
-        .map(|c| build_candidate_debug(c, arena))
-        .collect();
+    let all: Vec<CandidateDebug> =
+        sorted.into_iter().map(|c| build_candidate_debug(c, arena)).collect();
 
     DebugInfo { candidates: all }
 }

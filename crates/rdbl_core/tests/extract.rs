@@ -39,10 +39,7 @@ fn test_extract_article() {
     </html>
     "#;
 
-    let options = ExtractOptions {
-        min_text_chars: 100,
-        ..Default::default()
-    };
+    let options = ExtractOptions { min_text_chars: 100, ..Default::default() };
 
     let result = extract(html, &options);
 
@@ -85,10 +82,7 @@ fn test_extract_main_does_not_expand_to_external_sibling() {
         </div>
     </body></html>
     "#;
-    let options = ExtractOptions {
-        min_text_chars: 100,
-        ..Default::default()
-    };
+    let options = ExtractOptions { min_text_chars: 100, ..Default::default() };
 
     let result = extract(html, &options);
 
@@ -150,10 +144,7 @@ fn test_extract_japanese_content() {
     </html>
     "#;
 
-    let options = ExtractOptions {
-        min_text_chars: 50,
-        ..Default::default()
-    };
+    let options = ExtractOptions { min_text_chars: 50, ..Default::default() };
 
     let result = extract(html, &options);
 

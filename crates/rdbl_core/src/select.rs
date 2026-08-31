@@ -211,11 +211,7 @@ fn semantic_article_fallback<'a>(
                 && features.get(FeatureIndex::TocLike) <= 0.5
                 && features.get(FeatureIndex::LinkDensity) <= 0.6
         })
-        .max_by(|a, b| {
-            a.score
-                .partial_cmp(&b.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
+        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
         .unwrap_or(best)
 }
 
@@ -384,16 +380,15 @@ fn refine_overextracted_once<'a>(
             continue;
         }
         let attrs = arena.get_attributes(candidate.node_id);
-        let class_id = attrs
-            .map(|attrs| attrs.normalized_class_id())
-            .unwrap_or_default();
-        let schema_article_body = attrs
-            .and_then(|attrs| attrs.itemprop.as_deref())
-            .is_some_and(|itemprop| {
-                itemprop
-                    .split_ascii_whitespace()
-                    .any(|value| value.eq_ignore_ascii_case("articleBody"))
-            });
+        let class_id = attrs.map(|attrs| attrs.normalized_class_id()).unwrap_or_default();
+        let schema_article_body =
+            attrs
+                .and_then(|attrs| attrs.itemprop.as_deref())
+                .is_some_and(|itemprop| {
+                    itemprop
+                        .split_ascii_whitespace()
+                        .any(|value| value.eq_ignore_ascii_case("articleBody"))
+                });
         let bem_article_body = class_id.contains("article__body");
         if !schema_article_body
             && !class_id.contains("articlebody")
@@ -964,7 +959,10 @@ mod tests {
 
     #[test]
     fn test_refines_to_explicit_clean_article_body() {
-        use crate::{dom::Attributes, dom::Node, features::FeatureVector};
+        use crate::{
+            dom::{Attributes, Node},
+            features::FeatureVector,
+        };
 
         let mut arena = Arena::new();
         let root = arena.add_node(Node::document());
@@ -1003,7 +1001,10 @@ mod tests {
 
     #[test]
     fn test_refines_to_substantive_direct_article_body() {
-        use crate::{dom::Attributes, dom::Node, features::FeatureVector};
+        use crate::{
+            dom::{Attributes, Node},
+            features::FeatureVector,
+        };
 
         let mut arena = Arena::new();
         let root = arena.add_node(Node::document());
@@ -1040,7 +1041,10 @@ mod tests {
 
     #[test]
     fn test_keeps_fragmented_explicit_article_bodies_together() {
-        use crate::{dom::Attributes, dom::Node, features::FeatureVector};
+        use crate::{
+            dom::{Attributes, Node},
+            features::FeatureVector,
+        };
 
         let mut arena = Arena::new();
         let root = arena.add_node(Node::document());

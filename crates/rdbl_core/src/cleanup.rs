@@ -750,11 +750,7 @@ mod tests {
              <ul class=\"thumbnail-gallery\">{thumbnail_items}</ul></article></body></html>"
         );
         let arena = parse_html(&html);
-        let cleaned = cleanup(
-            &arena,
-            arena.find_body().unwrap(),
-            &ExtractOptions::default(),
-        );
+        let cleaned = cleanup(&arena, arena.find_body().unwrap(), &ExtractOptions::default());
         let html = to_html(&cleaned);
 
         assert!(html.contains("Substantive caption 0"));
