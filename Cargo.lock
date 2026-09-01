@@ -1166,8 +1166,11 @@ name = "rdbl_cli"
 version = "0.10.0"
 dependencies = [
  "anyhow",
+ "base64",
  "clap",
  "html2md",
+ "html5ever 0.39.0",
+ "markup5ever_rcdom 0.39.0+unofficial",
  "rdbl_core",
  "reqwest",
  "serde_json",

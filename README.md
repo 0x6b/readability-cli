@@ -41,6 +41,14 @@ is calculated over the exact UTF-8 bytes of the Markdown body after the closing 
 extracted `# title` heading when present), excluding the frontmatter and the final newline written by
 the CLI.
 
+Archive output is self-contained where possible. Relative links are resolved against the fetched
+page's final URL, and Markdown links use reference definitions collected at the end of the document.
+Images are downloaded concurrently in groups of eight and stored as base64 `data:` URIs in those
+definitions. If an image cannot be fetched or does not have an `image/*` content type, its absolute
+URL is retained instead, so a failed subresource does not prevent the article from being archived.
+For `--stdin`, already-absolute images can still be embedded, but relative URLs cannot be resolved
+without a source URL.
+
 Use `--heading-offset N` when embedding the output below an existing Markdown heading. It increases
 both the generated title heading and headings originating from structured `<h1>`–`<h6>` elements by
 `N` levels. Levels deeper than h6 are clamped to h6. The shift is applied while converting the

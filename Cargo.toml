@@ -37,6 +37,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 html2md = "0.2"
 sha2 = "0.10"
+base64 = "0.22"
 
 # Dev dependencies
 pretty_assertions = "1.4"
