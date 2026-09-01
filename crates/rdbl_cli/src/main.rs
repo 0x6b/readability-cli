@@ -217,9 +217,8 @@ fn markdown_from_html(
     if collect_references || !embedded_images.is_empty() {
         handlers.insert(
             "a".to_string(),
-            Box::new(ReferenceLinkFactory {
+            Box::new(AbsoluteLinkFactory {
                 document_url: document_url.cloned(),
-                references: Rc::clone(&references),
             }),
         );
         handlers.insert(
@@ -268,11 +267,7 @@ impl ReferenceRegistry {
                     .as_ref()
                     .map(|title| format!(" {}", to_string(title).unwrap()))
                     .unwrap_or_default();
-                let destination = destination
-                    .replace('<', "%3C")
-                    .replace('>', "%3E")
-                    .replace(' ', "%20")
-                    .replace(['\r', '\n'], "");
+                let destination = markdown_destination(destination);
                 format!("[rdbl-{}]: <{destination}>{title}", index + 1)
             })
             .collect::<Vec<_>>()
@@ -280,30 +275,27 @@ impl ReferenceRegistry {
     }
 }
 
-struct ReferenceLinkFactory {
+struct AbsoluteLinkFactory {
     document_url: Option<Url>,
-    references: Rc<RefCell<ReferenceRegistry>>,
 }
 
-impl TagHandlerFactory for ReferenceLinkFactory {
+impl TagHandlerFactory for AbsoluteLinkFactory {
     fn instantiate(&self) -> Box<dyn TagHandler> {
-        Box::new(ReferenceLink {
+        Box::new(AbsoluteLink {
             document_url: self.document_url.clone(),
-            references: Rc::clone(&self.references),
             start_pos: 0,
-            reference: None,
+            destination: None,
         })
     }
 }
 
-struct ReferenceLink {
+struct AbsoluteLink {
     document_url: Option<Url>,
-    references: Rc<RefCell<ReferenceRegistry>>,
     start_pos: usize,
-    reference: Option<usize>,
+    destination: Option<String>,
 }
 
-impl TagHandler for ReferenceLink {
+impl TagHandler for AbsoluteLink {
     fn handle(&mut self, tag: &Handle, printer: &mut StructuredPrinter) {
         self.start_pos = printer.data.len();
         let Some(href) = tag_attribute(tag, "href") else {
@@ -311,16 +303,24 @@ impl TagHandler for ReferenceLink {
         };
         let destination = resolve_url(&href, self.document_url.as_ref());
         if !destination.is_empty() {
-            self.reference = Some(self.references.borrow_mut().register(destination, None));
+            self.destination = Some(markdown_destination(&destination));
         }
     }
 
     fn after_handle(&mut self, printer: &mut StructuredPrinter) {
-        if let Some(reference) = self.reference {
+        if let Some(destination) = &self.destination {
             printer.insert_str(self.start_pos, "[");
-            printer.append_str(&format!("][rdbl-{reference}]"));
+            printer.append_str(&format!("](<{destination}>)"));
         }
     }
+}
+
+fn markdown_destination(destination: &str) -> String {
+    destination
+        .replace('<', "%3C")
+        .replace('>', "%3E")
+        .replace(' ', "%20")
+        .replace(['\r', '\n'], "")
 }
 
 struct ReferenceImageFactory {
@@ -628,7 +628,7 @@ mod tests {
     }
 
     #[test]
-    fn portable_markdown_resolves_urls_and_collects_references_at_end() {
+    fn portable_markdown_keeps_links_inline_and_collects_images_at_end() {
         let base = Url::parse("https://example.com/articles/page.html").unwrap();
         let data_uri = "data:image/png;base64,AQID";
         let mut images = HashMap::new();
@@ -647,9 +647,10 @@ mod tests {
         assert_eq!(
             output,
             concat!(
-                "[About][rdbl-1] and [again][rdbl-1].\n\n![Photo][rdbl-2]\n\n",
-                "[rdbl-1]: <https://example.com/about?q=1>\n",
-                "[rdbl-2]: <data:image/png;base64,AQID> \"Saved image\""
+                "[About](<https://example.com/about?q=1>) and ",
+                "[again](<https://example.com/about?q=1>).\n\n",
+                "![Photo][rdbl-1]\n\n",
+                "[rdbl-1]: <data:image/png;base64,AQID> \"Saved image\""
             )
         );
     }

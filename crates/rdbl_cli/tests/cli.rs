@@ -137,10 +137,9 @@ fn url_archive_embeds_images_and_resolves_reference_links() {
         String::from_utf8_lossy(&output.stderr)
     );
     let output = String::from_utf8(output.stdout).unwrap();
-    assert!(output.contains("[Read details][rdbl-1]"));
-    assert!(output.contains("![Small image][rdbl-2]"));
-    assert!(output.contains(&format!("[rdbl-1]: <http://{address}/details>")));
-    assert!(output.contains("[rdbl-2]: <data:image/png;base64,AQID>"));
+    assert!(output.contains(&format!("[Read details](<http://{address}/details>)")));
+    assert!(output.contains("![Small image][rdbl-1]"));
+    assert!(output.contains("[rdbl-1]: <data:image/png;base64,AQID>"));
     assert!(!output.contains("](/details)"));
     assert!(!output.contains("](/image.png)"));
 }

@@ -42,10 +42,10 @@ extracted `# title` heading when present), excluding the frontmatter and the fin
 the CLI.
 
 Archive output is self-contained where possible. Relative links are resolved against the fetched
-page's final URL, and Markdown links use reference definitions collected at the end of the document.
-Images are downloaded concurrently in groups of eight and stored as base64 `data:` URIs in those
-definitions. If an image cannot be fetched or does not have an `image/*` content type, its absolute
-URL is retained instead, so a failed subresource does not prevent the article from being archived.
+page's final URL and remain inline Markdown links. Images are downloaded concurrently in groups of
+eight and stored as base64 `data:` URIs in reference definitions collected at the end of the
+document. If an image cannot be fetched or does not have an `image/*` content type, its absolute URL
+is retained instead, so a failed subresource does not prevent the article from being archived.
 For `--stdin`, already-absolute images can still be embedded, but relative URLs cannot be resolved
 without a source URL.
 
