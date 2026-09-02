@@ -124,6 +124,8 @@ fn url_archive_embeds_images_and_resolves_reference_links() {
     let output = Command::new(env!("CARGO_BIN_EXE_rdbl"))
         .args([
             "--frontmatter",
+            "--image-mode",
+            "embed",
             "--min-text",
             "20",
             &format!("http://{address}/article"),
@@ -142,4 +144,43 @@ fn url_archive_embeds_images_and_resolves_reference_links() {
     assert!(output.contains("[rdbl-1]: <data:image/png;base64,AQID>"));
     assert!(!output.contains("](/details)"));
     assert!(!output.contains("](/image.png)"));
+}
+
+#[test]
+fn frontmatter_and_image_mode_are_independent() {
+    let article = ARTICLE.replace(
+        "</article>",
+        "<img src=\"https://example.com/photo.png\" alt=\"Photo\"></article>",
+    );
+    let linked = run_stdin(
+        &[
+            "--frontmatter",
+            "--image-mode",
+            "link",
+            "--stdin",
+            "--min-text",
+            "20",
+        ],
+        &article,
+    );
+    assert!(linked.status.success());
+    let linked = String::from_utf8(linked.stdout).unwrap();
+    assert!(linked.contains("[rdbl-1]: <https://example.com/photo.png>"));
+    assert!(!linked.contains("data:image/"));
+
+    let omitted = run_stdin(
+        &[
+            "--frontmatter",
+            "--image-mode",
+            "omit",
+            "--stdin",
+            "--min-text",
+            "20",
+        ],
+        &article,
+    );
+    assert!(omitted.status.success());
+    let omitted = String::from_utf8(omitted.stdout).unwrap();
+    assert!(omitted.contains("[Image omitted: Photo]"));
+    assert!(!omitted.contains("photo.png"));
 }

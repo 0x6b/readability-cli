@@ -9,10 +9,9 @@ use std::{
 
 use anyhow::{Result, bail};
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use html2md::{
-    Handle, NodeData, StructuredPrinter, TagHandler, TagHandlerFactory, parse_html,
-    parse_html_custom,
+    Handle, NodeData, StructuredPrinter, TagHandler, TagHandlerFactory, parse_html_custom,
 };
 use html5ever::{parse_document, tendril::TendrilSink};
 use markup5ever_rcdom::{Handle as DomHandle, NodeData as DomNodeData, RcDom};
@@ -21,6 +20,14 @@ use reqwest::{Client, Url, header::CONTENT_TYPE};
 use serde_json::{to_string, to_string_pretty};
 use sha2::{Digest, Sha256};
 use tokio::task::JoinSet;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+enum ImageMode {
+    Embed,
+    #[default]
+    Link,
+    Omit,
+}
 
 #[derive(Parser)]
 #[clap(version, about = "Extract readable content from HTML")]
@@ -40,6 +47,10 @@ pub struct Args {
     /// Prepend archive metadata as YAML frontmatter (markdown only)
     #[clap(long)]
     pub frontmatter: bool,
+
+    /// Image handling in Markdown: embed, link, or omit
+    #[clap(long, value_enum, default_value_t)]
+    image_mode: ImageMode,
 
     /// Increase Markdown heading levels, clamping at h6
     #[clap(long, default_value = "0")]
@@ -94,7 +105,7 @@ async fn main() -> Result<()> {
 
     // Extract content
     let result = extract(&html, &options);
-    let embedded_images = if args.frontmatter {
+    let embedded_images = if args.image_mode == ImageMode::Embed {
         embed_images(&client, &result.content_html, document_url.as_ref()).await
     } else {
         HashMap::new()
@@ -124,6 +135,7 @@ async fn main() -> Result<()> {
                 render_markdown(
                     &result,
                     args.frontmatter,
+                    args.image_mode,
                     args.heading_offset,
                     source_url,
                     document_url.as_ref(),
@@ -140,6 +152,7 @@ async fn main() -> Result<()> {
 fn render_markdown(
     result: &ExtractResult,
     frontmatter: bool,
+    image_mode: ImageMode,
     heading_offset: u8,
     source_url: Option<&Url>,
     document_url: Option<&Url>,
@@ -156,8 +169,8 @@ fn render_markdown(
     markdown.push_str(&markdown_from_html(
         &result.content_html,
         heading_offset,
-        frontmatter,
-        frontmatter.then_some(document_url).flatten(),
+        image_mode,
+        document_url,
         embedded_images,
     ));
 
@@ -192,14 +205,10 @@ fn shifted_heading_level(level: u8, offset: u8) -> usize {
 fn markdown_from_html(
     html: &str,
     heading_offset: u8,
-    collect_references: bool,
+    image_mode: ImageMode,
     document_url: Option<&Url>,
     embedded_images: HashMap<String, String>,
 ) -> String {
-    if heading_offset == 0 && !collect_references && embedded_images.is_empty() {
-        return parse_html(html);
-    }
-
     let mut handlers: HashMap<String, Box<dyn TagHandlerFactory>> = HashMap::new();
     if heading_offset > 0 {
         for level in 1..=6 {
@@ -214,22 +223,23 @@ fn markdown_from_html(
 
     let references = Rc::new(RefCell::new(ReferenceRegistry::default()));
     let embedded_images = Rc::new(embedded_images);
-    if collect_references || !embedded_images.is_empty() {
+    if document_url.is_some() {
         handlers.insert(
             "a".to_string(),
             Box::new(AbsoluteLinkFactory {
                 document_url: document_url.cloned(),
             }),
         );
-        handlers.insert(
-            "img".to_string(),
-            Box::new(ReferenceImageFactory {
-                document_url: document_url.cloned(),
-                embedded_images: Rc::clone(&embedded_images),
-                references: Rc::clone(&references),
-            }),
-        );
     }
+    handlers.insert(
+        "img".to_string(),
+        Box::new(ReferenceImageFactory {
+            document_url: document_url.cloned(),
+            image_mode,
+            embedded_images: Rc::clone(&embedded_images),
+            references: Rc::clone(&references),
+        }),
+    );
 
     let mut markdown = parse_html_custom(html, &handlers);
     let definitions = references.borrow().definitions();
@@ -325,6 +335,7 @@ fn markdown_destination(destination: &str) -> String {
 
 struct ReferenceImageFactory {
     document_url: Option<Url>,
+    image_mode: ImageMode,
     embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
 }
@@ -333,6 +344,7 @@ impl TagHandlerFactory for ReferenceImageFactory {
     fn instantiate(&self) -> Box<dyn TagHandler> {
         Box::new(ReferenceImage {
             document_url: self.document_url.clone(),
+            image_mode: self.image_mode,
             embedded_images: Rc::clone(&self.embedded_images),
             references: Rc::clone(&self.references),
         })
@@ -341,31 +353,39 @@ impl TagHandlerFactory for ReferenceImageFactory {
 
 struct ReferenceImage {
     document_url: Option<Url>,
+    image_mode: ImageMode,
     embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
 }
 
 impl TagHandler for ReferenceImage {
     fn handle(&mut self, tag: &Handle, printer: &mut StructuredPrinter) {
-        let Some(src) = tag_attribute(tag, "src") else {
-            return;
-        };
-        let absolute_url = resolve_url(&src, self.document_url.as_ref());
-        let destination = self
-            .embedded_images
-            .get(&absolute_url)
-            .cloned()
-            .unwrap_or(absolute_url);
-        if destination.is_empty() {
-            return;
-        }
-        let title = tag_attribute(tag, "title");
-        let reference = self.references.borrow_mut().register(destination, title);
         let alt = tag_attribute(tag, "alt")
             .unwrap_or_default()
             .replace('\\', "\\\\")
             .replace('[', "\\[")
             .replace(']', "\\]");
+        if self.image_mode == ImageMode::Omit {
+            printer.append_str(&format!("[Image omitted: {alt}]"));
+            return;
+        }
+        let Some(src) = tag_attribute(tag, "src") else {
+            return;
+        };
+        let absolute_url = resolve_url(&src, self.document_url.as_ref());
+        let destination = if self.image_mode == ImageMode::Embed {
+            self.embedded_images
+                .get(&absolute_url)
+                .cloned()
+                .unwrap_or(absolute_url)
+        } else {
+            absolute_url
+        };
+        if destination.is_empty() {
+            return;
+        }
+        let title = tag_attribute(tag, "title");
+        let reference = self.references.borrow_mut().register(destination, title);
         printer.append_str(&format!("![{alt}][rdbl-{reference}]"));
     }
 
@@ -559,6 +579,7 @@ mod tests {
             render_markdown(
                 &result(Some("Article"), None),
                 false,
+                ImageMode::Link,
                 0,
                 None,
                 None,
@@ -579,6 +600,7 @@ mod tests {
         let output = render_markdown(
             &result,
             true,
+            ImageMode::Link,
             2,
             Some(&url),
             Some(&url),
@@ -602,6 +624,7 @@ mod tests {
         let output = render_markdown(
             &result(Some("No author"), None),
             true,
+            ImageMode::Link,
             0,
             None,
             None,
@@ -619,7 +642,16 @@ mod tests {
             "<h1>見出し一</h1><h5>Heading five</h5><h6>見出し六</h6><pre><code># unchanged\n## code</code></pre>"
                 .to_string();
 
-        let output = render_markdown(&result, false, 2, None, None, HashMap::new(), "ignored");
+        let output = render_markdown(
+            &result,
+            false,
+            ImageMode::Link,
+            2,
+            None,
+            None,
+            HashMap::new(),
+            "ignored",
+        );
 
         assert!(output.starts_with("### 題名\n\n### 見出し一"));
         assert!(output.contains("###### Heading five"));
@@ -642,7 +674,7 @@ mod tests {
             "<img src=\"../media/photo.png\" alt=\"Photo\" title=\"Saved image\">"
         );
 
-        let output = markdown_from_html(html, 0, true, Some(&base), images);
+        let output = markdown_from_html(html, 0, ImageMode::Embed, Some(&base), images);
 
         assert_eq!(
             output,
@@ -653,6 +685,26 @@ mod tests {
                 "[rdbl-1]: <data:image/png;base64,AQID> \"Saved image\""
             )
         );
+    }
+
+    #[test]
+    fn image_modes_are_independent_from_frontmatter() {
+        let base = Url::parse("https://example.com/articles/page.html").unwrap();
+        let html = "<p>Body</p><img src=\"../photo.png\" alt=\"Photo\">";
+        let mut images = HashMap::new();
+        images.insert(
+            "https://example.com/photo.png".to_string(),
+            "data:image/png;base64,AQID".to_string(),
+        );
+
+        let linked = markdown_from_html(html, 0, ImageMode::Link, Some(&base), images.clone());
+        let embedded = markdown_from_html(html, 0, ImageMode::Embed, Some(&base), images.clone());
+        let omitted = markdown_from_html(html, 0, ImageMode::Omit, Some(&base), images);
+
+        assert!(linked.contains("[rdbl-1]: <https://example.com/photo.png>"));
+        assert!(embedded.contains("[rdbl-1]: <data:image/png;base64,AQID>"));
+        assert_eq!(omitted, "Body\n\n[Image omitted: Photo]");
+        assert!(!omitted.contains("photo.png"));
     }
 
     #[test]

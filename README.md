@@ -15,8 +15,8 @@ The binary will be installed to `~/.cargo/bin/rdbl`.
 ```console
 $ rdbl https://example.com/article
 $ cat article.html | rdbl --stdin
-$ rdbl --frontmatter https://example.com/article > article.md
-$ rdbl --frontmatter --heading-offset 2 https://example.com/article > article.md
+$ rdbl --frontmatter --image-mode embed https://example.com/article > article.md
+$ rdbl --frontmatter --image-mode omit --heading-offset 2 https://example.com/article > article.md
 ```
 
 By default, `rdbl` writes the same plain Markdown output as before. Pass `--frontmatter` to prepend
@@ -41,13 +41,14 @@ is calculated over the exact UTF-8 bytes of the Markdown body after the closing 
 extracted `# title` heading when present), excluding the frontmatter and the final newline written by
 the CLI.
 
-Archive output is self-contained where possible. Relative links are resolved against the fetched
-page's final URL and remain inline Markdown links. Images are downloaded concurrently in groups of
-eight and stored as base64 `data:` URIs in reference definitions collected at the end of the
-document. If an image cannot be fetched or does not have an `image/*` content type, its absolute URL
-is retained instead, so a failed subresource does not prevent the article from being archived.
-For `--stdin`, already-absolute images can still be embedded, but relative URLs cannot be resolved
-without a source URL.
+Relative links are resolved against the fetched page's final URL and remain inline Markdown links.
+Image handling is independent from frontmatter. `--image-mode link` (the default) writes images as
+reference-style Markdown with absolute URL definitions. `--image-mode embed` downloads images
+concurrently in groups of eight and stores them as base64 `data:` URI definitions; a failed image
+fetch falls back to its absolute URL. `--image-mode omit` leaves an alt-text placeholder and stores
+neither the image nor its URL. For `--stdin`, already-absolute images can still be embedded, but
+relative URLs cannot be resolved without a source URL. `content_sha256` always hashes the final
+Markdown body produced by the selected image mode.
 
 Use `--heading-offset N` when embedding the output below an existing Markdown heading. It increases
 both the generated title heading and headings originating from structured `<h1>`–`<h6>` elements by
@@ -71,6 +72,9 @@ Options:
           Output format: markdown, html, text, json [default: markdown]
       --frontmatter
           Prepend archive metadata as YAML frontmatter (markdown only)
+      --image-mode <IMAGE_MODE>
+          Image handling in Markdown: embed, link, or omit [default: link]
+          [possible values: embed, link, omit]
       --heading-offset <HEADING_OFFSET>
           Increase Markdown heading levels, clamping at h6 [default: 0]
       --min-text <MIN_TEXT>
