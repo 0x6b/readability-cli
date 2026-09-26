@@ -22,8 +22,8 @@ rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
 ```
 
 The library deliberately performs no network I/O. A server or other network-facing consumer must
-fetch and bound the HTML itself. `source_url` is the originally requested URL; `document_url` is the
-base for relative links and should differ only when the fetch followed a redirect:
+fetch and bound the HTML itself. `source_url` is recorded in archive metadata; `document_url` is the
+base URL used to resolve relative links and images in the fetched document:
 
 ```rust
 use std::collections::HashMap;
