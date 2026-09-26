@@ -22,15 +22,14 @@ rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
 ```
 
 The library deliberately performs no network I/O. A server or other network-facing consumer must
-fetch and bound the HTML itself, then pass the originally requested URL as `source_url` and the final
-post-redirect URL as `document_url`:
+fetch and bound the HTML itself. `source_url` is the originally requested URL; `document_url` is the
+base for relative links and should differ only when the fetch followed a redirect:
 
 ```rust
 use std::collections::HashMap;
 use rdbl::{ExtractOptions, ImageMode, RenderOptions, Url, extract_and_render};
 
 let source_url = Url::parse("https://example.com/article")?;
-let final_url = Url::parse("https://www.example.com/article")?;
 let archive = extract_and_render(
     fetched_html,
     &ExtractOptions::default(),
@@ -39,12 +38,12 @@ let archive = extract_and_render(
         image_mode: ImageMode::Omit,
         heading_offset: 0,
         source_url: Some(&source_url),
-        document_url: Some(&final_url),
+        document_url: Some(&source_url),
         embedded_images: HashMap::new(),
         retrieved_at: "2026-09-26T12:34:56Z",
     },
 );
-println!("{}", archive.rendered.content);
+println!("{}", archive.rendered);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
@@ -58,7 +57,8 @@ an absolute image link.
 This boundary is intentional: URL scheme checks, DNS and redirect validation, SSRF controls,
 content-type checks, byte/image/concurrency/time limits, and HTTP errors belong to the injecting
 fetcher. `ImageMode::Omit` avoids image URLs in output; `ImageMode::Link` performs no image fetch;
-`ImageMode::Embed` only embeds bytes explicitly supplied by the caller.
+`ImageMode::Embed` uses destinations supplied in `embedded_images` and falls back to the absolute
+image URL for entries the caller did not supply.
 
 ## Usage
 
