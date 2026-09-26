@@ -21,12 +21,11 @@ extraction. Git consumers can pin this repository directly:
 rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
 ```
 
-The library deliberately performs no network I/O. A server or other network-facing consumer must
-fetch and bound the HTML itself. `source_url` is recorded in archive metadata and is also the
-resolution root for relative links and images by default:
+The library does not fetch source HTML. A server or other network-facing consumer must fetch and
+bound the HTML itself. `source_url` is recorded in archive metadata and is also the resolution root
+for relative links and images by default:
 
 ```rust
-use std::collections::HashMap;
 use rdbl::{ExtractOptions, ImageMode, RenderOptions, Url, extract_and_render};
 
 let source_url = Url::parse("https://example.com/article")?;
@@ -39,10 +38,10 @@ let archive = extract_and_render(
         heading_offset: 0,
         source_url: Some(&source_url),
         base_url: None,
-        embedded_images: HashMap::new(),
         retrieved_at: "2026-09-26T12:34:56Z",
+        max_output_bytes: Some(8 * 1024 * 1024),
     },
-);
+)?;
 println!("{}", archive.rendered);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
@@ -52,17 +51,17 @@ Set `base_url` only when relative URLs need to be resolved from a different root
 omitted. Relative URLs remain unchanged unless `base_url` is provided.
 
 `ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
-`content`, the Markdown `body` covered by the hash, and `content_sha256`. For bounded image
-embedding, call `extract`, discover absolute image URLs with `collect_image_sources`, fetch only
-approved images in the caller, convert their validated bytes with `image_data_uri`, and pass the
-resulting URL-to-data-URI map to `render_markdown`. Missing map entries retain the CLI's fallback to
-an absolute image link.
+`content`, the Markdown `body` covered by the hash, and `content_sha256`. `max_output_bytes` bounds
+the exact UTF-8 bytes in `content`, including frontmatter and embedded data URIs. Output that is too
+large without embedded images returns `ArchiveError::OutputTooLarge`.
 
-This boundary is intentional: URL scheme checks, DNS and redirect validation, SSRF controls,
-content-type checks, byte/image/concurrency/time limits, and HTTP errors belong to the injecting
-fetcher. `ImageMode::Omit` avoids image URLs in output; `ImageMode::Link` performs no image fetch;
-`ImageMode::Embed` uses destinations supplied in `embedded_images` and falls back to the absolute
-image URL for entries the caller did not supply.
+`ImageMode::Omit` and `ImageMode::Link` perform no image fetch. For `ImageMode::Embed`, call
+`extract_and_render_with_fetcher` or `render_markdown_with_fetcher` with an `ImageFetcher`. The
+renderer discovers images during Markdown conversion and passes each fetcher the remaining data-URI
+budget. Failed, invalid, or over-budget images fall back to their absolute URLs. The optional
+`reqwest-fetcher` feature exports `ReqwestImageFetcher` for CLI-style use; network-facing services can
+inject a fetcher with their own SSRF, DNS, redirect, and timeout policy. Fetching and bounding the
+source HTML remains the caller's responsibility.
 
 ## Usage
 
@@ -98,11 +97,11 @@ the CLI.
 Relative links are resolved against the fetched page's final URL and remain inline Markdown links.
 Image handling is independent from frontmatter. `--image-mode link` (the default) writes images as
 reference-style Markdown with absolute URL definitions. `--image-mode embed` downloads images
-concurrently in groups of eight and stores them as base64 `data:` URI definitions; a failed image
-fetch falls back to its absolute URL. `--image-mode omit` leaves an alt-text placeholder and stores
-neither the image nor its URL. For `--stdin`, already-absolute images can still be embedded, but
-relative URLs cannot be resolved without a source URL. `content_sha256` always hashes the final
-Markdown body produced by the selected image mode.
+in document order and stores them as base64 `data:` URI definitions; a failed image fetch falls back
+to its absolute URL. `--image-mode omit` leaves an alt-text placeholder and stores neither the image
+nor its URL. For `--stdin`, already-absolute images can still be embedded, but relative URLs cannot
+be resolved without a source URL. `content_sha256` always hashes the final Markdown body produced by
+the selected image mode.
 
 Use `--heading-offset N` when embedding the output below an existing Markdown heading. It increases
 both the generated title heading and headings originating from structured `<h1>`–`<h6>` elements by
