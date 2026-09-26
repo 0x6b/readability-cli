@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     io::{Read, stdin},
     process::exit,
     time::SystemTime,
@@ -11,12 +10,11 @@ use clap::{
     builder::{PossibleValuesParser, TypedValueParser},
 };
 use rdbl::{
-    ExtractOptions, ImageMode, RenderOptions, collect_image_sources, extract, format_utc,
-    image_data_uri, render_markdown,
+    ExtractOptions, ImageMode, RenderOptions, ReqwestImageFetcher, extract, format_utc,
+    render_markdown_with_fetcher,
 };
-use reqwest::{Client, Url, header::CONTENT_TYPE};
+use reqwest::{Client, Url};
 use serde_json::to_string_pretty;
-use tokio::task::JoinSet;
 
 #[derive(Parser)]
 #[clap(version, about = "Extract readable content from HTML")]
@@ -87,13 +85,6 @@ async fn main() -> Result<()> {
             ..Default::default()
         },
     );
-    let image_mode = args.image_mode;
-    let embedded_images = if image_mode == ImageMode::Embed {
-        embed_images(&client, &result.content_html, base_url.as_ref()).await
-    } else {
-        HashMap::new()
-    };
-
     match args.format.as_str() {
         "json" => println!("{}", to_string_pretty(&result)?),
         "html" => {
@@ -110,65 +101,23 @@ async fn main() -> Result<()> {
         }
         _ => print!(
             "{}",
-            render_markdown(
+            render_markdown_with_fetcher(
                 &result,
                 RenderOptions {
                     frontmatter: args.frontmatter,
-                    image_mode,
+                    image_mode: args.image_mode,
                     heading_offset: args.heading_offset,
                     source_url: (!args.stdin).then_some(args.url.as_ref()).flatten(),
                     base_url: base_url.as_ref(),
-                    embedded_images,
                     retrieved_at: &retrieved_at,
-                }
+                    max_output_bytes: None,
+                },
+                &ReqwestImageFetcher::new(client.clone()),
             )
+            .await?
         ),
     }
     Ok(())
-}
-
-async fn embed_images(
-    client: &Client,
-    html: &str,
-    base_url: Option<&Url>,
-) -> HashMap<String, String> {
-    let sources = collect_image_sources(html, base_url, usize::MAX);
-    let mut embedded = HashMap::new();
-    for batch in sources.chunks(8) {
-        let mut requests = JoinSet::new();
-        for url in batch {
-            let client = client.clone();
-            let url = url.clone();
-            requests.spawn(async move { (url.clone(), fetch_image_data_uri(&client, &url).await) });
-        }
-        while let Some(result) = requests.join_next().await {
-            if let Ok((url, Some(data_uri))) = result {
-                embedded.insert(url, data_uri);
-            }
-        }
-    }
-    embedded
-}
-
-async fn fetch_image_data_uri(client: &Client, url: &str) -> Option<String> {
-    let response = client.get(url).send().await.ok()?;
-    if !response.status().is_success() {
-        return None;
-    }
-    let media_type = response
-        .headers()
-        .get(CONTENT_TYPE)?
-        .to_str()
-        .ok()?
-        .split(';')
-        .next()?
-        .trim()
-        .to_ascii_lowercase();
-    if !media_type.starts_with("image/") {
-        return None;
-    }
-    let bytes = response.bytes().await.ok()?;
-    Some(image_data_uri(&media_type, &bytes))
 }
 
 async fn fetch_url(client: &Client, url: &Url) -> Result<(String, Url)> {

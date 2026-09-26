@@ -3,6 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
     error::Error,
     fmt::{self, Display, Formatter},
+    future::Future,
     rc::Rc,
     str::FromStr,
     time::{SystemTime, SystemTimeError, UNIX_EPOCH},
@@ -12,8 +13,6 @@ use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use html2md::{
     Handle, NodeData, StructuredPrinter, TagHandler, TagHandlerFactory, parse_html_custom,
 };
-use html5ever::{parse_document, tendril::TendrilSink};
-use markup5ever_rcdom::{Handle as DomHandle, NodeData as DomNodeData, RcDom};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use sha2::{Digest, Sha256};
@@ -81,9 +80,59 @@ pub struct RenderOptions<'a> {
     pub source_url: Option<&'a Url>,
     /// Override the relative-URL resolution root. Defaults to `source_url`.
     pub base_url: Option<&'a Url>,
-    pub embedded_images: HashMap<String, String>,
     pub retrieved_at: &'a str,
+    /// Maximum bytes in the exact rendered content, including frontmatter.
+    pub max_output_bytes: Option<usize>,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FetchedImage {
+    pub media_type: String,
+    pub bytes: Vec<u8>,
+}
+
+impl FetchedImage {
+    fn data_uri(&self) -> Option<String> {
+        let valid_media_type = self.media_type.starts_with("image/")
+            && self.media_type.bytes().all(|byte| {
+                byte.is_ascii_alphanumeric()
+                    || matches!(
+                        byte,
+                        b'/' | b'!' | b'#' | b'$' | b'&' | b'^' | b'_' | b'.' | b'+' | b'-'
+                    )
+            });
+        valid_media_type.then(|| image_data_uri(&self.media_type, &self.bytes))
+    }
+}
+
+pub trait ImageFetcher {
+    /// Fetch an image only if its resulting data URI fits in `max_data_uri_bytes`.
+    fn fetch(
+        &self,
+        url: &Url,
+        max_data_uri_bytes: usize,
+    ) -> impl Future<Output = Option<FetchedImage>> + Send;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ArchiveError {
+    OutputTooLarge { limit: usize, actual: usize },
+}
+
+impl Display for ArchiveError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OutputTooLarge { limit, actual } => {
+                write!(
+                    formatter,
+                    "rendered content is {actual} bytes; limit is {limit} bytes"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ArchiveError {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RenderedDocument {
@@ -116,16 +165,114 @@ pub fn extract_and_render(
     html: &str,
     extract_options: &ExtractOptions,
     render_options: RenderOptions<'_>,
-) -> ArchiveDocument {
+) -> Result<ArchiveDocument, ArchiveError> {
     let extracted = extract(html, extract_options);
-    let rendered = render_markdown(&extracted, render_options);
-    ArchiveDocument {
+    let rendered = render_markdown(&extracted, render_options)?;
+    Ok(ArchiveDocument {
         extracted,
         rendered,
-    }
+    })
 }
 
-pub fn render_markdown(result: &ExtractResult, options: RenderOptions<'_>) -> RenderedDocument {
+pub async fn extract_and_render_with_fetcher<F: ImageFetcher>(
+    html: &str,
+    extract_options: &ExtractOptions,
+    render_options: RenderOptions<'_>,
+    fetcher: &F,
+) -> Result<ArchiveDocument, ArchiveError> {
+    let extracted = extract(html, extract_options);
+    let rendered = render_markdown_with_fetcher(&extracted, render_options, fetcher).await?;
+    Ok(ArchiveDocument {
+        extracted,
+        rendered,
+    })
+}
+
+pub fn render_markdown(
+    result: &ExtractResult,
+    options: RenderOptions<'_>,
+) -> Result<RenderedDocument, ArchiveError> {
+    let prepared = prepare_markdown(result, &options);
+    finish_markdown(result, &options, prepared, &HashMap::new())
+}
+
+pub async fn render_markdown_with_fetcher<F: ImageFetcher>(
+    result: &ExtractResult,
+    options: RenderOptions<'_>,
+    fetcher: &F,
+) -> Result<RenderedDocument, ArchiveError> {
+    let prepared = prepare_markdown(result, &options);
+    let baseline = finish_markdown(result, &options, prepared.clone(), &HashMap::new())?;
+    if options.image_mode != ImageMode::Embed {
+        return Ok(baseline);
+    }
+
+    let mut current_size = baseline.content.len();
+    let mut embedded = HashMap::new();
+    let mut seen = HashSet::new();
+    for reference in &prepared.references {
+        if !seen.insert(reference.destination.clone()) {
+            continue;
+        }
+        let Ok(url) = Url::parse(&reference.destination) else {
+            continue;
+        };
+        if !matches!(url.scheme(), "http" | "https") {
+            continue;
+        }
+        let reference_count = prepared
+            .references
+            .iter()
+            .filter(|candidate| candidate.destination == reference.destination)
+            .count();
+        let fallback_len = markdown_destination(&reference.destination).len();
+        let remaining = options
+            .max_output_bytes
+            .map_or(usize::MAX, |limit| limit.saturating_sub(current_size));
+        let growth_per_reference = remaining / reference_count;
+        let max_data_uri_bytes = fallback_len.saturating_add(growth_per_reference);
+        let Some(image) = fetcher.fetch(&url, max_data_uri_bytes).await else {
+            continue;
+        };
+        let Some(data_uri) = image.data_uri() else {
+            continue;
+        };
+        if data_uri.len() > max_data_uri_bytes {
+            continue;
+        }
+        let growth = data_uri
+            .len()
+            .saturating_sub(fallback_len)
+            .saturating_mul(reference_count);
+        let Some(candidate_size) = current_size.checked_add(growth) else {
+            continue;
+        };
+        if options
+            .max_output_bytes
+            .is_some_and(|limit| candidate_size > limit)
+        {
+            continue;
+        }
+        current_size = candidate_size;
+        embedded.insert(reference.destination.clone(), data_uri);
+    }
+
+    finish_markdown(result, &options, prepared, &embedded)
+}
+
+#[derive(Clone)]
+struct PreparedMarkdown {
+    body: String,
+    references: Vec<Reference>,
+}
+
+#[derive(Clone)]
+struct Reference {
+    destination: String,
+    title: Option<String>,
+}
+
+fn prepare_markdown(result: &ExtractResult, options: &RenderOptions<'_>) -> PreparedMarkdown {
     let base_url = options.base_url.or(options.source_url);
     let mut body = String::new();
     if let Some(title) = &result.title {
@@ -134,13 +281,29 @@ pub fn render_markdown(result: &ExtractResult, options: RenderOptions<'_>) -> Re
         body.push_str(title);
         body.push_str("\n\n");
     }
-    body.push_str(&markdown_from_html(
+    let (markdown, references) = markdown_from_html(
         &result.content_html,
         options.heading_offset,
         options.image_mode,
         base_url,
-        options.embedded_images,
-    ));
+    );
+    body.push_str(&markdown);
+    PreparedMarkdown { body, references }
+}
+
+fn finish_markdown(
+    result: &ExtractResult,
+    options: &RenderOptions<'_>,
+    mut prepared: PreparedMarkdown,
+    embedded: &HashMap<String, String>,
+) -> Result<RenderedDocument, ArchiveError> {
+    if !prepared.references.is_empty() {
+        prepared.body.push_str("\n\n");
+        prepared
+            .body
+            .push_str(&reference_definitions(&prepared.references, embedded));
+    }
+    let body = prepared.body;
     let content_sha256 = format!("{:x}", Sha256::digest(body.as_bytes()));
 
     let mut content = String::new();
@@ -162,11 +325,20 @@ pub fn render_markdown(result: &ExtractResult, options: RenderOptions<'_>) -> Re
     content.push_str(&body);
     content.push('\n');
 
-    RenderedDocument {
+    if let Some(limit) = options.max_output_bytes
+        && content.len() > limit
+    {
+        return Err(ArchiveError::OutputTooLarge {
+            limit,
+            actual: content.len(),
+        });
+    }
+
+    Ok(RenderedDocument {
         content,
         body,
         content_sha256,
-    }
+    })
 }
 
 pub fn format_utc(time: SystemTime) -> Result<String, SystemTimeError> {
@@ -192,47 +364,7 @@ pub fn format_utc(time: SystemTime) -> Result<String, SystemTimeError> {
     ))
 }
 
-pub fn collect_image_sources(html: &str, base_url: Option<&Url>, limit: usize) -> Vec<String> {
-    let dom = parse_document(RcDom::default(), Default::default())
-        .from_utf8()
-        .read_from(&mut html.as_bytes())
-        .expect("reading HTML from memory cannot fail");
-    let mut sources = Vec::new();
-    let mut seen = HashSet::new();
-    collect_sources(&dom.document, base_url, limit, &mut seen, &mut sources);
-    sources
-}
-
-fn collect_sources(
-    node: &DomHandle,
-    base_url: Option<&Url>,
-    limit: usize,
-    seen: &mut HashSet<String>,
-    sources: &mut Vec<String>,
-) {
-    if sources.len() >= limit {
-        return;
-    }
-    if let DomNodeData::Element { name, attrs, .. } = &node.data
-        && name.local.as_ref() == "img"
-        && let Some(src) = attrs
-            .borrow()
-            .iter()
-            .find(|attr| attr.name.local.as_ref() == "src")
-    {
-        let url = resolve_url(src.value.as_ref(), base_url);
-        if matches!(Url::parse(&url), Ok(url) if matches!(url.scheme(), "http" | "https"))
-            && seen.insert(url.clone())
-        {
-            sources.push(url);
-        }
-    }
-    for child in node.children.borrow().iter() {
-        collect_sources(child, base_url, limit, seen, sources);
-    }
-}
-
-pub fn image_data_uri(media_type: &str, bytes: &[u8]) -> String {
+fn image_data_uri(media_type: &str, bytes: &[u8]) -> String {
     format!("data:{media_type};base64,{}", BASE64.encode(bytes))
 }
 
@@ -241,8 +373,7 @@ fn markdown_from_html(
     heading_offset: u8,
     image_mode: ImageMode,
     base_url: Option<&Url>,
-    embedded_images: HashMap<String, String>,
-) -> String {
+) -> (String, Vec<Reference>) {
     let mut handlers: HashMap<String, Box<dyn TagHandlerFactory>> = HashMap::new();
     if heading_offset > 0 {
         for level in 1..=6 {
@@ -268,17 +399,12 @@ fn markdown_from_html(
         Box::new(ReferenceImageFactory {
             base_url: base_url.cloned(),
             image_mode,
-            embedded_images: Rc::new(embedded_images),
             references: Rc::clone(&references),
         }),
     );
-    let mut markdown = parse_html_custom(html, &handlers);
-    let definitions = references.borrow().definitions();
-    if !definitions.is_empty() {
-        markdown.push_str("\n\n");
-        markdown.push_str(&definitions);
-    }
-    markdown
+    let markdown = parse_html_custom(html, &handlers);
+    let references = references.borrow().entries.clone();
+    (markdown, references)
 }
 
 fn shifted_heading_level(level: u8, offset: u8) -> usize {
@@ -287,7 +413,7 @@ fn shifted_heading_level(level: u8, offset: u8) -> usize {
 
 #[derive(Default)]
 struct ReferenceRegistry {
-    entries: Vec<(String, Option<String>)>,
+    entries: Vec<Reference>,
 }
 
 impl ReferenceRegistry {
@@ -295,32 +421,36 @@ impl ReferenceRegistry {
         if let Some(index) = self
             .entries
             .iter()
-            .position(|entry| *entry == (destination.clone(), title.clone()))
+            .position(|entry| entry.destination == destination && entry.title == title)
         {
             return index + 1;
         }
-        self.entries.push((destination, title));
+        self.entries.push(Reference { destination, title });
         self.entries.len()
     }
+}
 
-    fn definitions(&self) -> String {
-        self.entries
-            .iter()
-            .enumerate()
-            .map(|(index, (destination, title))| {
-                let title = title
-                    .as_ref()
-                    .map(|title| format!(" {}", to_string(title).unwrap()))
-                    .unwrap_or_default();
-                format!(
-                    "[rdbl-{}]: <{}>{title}",
-                    index + 1,
-                    markdown_destination(destination)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
+fn reference_definitions(references: &[Reference], embedded: &HashMap<String, String>) -> String {
+    references
+        .iter()
+        .enumerate()
+        .map(|(index, reference)| {
+            let title = reference
+                .title
+                .as_ref()
+                .map(|title| format!(" {}", to_string(title).unwrap()))
+                .unwrap_or_default();
+            let destination = embedded
+                .get(&reference.destination)
+                .unwrap_or(&reference.destination);
+            format!(
+                "[rdbl-{}]: <{}>{title}",
+                index + 1,
+                markdown_destination(destination)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 struct AbsoluteLinkFactory {
@@ -361,7 +491,6 @@ impl TagHandler for AbsoluteLink {
 struct ReferenceImageFactory {
     base_url: Option<Url>,
     image_mode: ImageMode,
-    embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
 }
 impl TagHandlerFactory for ReferenceImageFactory {
@@ -369,7 +498,6 @@ impl TagHandlerFactory for ReferenceImageFactory {
         Box::new(ReferenceImage {
             base_url: self.base_url.clone(),
             image_mode: self.image_mode,
-            embedded_images: Rc::clone(&self.embedded_images),
             references: Rc::clone(&self.references),
         })
     }
@@ -377,7 +505,6 @@ impl TagHandlerFactory for ReferenceImageFactory {
 struct ReferenceImage {
     base_url: Option<Url>,
     image_mode: ImageMode,
-    embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
 }
 impl TagHandler for ReferenceImage {
@@ -395,21 +522,13 @@ impl TagHandler for ReferenceImage {
             return;
         };
         let absolute_url = resolve_url(&src, self.base_url.as_ref());
-        let destination = if self.image_mode == ImageMode::Embed {
-            self.embedded_images
-                .get(&absolute_url)
-                .cloned()
-                .unwrap_or(absolute_url)
-        } else {
-            absolute_url
-        };
-        if destination.is_empty() {
+        if absolute_url.is_empty() {
             return;
         }
         let reference = self
             .references
             .borrow_mut()
-            .register(destination, tag_attribute(tag, "title"));
+            .register(absolute_url, tag_attribute(tag, "title"));
         printer.append_str(&format!("![{alt}][rdbl-{reference}]"));
     }
     fn after_handle(&mut self, _printer: &mut StructuredPrinter) {}
@@ -494,10 +613,11 @@ mod tests {
                 heading_offset: 1,
                 source_url: Some(&url),
                 base_url: None,
-                embedded_images: HashMap::new(),
                 retrieved_at: "2026-01-02T03:04:05Z",
+                max_output_bytes: None,
             },
-        );
+        )
+        .unwrap();
         assert!(rendered.content.starts_with("---\ntitle: \"Article\""));
         assert!(rendered.body.starts_with("## Article\n\n## Section"));
         assert!(
@@ -519,10 +639,11 @@ mod tests {
                 heading_offset: 0,
                 source_url: None,
                 base_url: None,
-                embedded_images: HashMap::new(),
                 retrieved_at: "ignored",
+                max_output_bytes: None,
             },
-        );
+        )
+        .unwrap();
 
         assert_eq!(rendered.content, "# Article\n\nArchive body: 日本語\n");
         assert_eq!(rendered.body, "# Article\n\nArchive body: 日本語");
@@ -530,17 +651,49 @@ mod tests {
             rendered.content_sha256,
             "94af606d01b6e332331c1a9fbb02346eadadee45812a1f356b4f23f137e8257a"
         );
+
+        let error = render_markdown(
+            &result,
+            RenderOptions {
+                frontmatter: false,
+                image_mode: ImageMode::Link,
+                heading_offset: 0,
+                source_url: None,
+                base_url: None,
+                retrieved_at: "ignored",
+                max_output_bytes: Some(rendered.content.len() - 1),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(
+            error,
+            ArchiveError::OutputTooLarge {
+                limit: rendered.content.len() - 1,
+                actual: rendered.content.len(),
+            }
+        );
     }
 
-    #[test]
-    fn caller_supplied_images_control_embedding() {
+    struct StaticFetcher {
+        image: FetchedImage,
+    }
+
+    impl ImageFetcher for StaticFetcher {
+        async fn fetch(&self, _url: &Url, max_data_uri_bytes: usize) -> Option<FetchedImage> {
+            (self.image.data_uri()?.len() <= max_data_uri_bytes).then(|| self.image.clone())
+        }
+    }
+
+    #[tokio::test]
+    async fn fetches_embedded_images_and_falls_back_at_output_limit() {
         let base = Url::parse("https://example.com/articles/page").unwrap();
-        let mut images = HashMap::new();
-        images.insert(
-            "https://example.com/photo.png".into(),
-            image_data_uri("image/png", &[1, 2, 3]),
-        );
-        let embedded = render_markdown(
+        let fetcher = StaticFetcher {
+            image: FetchedImage {
+                media_type: "image/png".into(),
+                bytes: vec![1; 30],
+            },
+        };
+        let embedded = render_markdown_with_fetcher(
             &result(),
             RenderOptions {
                 frontmatter: false,
@@ -548,30 +701,41 @@ mod tests {
                 heading_offset: 0,
                 source_url: Some(&base),
                 base_url: None,
-                embedded_images: images,
                 retrieved_at: "ignored",
+                max_output_bytes: None,
             },
-        );
-        let omitted = render_markdown(
+            &fetcher,
+        )
+        .await
+        .unwrap();
+        let fallback_limit = embedded.content.len() - 1;
+        let fallback = render_markdown_with_fetcher(
             &result(),
             RenderOptions {
                 frontmatter: false,
-                image_mode: ImageMode::Omit,
+                image_mode: ImageMode::Embed,
                 heading_offset: 0,
                 source_url: Some(&base),
                 base_url: None,
-                embedded_images: HashMap::new(),
                 retrieved_at: "ignored",
+                max_output_bytes: Some(fallback_limit),
             },
-        );
+            &fetcher,
+        )
+        .await
+        .unwrap();
 
         assert!(
             embedded
                 .content
-                .contains("[rdbl-1]: <data:image/png;base64,AQID>")
+                .contains("[rdbl-1]: <data:image/png;base64,")
         );
-        assert!(omitted.content.contains("[Image omitted: Photo]"));
-        assert!(!omitted.content.contains("photo.png"));
+        assert!(
+            fallback
+                .content
+                .contains("[rdbl-1]: <https://example.com/photo.png>")
+        );
+        assert!(fallback.content.len() <= fallback_limit);
     }
 
     #[test]

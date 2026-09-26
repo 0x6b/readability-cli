@@ -10,7 +10,7 @@ name = "rdbl"
 path = "src/main.rs"
 
 [dependencies]
-rdbl.workspace = true
+rdbl = { workspace = true, features = ["reqwest-fetcher"] }
 clap.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
