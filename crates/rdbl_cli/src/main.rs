@@ -6,7 +6,10 @@ use std::{
 };
 
 use anyhow::{Result, bail};
-use clap::{Parser, ValueEnum};
+use clap::{
+    Parser,
+    builder::{PossibleValuesParser, TypedValueParser},
+};
 use rdbl::{
     ExtractOptions, ImageMode, RenderOptions, collect_image_sources, extract, format_utc,
     image_data_uri, render_markdown,
@@ -14,24 +17,6 @@ use rdbl::{
 use reqwest::{Client, Url, header::CONTENT_TYPE};
 use serde_json::to_string_pretty;
 use tokio::task::JoinSet;
-
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
-enum CliImageMode {
-    Embed,
-    #[default]
-    Link,
-    Omit,
-}
-
-impl From<CliImageMode> for ImageMode {
-    fn from(value: CliImageMode) -> Self {
-        match value {
-            CliImageMode::Embed => Self::Embed,
-            CliImageMode::Link => Self::Link,
-            CliImageMode::Omit => Self::Omit,
-        }
-    }
-}
 
 #[derive(Parser)]
 #[clap(version, about = "Extract readable content from HTML")]
@@ -48,8 +33,8 @@ struct Args {
     #[clap(long)]
     frontmatter: bool,
     /// Image handling in Markdown: embed, link, or omit
-    #[clap(long, value_enum, default_value_t)]
-    image_mode: CliImageMode,
+    #[clap(long, default_value_t, value_parser = image_mode_parser())]
+    image_mode: ImageMode,
     /// Increase Markdown heading levels, clamping at h6
     #[clap(long, default_value = "0")]
     heading_offset: u8,
@@ -65,6 +50,14 @@ struct Args {
         default_value = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0"
     )]
     user_agent: String,
+}
+
+fn image_mode_parser() -> impl TypedValueParser<Value = ImageMode> {
+    PossibleValuesParser::new(["embed", "link", "omit"]).map(|value| {
+        value
+            .parse()
+            .expect("all possible values are valid image modes")
+    })
 }
 
 #[tokio::main]
@@ -94,7 +87,7 @@ async fn main() -> Result<()> {
             ..Default::default()
         },
     );
-    let image_mode = ImageMode::from(args.image_mode);
+    let image_mode = args.image_mode;
     let embedded_images = if image_mode == ImageMode::Embed {
         embed_images(&client, &result.content_html, document_url.as_ref()).await
     } else {
@@ -129,7 +122,6 @@ async fn main() -> Result<()> {
                     retrieved_at: &retrieved_at,
                 }
             )
-            .content
         ),
     }
     Ok(())
