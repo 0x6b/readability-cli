@@ -107,11 +107,27 @@ impl FetchedImage {
 
 pub trait ImageFetcher {
     /// Fetch an image only if its resulting data URI fits in `max_data_uri_bytes`.
-    fn fetch(
+    fn fetch_image(
         &self,
         url: &Url,
         max_data_uri_bytes: usize,
     ) -> impl Future<Output = Option<FetchedImage>> + Send;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FetchedHtml {
+    pub html: String,
+    /// Final URL after redirects, used to resolve relative links and images.
+    pub final_url: Url,
+}
+
+pub trait HtmlFetcher {
+    type Error: Error + Send + Sync + 'static;
+
+    fn fetch_html(
+        &self,
+        url: &Url,
+    ) -> impl Future<Output = Result<FetchedHtml, Self::Error>> + Send;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -231,7 +247,7 @@ pub async fn render_markdown_with_fetcher<F: ImageFetcher>(
             .map_or(usize::MAX, |limit| limit.saturating_sub(current_size));
         let growth_per_reference = remaining / reference_count;
         let max_data_uri_bytes = fallback_len.saturating_add(growth_per_reference);
-        let Some(image) = fetcher.fetch(&url, max_data_uri_bytes).await else {
+        let Some(image) = fetcher.fetch_image(&url, max_data_uri_bytes).await else {
             continue;
         };
         let Some(data_uri) = image.data_uri() else {
@@ -679,7 +695,7 @@ mod tests {
     }
 
     impl ImageFetcher for StaticFetcher {
-        async fn fetch(&self, _url: &Url, max_data_uri_bytes: usize) -> Option<FetchedImage> {
+        async fn fetch_image(&self, _url: &Url, max_data_uri_bytes: usize) -> Option<FetchedImage> {
             (self.image.data_uri()?.len() <= max_data_uri_bytes).then(|| self.image.clone())
         }
     }

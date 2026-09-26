@@ -1,22 +1,77 @@
-use std::future::Future;
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+    future::Future,
+};
 
-use reqwest::{Client, Url, header::CONTENT_TYPE};
+use reqwest::{Client, StatusCode, Url, header::CONTENT_TYPE};
 
-use crate::{FetchedImage, ImageFetcher};
+use crate::{FetchedHtml, FetchedImage, HtmlFetcher, ImageFetcher};
 
 #[derive(Clone, Debug)]
-pub struct ReqwestImageFetcher {
+pub struct ReqwestFetcher {
     client: Client,
 }
 
-impl ReqwestImageFetcher {
+impl ReqwestFetcher {
     pub fn new(client: Client) -> Self {
         Self { client }
     }
 }
 
-impl ImageFetcher for ReqwestImageFetcher {
-    fn fetch(
+#[derive(Debug)]
+pub enum ReqwestFetchError {
+    Request(reqwest::Error),
+    HttpStatus(StatusCode),
+}
+
+impl Display for ReqwestFetchError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Request(error) => Display::fmt(error, formatter),
+            Self::HttpStatus(status) => write!(formatter, "HTTP error: {status}"),
+        }
+    }
+}
+
+impl Error for ReqwestFetchError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Request(error) => Some(error),
+            Self::HttpStatus(_) => None,
+        }
+    }
+}
+
+impl From<reqwest::Error> for ReqwestFetchError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Request(error)
+    }
+}
+
+impl HtmlFetcher for ReqwestFetcher {
+    type Error = ReqwestFetchError;
+
+    fn fetch_html(
+        &self,
+        url: &Url,
+    ) -> impl Future<Output = Result<FetchedHtml, Self::Error>> + Send {
+        let client = self.client.clone();
+        let url = url.clone();
+        async move {
+            let response = client.get(url).send().await?;
+            if !response.status().is_success() {
+                return Err(ReqwestFetchError::HttpStatus(response.status()));
+            }
+            let final_url = response.url().clone();
+            let html = response.text().await?;
+            Ok(FetchedHtml { html, final_url })
+        }
+    }
+}
+
+impl ImageFetcher for ReqwestFetcher {
+    fn fetch_image(
         &self,
         url: &Url,
         max_data_uri_bytes: usize,

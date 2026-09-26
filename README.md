@@ -21,9 +21,8 @@ extraction. Git consumers can pin this repository directly:
 rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
 ```
 
-The library does not fetch source HTML. A server or other network-facing consumer must fetch and
-bound the HTML itself. `source_url` is recorded in archive metadata and is also the resolution root
-for relative links and images by default:
+The archive API accepts already-fetched HTML. `source_url` is recorded in archive metadata and is
+also the resolution root for relative links and images by default:
 
 ```rust
 use rdbl::{ExtractOptions, ImageMode, RenderOptions, Url, extract_and_render};
@@ -50,6 +49,11 @@ Set `base_url` only when relative URLs need to be resolved from a different root
 `source_url`. For URL-less input such as stdin, set `source_url` to `None`; source metadata is then
 omitted. Relative URLs remain unchanged unless `base_url` is provided.
 
+Network consumers can implement `HtmlFetcher` to supply `FetchedHtml`. Its `final_url` should be the
+URL after redirects and can be passed as `base_url`, while the requested URL remains `source_url`.
+The fetcher owns DNS, redirects, response limits, content-type validation, and timeouts. This keeps
+those policies injectable without coupling extraction and rendering to a particular HTTP client.
+
 `ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
 `content`, the Markdown `body` covered by the hash, and `content_sha256`. `max_output_bytes` bounds
 the exact UTF-8 bytes in `content`, including frontmatter and embedded data URIs. Output that is too
@@ -59,9 +63,9 @@ large without embedded images returns `ArchiveError::OutputTooLarge`.
 `extract_and_render_with_fetcher` or `render_markdown_with_fetcher` with an `ImageFetcher`. The
 renderer discovers images during Markdown conversion and passes each fetcher the remaining data-URI
 budget. Failed, invalid, or over-budget images fall back to their absolute URLs. The optional
-`reqwest-fetcher` feature exports `ReqwestImageFetcher` for CLI-style use; network-facing services can
-inject a fetcher with their own SSRF, DNS, redirect, and timeout policy. Fetching and bounding the
-source HTML remains the caller's responsibility.
+`reqwest-fetcher` feature exports `ReqwestFetcher`, which implements both `HtmlFetcher` and
+`ImageFetcher` for CLI-style use. It does not add SSRF protection or source-response limits;
+network-facing services should inject a fetcher with their own policy.
 
 ## Usage
 

@@ -10,7 +10,7 @@ use clap::{
     builder::{PossibleValuesParser, TypedValueParser},
 };
 use rdbl::{
-    ExtractOptions, ImageMode, RenderOptions, ReqwestImageFetcher, extract, format_utc,
+    ExtractOptions, HtmlFetcher, ImageMode, RenderOptions, ReqwestFetcher, extract, format_utc,
     render_markdown_with_fetcher,
 };
 use reqwest::{Client, Url};
@@ -65,13 +65,14 @@ async fn main() -> Result<()> {
         bail!("--frontmatter and --heading-offset can only be used with --format markdown");
     }
     let client = Client::builder().user_agent(&args.user_agent).build()?;
+    let fetcher = ReqwestFetcher::new(client);
     let (html, base_url) = if args.stdin {
         let mut buffer = String::new();
         stdin().read_to_string(&mut buffer)?;
         (buffer, None)
     } else if let Some(url) = &args.url {
-        let (html, final_url) = fetch_url(&client, url).await?;
-        (html, Some(final_url))
+        let fetched = fetcher.fetch_html(url).await?;
+        (fetched.html, Some(fetched.final_url))
     } else {
         eprintln!("Error: Either provide a URL or use --stdin to read HTML from stdin");
         exit(1);
@@ -112,19 +113,10 @@ async fn main() -> Result<()> {
                     retrieved_at: &retrieved_at,
                     max_output_bytes: None,
                 },
-                &ReqwestImageFetcher::new(client.clone()),
+                &fetcher,
             )
             .await?
         ),
     }
     Ok(())
-}
-
-async fn fetch_url(client: &Client, url: &Url) -> Result<(String, Url)> {
-    let response = client.get(url.as_str()).send().await?;
-    if !response.status().is_success() {
-        bail!("HTTP error: {}", response.status());
-    }
-    let final_url = response.url().clone();
-    Ok((response.text().await?, final_url))
 }
