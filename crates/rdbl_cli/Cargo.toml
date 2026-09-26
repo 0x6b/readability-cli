@@ -10,14 +10,12 @@ name = "rdbl"
 path = "src/main.rs"
 
 [dependencies]
-rdbl_core.workspace = true
+rdbl = { workspace = true, features = ["reqwest-fetcher"] }
 clap.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
-html2md.workspace = true
+
+[dev-dependencies]
 sha2.workspace = true
-base64.workspace = true
-html5ever.workspace = true
-markup5ever_rcdom.workspace = true

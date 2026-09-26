@@ -1162,16 +1162,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdbl"
+version = "0.10.0"
+dependencies = [
+ "base64",
+ "html2md",
+ "rdbl_core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "rdbl_cli"
 version = "0.10.0"
 dependencies = [
  "anyhow",
- "base64",
  "clap",
- "html2md",
- "html5ever 0.39.0",
- "markup5ever_rcdom 0.39.0+unofficial",
- "rdbl_core",
+ "rdbl",
  "reqwest",
  "serde_json",
  "sha2",

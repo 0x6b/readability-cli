@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/rdbl_core", "crates/rdbl_wasm", "crates/rdbl_cli"]
+members = ["crates/rdbl_core", "crates/rdbl", "crates/rdbl_wasm", "crates/rdbl_cli"]
 default-members = ["crates/rdbl_cli"]
 resolver = "3"
 
@@ -10,6 +10,7 @@ license = "MIT"
 [workspace.dependencies]
 # Internal crates
 rdbl_core = { version = "0.1.0", path = "crates/rdbl_core" }
+rdbl = { version = "0.10.0", path = "crates/rdbl" }
 
 # HTML parsing
 html5ever = "0.39"
@@ -33,6 +34,7 @@ js-sys = "0.3"
 # CLI
 clap = { version = "4.6", features = ["derive", "wrap_help", "env"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+url = "2.5"
 tokio = { version = "1.53", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 html2md = "0.2"

@@ -10,6 +10,63 @@ $ cargo install --git https://github.com/0x6b/readability-cli
 
 The binary will be installed to `~/.cargo/bin/rdbl`.
 
+## Rust library
+
+The `rdbl` package is the high-level, reusable API. It layers Markdown conversion, frontmatter,
+heading offsets, image modes, URL resolution, and content hashing over `rdbl_core`'s HTML content
+extraction. Git consumers can pin this repository directly:
+
+```toml
+[dependencies]
+rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
+```
+
+The archive API accepts already-fetched HTML. `source_url` is recorded in archive metadata and is
+also the resolution root for relative links and images by default:
+
+```rust
+use rdbl::{ExtractOptions, ImageMode, RenderOptions, Url, extract_and_render};
+
+let source_url = Url::parse("https://example.com/article")?;
+let archive = extract_and_render(
+    fetched_html,
+    &ExtractOptions::default(),
+    RenderOptions {
+        frontmatter: true,
+        image_mode: ImageMode::Omit,
+        heading_offset: 0,
+        source_url: Some(&source_url),
+        base_url: None,
+        retrieved_at: "2026-09-26T12:34:56Z",
+        max_output_bytes: Some(8 * 1024 * 1024),
+    },
+)?;
+println!("{}", archive.rendered);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Set `base_url` only when relative URLs need to be resolved from a different root than the archived
+`source_url`. For URL-less input such as stdin, set `source_url` to `None`; source metadata is then
+omitted. Relative URLs remain unchanged unless `base_url` is provided.
+
+Network consumers can implement `HtmlFetcher` to supply `FetchedHtml`. Its `final_url` should be the
+URL after redirects and can be passed as `base_url`, while the requested URL remains `source_url`.
+The fetcher owns DNS, redirects, response limits, content-type validation, and timeouts. This keeps
+those policies injectable without coupling extraction and rendering to a particular HTTP client.
+
+`ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
+`content`, the Markdown `body` covered by the hash, and `content_sha256`. `max_output_bytes` bounds
+the exact UTF-8 bytes in `content`, including frontmatter and embedded data URIs. Output that is too
+large without embedded images returns `ArchiveError::OutputTooLarge`.
+
+`ImageMode::Omit` and `ImageMode::Link` perform no image fetch. For `ImageMode::Embed`, call
+`extract_and_render_with_images` or `render_markdown_with_images` with an `ImageFetcher`. The
+renderer discovers images during Markdown conversion and passes each fetcher the remaining data-URI
+budget. Failed, invalid, or over-budget images fall back to their absolute URLs. The optional
+`reqwest-fetcher` feature exports `ReqwestFetcher`, which implements both `HtmlFetcher` and
+`ImageFetcher` for CLI-style use. It does not add SSRF protection or source-response limits;
+network-facing services should inject a fetcher with their own policy.
+
 ## Usage
 
 ```console
@@ -44,11 +101,11 @@ the CLI.
 Relative links are resolved against the fetched page's final URL and remain inline Markdown links.
 Image handling is independent from frontmatter. `--image-mode link` (the default) writes images as
 reference-style Markdown with absolute URL definitions. `--image-mode embed` downloads images
-concurrently in groups of eight and stores them as base64 `data:` URI definitions; a failed image
-fetch falls back to its absolute URL. `--image-mode omit` leaves an alt-text placeholder and stores
-neither the image nor its URL. For `--stdin`, already-absolute images can still be embedded, but
-relative URLs cannot be resolved without a source URL. `content_sha256` always hashes the final
-Markdown body produced by the selected image mode.
+in document order and stores them as base64 `data:` URI definitions; a failed image fetch falls back
+to its absolute URL. `--image-mode omit` leaves an alt-text placeholder and stores neither the image
+nor its URL. For `--stdin`, already-absolute images can still be embedded, but relative URLs cannot
+be resolved without a source URL. `content_sha256` always hashes the final Markdown body produced by
+the selected image mode.
 
 Use `--heading-offset N` when embedding the output below an existing Markdown heading. It increases
 both the generated title heading and headings originating from structured `<h1>`–`<h6>` elements by
