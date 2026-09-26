@@ -60,7 +60,7 @@ the exact UTF-8 bytes in `content`, including frontmatter and embedded data URIs
 large without embedded images returns `ArchiveError::OutputTooLarge`.
 
 `ImageMode::Omit` and `ImageMode::Link` perform no image fetch. For `ImageMode::Embed`, call
-`extract_and_render_with_fetcher` or `render_markdown_with_fetcher` with an `ImageFetcher`. The
+`extract_and_render_with_images` or `render_markdown_with_images` with an `ImageFetcher`. The
 renderer discovers images during Markdown conversion and passes each fetcher the remaining data-URI
 budget. Failed, invalid, or over-budget images fall back to their absolute URLs. The optional
 `reqwest-fetcher` feature exports `ReqwestFetcher`, which implements both `HtmlFetcher` and

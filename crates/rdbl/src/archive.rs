@@ -190,14 +190,14 @@ pub fn extract_and_render(
     })
 }
 
-pub async fn extract_and_render_with_fetcher<F: ImageFetcher>(
+pub async fn extract_and_render_with_images<F: ImageFetcher>(
     html: &str,
     extract_options: &ExtractOptions,
     render_options: RenderOptions<'_>,
     fetcher: &F,
 ) -> Result<ArchiveDocument, ArchiveError> {
     let extracted = extract(html, extract_options);
-    let rendered = render_markdown_with_fetcher(&extracted, render_options, fetcher).await?;
+    let rendered = render_markdown_with_images(&extracted, render_options, fetcher).await?;
     Ok(ArchiveDocument {
         extracted,
         rendered,
@@ -212,7 +212,7 @@ pub fn render_markdown(
     finish_markdown(result, &options, prepared, &HashMap::new())
 }
 
-pub async fn render_markdown_with_fetcher<F: ImageFetcher>(
+pub async fn render_markdown_with_images<F: ImageFetcher>(
     result: &ExtractResult,
     options: RenderOptions<'_>,
     fetcher: &F,
@@ -709,7 +709,7 @@ mod tests {
                 bytes: vec![1; 30],
             },
         };
-        let embedded = render_markdown_with_fetcher(
+        let embedded = render_markdown_with_images(
             &result(),
             RenderOptions {
                 frontmatter: false,
@@ -725,7 +725,7 @@ mod tests {
         .await
         .unwrap();
         let fallback_limit = embedded.content.len() - 1;
-        let fallback = render_markdown_with_fetcher(
+        let fallback = render_markdown_with_images(
             &result(),
             RenderOptions {
                 frontmatter: false,

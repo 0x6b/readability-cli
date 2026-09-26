@@ -11,7 +11,7 @@ use clap::{
 };
 use rdbl::{
     ExtractOptions, HtmlFetcher, ImageMode, RenderOptions, ReqwestFetcher, extract, format_utc,
-    render_markdown_with_fetcher,
+    render_markdown_with_images,
 };
 use reqwest::{Client, Url};
 use serde_json::to_string_pretty;
@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
         }
         _ => print!(
             "{}",
-            render_markdown_with_fetcher(
+            render_markdown_with_images(
                 &result,
                 RenderOptions {
                     frontmatter: args.frontmatter,

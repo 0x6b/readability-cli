@@ -7,8 +7,8 @@ mod fetch;
 pub use archive::{
     ArchiveDocument, ArchiveError, FetchedHtml, FetchedImage, GENERATOR, GENERATOR_VERSION,
     HtmlFetcher, ImageFetcher, ImageMode, ParseImageModeError, RenderOptions, RenderedDocument,
-    extract_and_render, extract_and_render_with_fetcher, format_utc, render_markdown,
-    render_markdown_with_fetcher,
+    extract_and_render, extract_and_render_with_images, format_utc, render_markdown,
+    render_markdown_with_images,
 };
 #[cfg(feature = "reqwest-fetcher")]
 pub use fetch::{ReqwestFetchError, ReqwestFetcher};
