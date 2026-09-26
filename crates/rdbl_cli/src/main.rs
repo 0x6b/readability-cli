@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
         bail!("--frontmatter and --heading-offset can only be used with --format markdown");
     }
     let client = Client::builder().user_agent(&args.user_agent).build()?;
-    let (html, document_url) = if args.stdin {
+    let (html, base_url) = if args.stdin {
         let mut buffer = String::new();
         stdin().read_to_string(&mut buffer)?;
         (buffer, None)
@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
     );
     let image_mode = args.image_mode;
     let embedded_images = if image_mode == ImageMode::Embed {
-        embed_images(&client, &result.content_html, document_url.as_ref()).await
+        embed_images(&client, &result.content_html, base_url.as_ref()).await
     } else {
         HashMap::new()
     };
@@ -117,7 +117,7 @@ async fn main() -> Result<()> {
                     image_mode,
                     heading_offset: args.heading_offset,
                     source_url: (!args.stdin).then_some(args.url.as_ref()).flatten(),
-                    document_url: document_url.as_ref(),
+                    base_url: base_url.as_ref(),
                     embedded_images,
                     retrieved_at: &retrieved_at,
                 }
@@ -130,9 +130,9 @@ async fn main() -> Result<()> {
 async fn embed_images(
     client: &Client,
     html: &str,
-    document_url: Option<&Url>,
+    base_url: Option<&Url>,
 ) -> HashMap<String, String> {
-    let sources = collect_image_sources(html, document_url, usize::MAX);
+    let sources = collect_image_sources(html, base_url, usize::MAX);
     let mut embedded = HashMap::new();
     for batch in sources.chunks(8) {
         let mut requests = JoinSet::new();

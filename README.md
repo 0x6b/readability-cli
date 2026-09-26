@@ -22,8 +22,8 @@ rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
 ```
 
 The library deliberately performs no network I/O. A server or other network-facing consumer must
-fetch and bound the HTML itself. `source_url` is recorded in archive metadata; `document_url` is the
-base URL used to resolve relative links and images in the fetched document:
+fetch and bound the HTML itself. `source_url` is recorded in archive metadata and is also the
+resolution root for relative links and images by default:
 
 ```rust
 use std::collections::HashMap;
@@ -38,7 +38,7 @@ let archive = extract_and_render(
         image_mode: ImageMode::Omit,
         heading_offset: 0,
         source_url: Some(&source_url),
-        document_url: Some(&source_url),
+        base_url: None,
         embedded_images: HashMap::new(),
         retrieved_at: "2026-09-26T12:34:56Z",
     },
@@ -46,6 +46,9 @@ let archive = extract_and_render(
 println!("{}", archive.rendered);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+Set `base_url` only when relative URLs need to be resolved from a different root than the archived
+`source_url`.
 
 `ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
 `content`, the Markdown `body` covered by the hash, and `content_sha256`. For bounded image

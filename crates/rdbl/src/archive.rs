@@ -77,7 +77,8 @@ pub struct RenderOptions<'a> {
     pub image_mode: ImageMode,
     pub heading_offset: u8,
     pub source_url: Option<&'a Url>,
-    pub document_url: Option<&'a Url>,
+    /// Override the relative-URL resolution root. Defaults to `source_url`.
+    pub base_url: Option<&'a Url>,
     pub embedded_images: HashMap<String, String>,
     pub retrieved_at: &'a str,
 }
@@ -105,10 +106,10 @@ pub struct ArchiveDocument {
 
 /// Extract readable content from fetched HTML and render the exact archive output.
 ///
-/// This function performs no I/O. `source_url` is the originally requested URL,
-/// while `document_url` must be the final URL after redirects and is used to
-/// resolve relative links. Network-facing consumers retain complete control of
-/// DNS, redirects, response limits, timeouts, and image fetching.
+/// This function performs no I/O. `source_url` is recorded in archive metadata,
+/// while `base_url` is the resolution root for relative links. Network-facing
+/// consumers retain complete control of DNS, redirects, response limits,
+/// timeouts, and image fetching.
 pub fn extract_and_render(
     html: &str,
     extract_options: &ExtractOptions,
@@ -123,6 +124,7 @@ pub fn extract_and_render(
 }
 
 pub fn render_markdown(result: &ExtractResult, options: RenderOptions<'_>) -> RenderedDocument {
+    let base_url = options.base_url.or(options.source_url);
     let mut body = String::new();
     if let Some(title) = &result.title {
         body.push_str(&"#".repeat(shifted_heading_level(1, options.heading_offset)));
@@ -134,7 +136,7 @@ pub fn render_markdown(result: &ExtractResult, options: RenderOptions<'_>) -> Re
         &result.content_html,
         options.heading_offset,
         options.image_mode,
-        options.document_url,
+        base_url,
         options.embedded_images,
     ));
     let content_sha256 = format!("{:x}", Sha256::digest(body.as_bytes()));
@@ -188,20 +190,20 @@ pub fn format_utc(time: SystemTime) -> Result<String, SystemTimeError> {
     ))
 }
 
-pub fn collect_image_sources(html: &str, document_url: Option<&Url>, limit: usize) -> Vec<String> {
+pub fn collect_image_sources(html: &str, base_url: Option<&Url>, limit: usize) -> Vec<String> {
     let dom = parse_document(RcDom::default(), Default::default())
         .from_utf8()
         .read_from(&mut html.as_bytes())
         .expect("reading HTML from memory cannot fail");
     let mut sources = Vec::new();
     let mut seen = HashSet::new();
-    collect_sources(&dom.document, document_url, limit, &mut seen, &mut sources);
+    collect_sources(&dom.document, base_url, limit, &mut seen, &mut sources);
     sources
 }
 
 fn collect_sources(
     node: &DomHandle,
-    document_url: Option<&Url>,
+    base_url: Option<&Url>,
     limit: usize,
     seen: &mut HashSet<String>,
     sources: &mut Vec<String>,
@@ -216,7 +218,7 @@ fn collect_sources(
             .iter()
             .find(|attr| attr.name.local.as_ref() == "src")
     {
-        let url = resolve_url(src.value.as_ref(), document_url);
+        let url = resolve_url(src.value.as_ref(), base_url);
         if matches!(Url::parse(&url), Ok(url) if matches!(url.scheme(), "http" | "https"))
             && seen.insert(url.clone())
         {
@@ -224,7 +226,7 @@ fn collect_sources(
         }
     }
     for child in node.children.borrow().iter() {
-        collect_sources(child, document_url, limit, seen, sources);
+        collect_sources(child, base_url, limit, seen, sources);
     }
 }
 
@@ -236,7 +238,7 @@ fn markdown_from_html(
     html: &str,
     heading_offset: u8,
     image_mode: ImageMode,
-    document_url: Option<&Url>,
+    base_url: Option<&Url>,
     embedded_images: HashMap<String, String>,
 ) -> String {
     let mut handlers: HashMap<String, Box<dyn TagHandlerFactory>> = HashMap::new();
@@ -250,11 +252,11 @@ fn markdown_from_html(
             );
         }
     }
-    if document_url.is_some() {
+    if base_url.is_some() {
         handlers.insert(
             "a".into(),
             Box::new(AbsoluteLinkFactory {
-                document_url: document_url.cloned(),
+                base_url: base_url.cloned(),
             }),
         );
     }
@@ -262,7 +264,7 @@ fn markdown_from_html(
     handlers.insert(
         "img".into(),
         Box::new(ReferenceImageFactory {
-            document_url: document_url.cloned(),
+            base_url: base_url.cloned(),
             image_mode,
             embedded_images: Rc::new(embedded_images),
             references: Rc::clone(&references),
@@ -320,19 +322,19 @@ impl ReferenceRegistry {
 }
 
 struct AbsoluteLinkFactory {
-    document_url: Option<Url>,
+    base_url: Option<Url>,
 }
 impl TagHandlerFactory for AbsoluteLinkFactory {
     fn instantiate(&self) -> Box<dyn TagHandler> {
         Box::new(AbsoluteLink {
-            document_url: self.document_url.clone(),
+            base_url: self.base_url.clone(),
             start_pos: 0,
             destination: None,
         })
     }
 }
 struct AbsoluteLink {
-    document_url: Option<Url>,
+    base_url: Option<Url>,
     start_pos: usize,
     destination: Option<String>,
 }
@@ -340,7 +342,7 @@ impl TagHandler for AbsoluteLink {
     fn handle(&mut self, tag: &Handle, printer: &mut StructuredPrinter) {
         self.start_pos = printer.data.len();
         if let Some(href) = tag_attribute(tag, "href") {
-            let destination = resolve_url(&href, self.document_url.as_ref());
+            let destination = resolve_url(&href, self.base_url.as_ref());
             if !destination.is_empty() {
                 self.destination = Some(markdown_destination(&destination));
             }
@@ -355,7 +357,7 @@ impl TagHandler for AbsoluteLink {
 }
 
 struct ReferenceImageFactory {
-    document_url: Option<Url>,
+    base_url: Option<Url>,
     image_mode: ImageMode,
     embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
@@ -363,7 +365,7 @@ struct ReferenceImageFactory {
 impl TagHandlerFactory for ReferenceImageFactory {
     fn instantiate(&self) -> Box<dyn TagHandler> {
         Box::new(ReferenceImage {
-            document_url: self.document_url.clone(),
+            base_url: self.base_url.clone(),
             image_mode: self.image_mode,
             embedded_images: Rc::clone(&self.embedded_images),
             references: Rc::clone(&self.references),
@@ -371,7 +373,7 @@ impl TagHandlerFactory for ReferenceImageFactory {
     }
 }
 struct ReferenceImage {
-    document_url: Option<Url>,
+    base_url: Option<Url>,
     image_mode: ImageMode,
     embedded_images: Rc<HashMap<String, String>>,
     references: Rc<RefCell<ReferenceRegistry>>,
@@ -390,7 +392,7 @@ impl TagHandler for ReferenceImage {
         let Some(src) = tag_attribute(tag, "src") else {
             return;
         };
-        let absolute_url = resolve_url(&src, self.document_url.as_ref());
+        let absolute_url = resolve_url(&src, self.base_url.as_ref());
         let destination = if self.image_mode == ImageMode::Embed {
             self.embedded_images
                 .get(&absolute_url)
@@ -445,8 +447,8 @@ fn tag_attribute(tag: &Handle, name: &str) -> Option<String> {
         .find(|attr| attr.name.local.as_ref() == name)
         .map(|attr| attr.value.to_string())
 }
-fn resolve_url(value: &str, document_url: Option<&Url>) -> String {
-    document_url
+fn resolve_url(value: &str, base_url: Option<&Url>) -> String {
+    base_url
         .and_then(|base| base.join(value).ok())
         .map_or_else(|| value.to_string(), |url| url.to_string())
 }
@@ -489,7 +491,7 @@ mod tests {
                 image_mode: ImageMode::Link,
                 heading_offset: 1,
                 source_url: Some(&url),
-                document_url: Some(&url),
+                base_url: None,
                 embedded_images: HashMap::new(),
                 retrieved_at: "2026-01-02T03:04:05Z",
             },
@@ -514,7 +516,7 @@ mod tests {
                 image_mode: ImageMode::Link,
                 heading_offset: 0,
                 source_url: None,
-                document_url: None,
+                base_url: None,
                 embedded_images: HashMap::new(),
                 retrieved_at: "ignored",
             },
@@ -543,7 +545,7 @@ mod tests {
                 image_mode: ImageMode::Embed,
                 heading_offset: 0,
                 source_url: Some(&base),
-                document_url: Some(&base),
+                base_url: None,
                 embedded_images: images,
                 retrieved_at: "ignored",
             },
@@ -555,7 +557,7 @@ mod tests {
                 image_mode: ImageMode::Omit,
                 heading_offset: 0,
                 source_url: Some(&base),
-                document_url: Some(&base),
+                base_url: None,
                 embedded_images: HashMap::new(),
                 retrieved_at: "ignored",
             },
