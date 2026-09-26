@@ -76,6 +76,8 @@ pub struct RenderOptions<'a> {
     pub frontmatter: bool,
     pub image_mode: ImageMode,
     pub heading_offset: u8,
+    /// URL recorded in frontmatter and the default relative-URL resolution root.
+    /// May be omitted for URL-less input.
     pub source_url: Option<&'a Url>,
     /// Override the relative-URL resolution root. Defaults to `source_url`.
     pub base_url: Option<&'a Url>,

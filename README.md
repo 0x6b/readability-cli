@@ -48,7 +48,8 @@ println!("{}", archive.rendered);
 ```
 
 Set `base_url` only when relative URLs need to be resolved from a different root than the archived
-`source_url`.
+`source_url`. For URL-less input such as stdin, set `source_url` to `None`; source metadata is then
+omitted. Relative URLs remain unchanged unless `base_url` is provided.
 
 `ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
 `content`, the Markdown `body` covered by the hash, and `content_sha256`. For bounded image
