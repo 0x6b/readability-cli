@@ -10,6 +10,56 @@ $ cargo install --git https://github.com/0x6b/readability-cli
 
 The binary will be installed to `~/.cargo/bin/rdbl`.
 
+## Rust library
+
+The `rdbl` package is the high-level, reusable API. It layers Markdown conversion, frontmatter,
+heading offsets, image modes, URL resolution, and content hashing over `rdbl_core`'s HTML content
+extraction. Git consumers can pin this repository directly:
+
+```toml
+[dependencies]
+rdbl = { git = "https://github.com/0x6b/readability-cli", rev = "<commit>" }
+```
+
+The library deliberately performs no network I/O. A server or other network-facing consumer must
+fetch and bound the HTML itself, then pass the originally requested URL as `source_url` and the final
+post-redirect URL as `document_url`:
+
+```rust
+use std::collections::HashMap;
+use rdbl::{ExtractOptions, ImageMode, RenderOptions, Url, extract_and_render};
+
+let source_url = Url::parse("https://example.com/article")?;
+let final_url = Url::parse("https://www.example.com/article")?;
+let archive = extract_and_render(
+    fetched_html,
+    &ExtractOptions::default(),
+    RenderOptions {
+        frontmatter: true,
+        image_mode: ImageMode::Omit,
+        heading_offset: 0,
+        source_url: Some(&source_url),
+        document_url: Some(&final_url),
+        embedded_images: HashMap::new(),
+        retrieved_at: "2026-09-26T12:34:56Z",
+    },
+);
+println!("{}", archive.rendered.content);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+`ArchiveDocument` also returns structured extraction metadata and separates the exact rendered
+`content`, the Markdown `body` covered by the hash, and `content_sha256`. For bounded image
+embedding, call `extract`, discover absolute image URLs with `collect_image_sources`, fetch only
+approved images in the caller, convert their validated bytes with `image_data_uri`, and pass the
+resulting URL-to-data-URI map to `render_markdown`. Missing map entries retain the CLI's fallback to
+an absolute image link.
+
+This boundary is intentional: URL scheme checks, DNS and redirect validation, SSRF controls,
+content-type checks, byte/image/concurrency/time limits, and HTTP errors belong to the injecting
+fetcher. `ImageMode::Omit` avoids image URLs in output; `ImageMode::Link` performs no image fetch;
+`ImageMode::Embed` only embeds bytes explicitly supplied by the caller.
+
 ## Usage
 
 ```console
